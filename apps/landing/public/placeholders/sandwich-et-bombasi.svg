@@ -1,0 +1,61 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread -->
+  <path d="M15,118 Q100,128 185,118 L182,110 Q100,120 18,110 Z" fill="#B8860B"/>
+  <path d="M18,110 Q100,120 182,110 L180,105 Q100,115 20,105 Z" fill="#D4A574"/>
+  
+  <!-- Sour chilli sauce -->
+  <path d="M30,100 Q60,95 90,100 Q120,95 150,100 Q170,97 175,100" stroke="#8B0000" stroke-width="4" fill="none"/>
+  
+  <!-- Caramelized onion -->
+  <ellipse cx="55" cy="92" rx="15" ry="4" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="100" cy="90" rx="18" ry="5" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="145" cy="92" rx="15" ry="4" fill="#8B4513" opacity="0.8"/>
+  
+  <!-- Smoked beef layer 1 (dana füme) -->
+  <path d="M30,82 Q50,78 70,85" fill="#4A2020"/>
+  <path d="M30,82 L30,87 Q50,93 70,87 L70,85 Q50,78 30,82 Z" fill="#5D2E2E"/>
+  <path d="M75,80 Q95,75 115,82" fill="#4A2020"/>
+  <path d="M75,80 L75,85 Q95,92 115,85 L115,82 Q95,75 75,80 Z" fill="#5D2E2E"/>
+  <path d="M120,82 Q140,78 160,85" fill="#4A2020"/>
+  <path d="M120,82 L120,87 Q140,93 160,87 L160,85 Q140,78 120,82 Z" fill="#5D2E2E"/>
+  
+  <!-- Pastırma layer -->
+  <path d="M35,70 Q55,65 75,72" fill="#8B0000"/>
+  <path d="M35,70 L35,75 Q55,82 75,75 L75,72 Q55,65 35,70 Z" fill="#A52A2A"/>
+  <ellipse cx="55" cy="72" rx="2" ry="1" fill="#FFD700" opacity="0.5"/>
+  <path d="M85,68 Q105,63 125,70" fill="#8B0000"/>
+  <path d="M85,68 L85,73 Q105,80 125,73 L125,70 Q105,63 85,68 Z" fill="#A52A2A"/>
+  <ellipse cx="105" cy="70" rx="2" ry="1" fill="#FFD700" opacity="0.5"/>
+  <path d="M135,70 Q155,65 175,72" fill="#8B0000"/>
+  <path d="M135,70 L135,75 Q155,82 175,75 L175,72 Q155,65 135,70 Z" fill="#A52A2A"/>
+  
+  <!-- Dana salam layer -->
+  <circle cx="45" cy="58" r="13" fill="#C41E3A"/>
+  <circle cx="45" cy="58" r="10" fill="#DC143C"/>
+  <circle cx="43" cy="56" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="85" cy="55" r="14" fill="#C41E3A"/>
+  <circle cx="85" cy="55" r="11" fill="#DC143C"/>
+  <circle cx="83" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="125" cy="55" r="14" fill="#C41E3A"/>
+  <circle cx="125" cy="55" r="11" fill="#DC143C"/>
+  <circle cx="123" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="160" cy="58" r="13" fill="#C41E3A"/>
+  <circle cx="160" cy="58" r="10" fill="#DC143C"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,48 Q100,28 185,48 L185,43 Q100,22 15,43 Z" fill="#A67C52"/>
+  <path d="M15,43 Q100,22 185,43 L182,38 Q100,18 18,38 Z" fill="#B8860B"/>
+  <path d="M18,38 Q100,18 182,38 L180,34 Q100,16 20,34 Z" fill="#D4A574"/>
+  
+  <!-- Grill marks -->
+  <line x1="40" y1="32" x2="50" y2="35" stroke="#8B4513" stroke-width="2" opacity="0.4"/>
+  <line x1="80" y1="28" x2="90" y2="31" stroke="#8B4513" stroke-width="2" opacity="0.4"/>
+  <line x1="120" y1="28" x2="130" y2="31" stroke="#8B4513" stroke-width="2" opacity="0.4"/>
+  <line x1="160" y1="32" x2="170" y2="35" stroke="#8B4513" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Fire icon to indicate "bomb" -->
+  <path d="M180,15 Q183,10 185,15 Q188,8 190,15 Q185,20 180,15 Z" fill="#FF4500"/>
+</svg>

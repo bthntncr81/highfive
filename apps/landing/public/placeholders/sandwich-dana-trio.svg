@@ -1,0 +1,63 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom ciabatta bread -->
+  <path d="M20,115 Q100,128 180,115 L175,105 Q100,118 25,105 Z" fill="#D4A574"/>
+  <path d="M25,105 Q100,118 175,105 L170,100 Q100,112 30,100 Z" fill="#E8C9A0"/>
+  
+  <!-- Dijon mustard -->
+  <path d="M35,95 Q100,99 165,95" stroke="#DAA520" stroke-width="3" fill="none"/>
+  
+  <!-- Lettuce -->
+  <path d="M30,88 Q50,80 70,88 Q55,84 30,88 Z" fill="#90EE90"/>
+  <path d="M65,86 Q90,78 115,86 Q95,82 65,86 Z" fill="#98FB98"/>
+  <path d="M110,88 Q135,80 160,88 Q140,84 110,88 Z" fill="#90EE90"/>
+  
+  <!-- Tomato slices -->
+  <circle cx="55" cy="78" r="10" fill="#DC3545"/>
+  <circle cx="55" cy="78" r="6" fill="#E63946"/>
+  <circle cx="100" cy="76" r="11" fill="#DC3545"/>
+  <circle cx="100" cy="76" r="7" fill="#E63946"/>
+  <circle cx="145" cy="78" r="10" fill="#DC3545"/>
+  <circle cx="145" cy="78" r="6" fill="#E63946"/>
+  
+  <!-- Dana salam layer -->
+  <circle cx="45" cy="68" r="12" fill="#C41E3A"/>
+  <circle cx="45" cy="68" r="9" fill="#DC143C"/>
+  <circle cx="43" cy="66" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="85" cy="65" r="13" fill="#C41E3A"/>
+  <circle cx="85" cy="65" r="10" fill="#DC143C"/>
+  <circle cx="83" cy="63" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="125" cy="65" r="13" fill="#C41E3A"/>
+  <circle cx="125" cy="65" r="10" fill="#DC143C"/>
+  <circle cx="165" cy="68" r="12" fill="#C41E3A"/>
+  <circle cx="165" cy="68" r="9" fill="#DC143C"/>
+  
+  <!-- Dana füme layer -->
+  <path d="M35,55 Q55,50 75,57" fill="#4A2020"/>
+  <path d="M35,55 L35,60 Q55,67 75,60 L75,57 Q55,50 35,55 Z" fill="#5D2E2E"/>
+  <path d="M85,53 Q105,48 125,55" fill="#4A2020"/>
+  <path d="M85,53 L85,58 Q105,65 125,58 L125,55 Q105,48 85,53 Z" fill="#5D2E2E"/>
+  <path d="M135,55 Q155,50 175,57" fill="#4A2020"/>
+  <path d="M135,55 L135,60 Q155,67 175,60 L175,57 Q155,50 135,55 Z" fill="#5D2E2E"/>
+  
+  <!-- Pastırma layer -->
+  <path d="M30,45 Q50,40 70,47" fill="#8B0000"/>
+  <path d="M30,45 L30,50 Q50,57 70,50 L70,47 Q50,40 30,45 Z" fill="#A52A2A"/>
+  <ellipse cx="50" cy="47" rx="2" ry="1" fill="#FFD700" opacity="0.5"/>
+  <path d="M80,43 Q100,38 120,45" fill="#8B0000"/>
+  <path d="M80,43 L80,48 Q100,55 120,48 L120,45 Q100,38 80,43 Z" fill="#A52A2A"/>
+  <ellipse cx="100" cy="45" rx="2" ry="1" fill="#FFD700" opacity="0.5"/>
+  <path d="M130,45 Q150,40 170,47" fill="#8B0000"/>
+  <path d="M130,45 L130,50 Q150,57 170,50 L170,47 Q150,40 130,45 Z" fill="#A52A2A"/>
+  
+  <!-- Top ciabatta bread -->
+  <path d="M20,38 Q100,18 180,38 L180,33 Q100,12 20,33 Z" fill="#C9956C"/>
+  <path d="M20,33 Q100,12 180,33 L175,29 Q100,10 25,29 Z" fill="#D4A574"/>
+  <path d="M25,29 Q100,10 175,29 L170,26 Q100,8 30,26 Z" fill="#E8C9A0"/>
+  
+  <!-- Triple meat badge -->
+  <circle cx="175" cy="20" r="12" fill="#8B0000"/>
+  <text x="175" y="24" text-anchor="middle" fill="white" font-size="8" font-weight="bold">3x</text>
+</svg>

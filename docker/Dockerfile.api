@@ -1,0 +1,31 @@
+# API Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install necessary packages
+RUN apk add --no-cache openssl
+
+# Copy package files
+COPY package*.json ./
+
+# Install root dependencies
+RUN npm install
+
+# Copy Prisma schema and generate client
+COPY packages/database/prisma ./packages/database/prisma
+COPY packages/database/package*.json ./packages/database/
+RUN cd packages/database && npm install && npx prisma generate
+
+# Copy API source code
+COPY apps/api ./apps/api
+COPY tsconfig.base.json ./
+
+# Expose port
+EXPOSE 3000
+
+# Environment
+ENV NODE_ENV=production
+
+# Start command - run migrations and start server
+CMD sh -c "cd packages/database && npx prisma migrate deploy && cd /app && npx ts-node apps/api/src/main.ts"

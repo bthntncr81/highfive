@@ -1,0 +1,51 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Cream sauce base -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#FFFACD"/>
+  
+  <!-- Pasta noodles (penne style) -->
+  <rect x="60" y="100" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-15 72 104)"/>
+  <rect x="85" y="95" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(10 97 99)"/>
+  <rect x="110" y="105" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-5 122 109)"/>
+  <rect x="70" y="115" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(20 82 119)"/>
+  <rect x="100" y="120" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-10 112 124)"/>
+  <rect x="55" y="125" width="22" height="7" rx="3" fill="#F5D742" transform="rotate(5 66 128)"/>
+  <rect x="120" y="115" width="22" height="7" rx="3" fill="#F4D03F" transform="rotate(-20 131 118)"/>
+  
+  <!-- Mushroom slices -->
+  <g transform="translate(75, 95)">
+    <ellipse cx="0" cy="0" rx="12" ry="8" fill="#D2B48C"/>
+    <path d="M-10,0 Q0,-12 10,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(115, 100)">
+    <ellipse cx="0" cy="0" rx="10" ry="7" fill="#D2B48C"/>
+    <path d="M-8,0 Q0,-10 8,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(90, 130)">
+    <ellipse cx="0" cy="0" rx="11" ry="7" fill="#D2B48C"/>
+    <path d="M-9,0 Q0,-11 9,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(130, 120)">
+    <ellipse cx="0" cy="0" rx="9" ry="6" fill="#D2B48C"/>
+    <path d="M-7,0 Q0,-8 7,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  
+  <!-- Cream drizzle -->
+  <path d="M70,110 Q90,105 110,110" stroke="#FFFDD0" stroke-width="4" fill="none" opacity="0.8"/>
+  <path d="M80,125 Q100,120 120,125" stroke="#FFFDD0" stroke-width="3" fill="none" opacity="0.7"/>
+  
+  <!-- Parsley garnish -->
+  <circle cx="95" cy="90" r="3" fill="#228B22"/>
+  <circle cx="105" cy="92" r="2.5" fill="#2E8B2E"/>
+  <circle cx="100" cy="88" r="2" fill="#228B22"/>
+  
+  <!-- Steam -->
+  <path d="M85,70 Q80,55 85,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,65 Q95,50 100,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,70 Q120,55 115,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

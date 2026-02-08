@@ -1,0 +1,41 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Tomato sauce base -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#C41E3A"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#DC3545"/>
+  
+  <!-- Pasta noodles -->
+  <rect x="60" y="100" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-15 72 104)"/>
+  <rect x="85" y="95" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(10 97 99)"/>
+  <rect x="110" y="105" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-5 122 109)"/>
+  <rect x="70" y="115" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(20 82 119)"/>
+  <rect x="100" y="120" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-10 112 124)"/>
+  
+  <!-- Köz patlıcan (roasted eggplant) pieces -->
+  <ellipse cx="70" cy="100" rx="15" ry="10" fill="#4B0082" opacity="0.8"/>
+  <ellipse cx="70" cy="100" rx="12" ry="7" fill="#5D3F6A"/>
+  <ellipse cx="115" cy="95" rx="14" ry="9" fill="#4B0082" opacity="0.8"/>
+  <ellipse cx="115" cy="95" rx="11" ry="6" fill="#5D3F6A"/>
+  <ellipse cx="90" cy="125" rx="16" ry="10" fill="#4B0082" opacity="0.8"/>
+  <ellipse cx="90" cy="125" rx="13" ry="7" fill="#5D3F6A"/>
+  <ellipse cx="130" cy="115" rx="12" ry="8" fill="#4B0082" opacity="0.8"/>
+  <ellipse cx="130" cy="115" rx="9" ry="5" fill="#5D3F6A"/>
+  
+  <!-- Char marks on eggplant -->
+  <line x1="65" y1="98" x2="75" y2="102" stroke="#2D1B30" stroke-width="1.5" opacity="0.5"/>
+  <line x1="110" y1="93" x2="120" y2="97" stroke="#2D1B30" stroke-width="1.5" opacity="0.5"/>
+  <line x1="85" y1="123" x2="95" y2="127" stroke="#2D1B30" stroke-width="1.5" opacity="0.5"/>
+  
+  <!-- Parsley garnish -->
+  <circle cx="100" cy="90" r="3" fill="#228B22"/>
+  <circle cx="108" cy="92" r="2.5" fill="#2E8B2E"/>
+  
+  <!-- Steam -->
+  <path d="M85,65 Q80,50 85,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,60 Q95,45 100,35" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,65 Q120,50 115,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

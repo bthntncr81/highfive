@@ -1,0 +1,490 @@
+{
+  "site": {
+    "name": "High Five",
+    "tagline": "Pizza • Makarna • Sandviç",
+    "description": "En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur, hızlı teslimat!",
+    "logoText": "High Five",
+    "primaryColor": "#C41E3A",
+    "accentColor": "#F4A300"
+  },
+  "whatsapp": {
+    "phone": "905056916831",
+    "defaultMessage": "Merhaba! Sipariş vermek istiyorum 🍕"
+  },
+  "links": {
+    "instagram": "https://instagram.com/highfive",
+    "tiktok": "https://tiktok.com/@highfive",
+    "googleMaps": "https://maps.google.com/?q=Istanbul",
+    "phoneTel": "0505 691 68 31"
+  },
+  "hero": {
+    "headline": "Lezzetin Beşliği!",
+    "subheadline": "Taze malzemeler, el yapımı hamur ve bol peynirle hazırlanan pizzalarımız kapınızda. High Five ile her lokma bir şölen!",
+    "heroImages": [
+      "/placeholders/pizza-hero.svg",
+      "/placeholders/pasta-hero.svg",
+      "/placeholders/sandwich-hero.svg"
+    ]
+  },
+  "highlights": [
+    {
+      "title": "Hızlı Teslimat",
+      "desc": "30 dakikada kapınızda, sıcacık!",
+      "icon": "🚀"
+    },
+    {
+      "title": "Taze Malzeme",
+      "desc": "Her gün taze, günlük tedarik",
+      "icon": "🥬"
+    },
+    {
+      "title": "El Yapımı Hamur",
+      "desc": "Geleneksel İtalyan tarifimiz",
+      "icon": "👨‍🍳"
+    },
+    {
+      "title": "Bol Peynir",
+      "desc": "Uzayan mozzarella garantisi",
+      "icon": "🧀"
+    }
+  ],
+  "menu": {
+    "categories": [
+      { "id": "pizza", "name": "Pizza", "icon": "🍕" },
+      { "id": "makarna", "name": "Makarna", "icon": "🍝" },
+      { "id": "sandvic", "name": "Sandviç", "icon": "🥪" },
+      { "id": "icecek", "name": "İçecek", "icon": "🥤" },
+      { "id": "tatli", "name": "Tatlı", "icon": "🍰" }
+    ],
+    "items": [
+      {
+        "id": "p1",
+        "category": "pizza",
+        "name": "Margherita",
+        "desc": "Domates sos, mozzarella, taze fesleğen. İtalyan klasiği!",
+        "price": 149,
+        "image": "/placeholders/pizza-margherita.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "p2",
+        "category": "pizza",
+        "name": "Marinara",
+        "desc": "Domates sos, sarımsak. Peynir sevmeyenler için sade lezzet!",
+        "price": 119,
+        "image": "/placeholders/pizza-marinara.svg",
+        "badges": ["Vegan"]
+      },
+      {
+        "id": "p3",
+        "category": "pizza",
+        "name": "Ateş Dilimi",
+        "desc": "Domates sos, mozzarella, sucuk, jalapeno, kırmızı biber. Cesurlar için!",
+        "price": 189,
+        "image": "/placeholders/pizza-ates-dilimi.svg",
+        "badges": ["Acılı", "Popüler"]
+      },
+      {
+        "id": "p4",
+        "category": "pizza",
+        "name": "Dört Peynirli",
+        "desc": "Domates sos, mozzarella, cheddar, parmesan, gorgonzola. Peynir cenneti!",
+        "price": 199,
+        "image": "/placeholders/pizza-dort-peynirli.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "p5",
+        "category": "pizza",
+        "name": "Kavurmalı",
+        "desc": "Domates sos, mozzarella, kavurma, mısır. Türk damak tadına özel!",
+        "price": 209,
+        "image": "/placeholders/pizza-kavurmali.svg",
+        "badges": ["Yeni"]
+      },
+      {
+        "id": "p6",
+        "category": "pizza",
+        "name": "Füme Mantar",
+        "desc": "Domates sos, mozzarella, füme et, mantar, soğan. Duman aroması!",
+        "price": 199,
+        "image": "/placeholders/pizza-fume-mantar.svg",
+        "badges": []
+      },
+      {
+        "id": "p7",
+        "category": "pizza",
+        "name": "Karışık",
+        "desc": "Domates sos, mozzarella, sucuk, salam, mantar. Her şeyden biraz!",
+        "price": 209,
+        "image": "/placeholders/pizza-karisik.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "p8",
+        "category": "pizza",
+        "name": "Et Partisi",
+        "desc": "Domates sos, mozzarella, isli et, sucuk, acı sos. Protein şöleni!",
+        "price": 229,
+        "image": "/placeholders/pizza-et-partisi.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "p9",
+        "category": "pizza",
+        "name": "High Five Özel",
+        "desc": "Domates sos, mozzarella, sucuk, füme et, biber. Şefin imzası!",
+        "price": 239,
+        "image": "/placeholders/pizza-highfive-ozel.svg",
+        "badges": ["Yeni", "Popüler"]
+      },
+      {
+        "id": "m1",
+        "category": "makarna",
+        "name": "Kremalı Mantarlı",
+        "desc": "Krema sos, taze mantar. Hafif ve lezzetli!",
+        "price": 129,
+        "image": "/placeholders/pasta-kremali-mantarli.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "m2",
+        "category": "makarna",
+        "name": "Acılı Soslu Sosisli",
+        "desc": "Domates sos, sosis, köz biber. Cesurlar için!",
+        "price": 139,
+        "image": "/placeholders/pasta-acili-ss.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "m3",
+        "category": "makarna",
+        "name": "4 Peynirli",
+        "desc": "Peynir sos, krema, 4 çeşit peynir. Peynir tutkunlarına!",
+        "price": 149,
+        "image": "/placeholders/pasta-dort-peynirli.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "m4",
+        "category": "makarna",
+        "name": "Beşamel Soslu",
+        "desc": "Beşamel sos, kaşar peyniri. Kremsi lezzet!",
+        "price": 139,
+        "image": "/placeholders/pasta-besamel.svg",
+        "badges": []
+      },
+      {
+        "id": "m5",
+        "category": "makarna",
+        "name": "Köz Patlıcanlı",
+        "desc": "Domates sos, köz patlıcan. Türk mutfağı esintisi!",
+        "price": 135,
+        "image": "/placeholders/pasta-koz-patlican.svg",
+        "badges": ["Yeni"]
+      },
+      {
+        "id": "m6",
+        "category": "makarna",
+        "name": "Köz Biberli",
+        "desc": "Krema sos, kaşar, köz biber. Hafif tütsü aroması!",
+        "price": 139,
+        "image": "/placeholders/pasta-koz-biber.svg",
+        "badges": []
+      },
+      {
+        "id": "m7",
+        "category": "makarna",
+        "name": "Acılı Domates Sarımsak",
+        "desc": "Acı domates sos, bol sarımsak. Ateşli tercih!",
+        "price": 125,
+        "image": "/placeholders/pasta-acili-domates.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "m8",
+        "category": "makarna",
+        "name": "Bahçe Makarnası",
+        "desc": "Zeytinyağı, taze sebze karışımı. Sağlıklı seçim!",
+        "price": 135,
+        "image": "/placeholders/pasta-bahce.svg",
+        "badges": ["Vegan"]
+      },
+      {
+        "id": "m9",
+        "category": "makarna",
+        "name": "Etli Mantarlı",
+        "desc": "Özel sos, füme et, mantar. Doyurucu lezzet!",
+        "price": 159,
+        "image": "/placeholders/pasta-etli-mantarli.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "m10",
+        "category": "makarna",
+        "name": "High Five Makarna",
+        "desc": "Özel sos, füme et, parmesan, kaşar. Şefin imzası!",
+        "price": 169,
+        "image": "/placeholders/pasta-highfive-ozel.svg",
+        "badges": ["Yeni", "Popüler"]
+      },
+      {
+        "id": "s1",
+        "category": "sandvic",
+        "name": "Mozzarella Classic",
+        "desc": "Ciabatta ekmek, mozzarella, domates dilimleri, roka, pesto sos.",
+        "price": 180,
+        "image": "/placeholders/sandwich-mozzarella-classic.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "s2",
+        "category": "sandvic",
+        "name": "Füme Dana Schiacciatta",
+        "desc": "Schiacciatta, dana füme, mozzarella, karamelize soğan, köz kapya, hardal.",
+        "price": 275,
+        "image": "/placeholders/sandwich-fume-dana.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "s3",
+        "category": "sandvic",
+        "name": "Pastırmalı Tulum",
+        "desc": "Ciabatta, pastırma, tulum peyniri, köz patlıcan, roka, acılı domates sosu.",
+        "price": 247,
+        "image": "/placeholders/sandwich-pastirmali-tulum.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "s4",
+        "category": "sandvic",
+        "name": "Hindi Light",
+        "desc": "Ciabatta, hindi füme, labne krem, marul, domates, zeytin ezmesi.",
+        "price": 165,
+        "image": "/placeholders/sandwich-hindi-light.svg",
+        "badges": []
+      },
+      {
+        "id": "s5",
+        "category": "sandvic",
+        "name": "Dört Peynir Schiacciatta",
+        "desc": "Schiacciatta, mozzarella, kaşar, parmesan, labne krem, fesleğen.",
+        "price": 250,
+        "image": "/placeholders/sandwich-dort-peynir.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "s6",
+        "category": "sandvic",
+        "name": "Acılı Salam Jalapeno",
+        "desc": "Ciabatta, dana salam, mozzarella, jalapeno, yeşil biber, acılı mayonez.",
+        "price": 240,
+        "image": "/placeholders/sandwich-acili-salam.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "s7",
+        "category": "sandvic",
+        "name": "Vejetaryen Köz Sebzeli",
+        "desc": "Ciabatta, köz kapya, köz patlıcan, domates, roka, sarımsaklı yoğurt.",
+        "price": 140,
+        "image": "/placeholders/sandwich-vejetaryen.svg",
+        "badges": ["Vegan"]
+      },
+      {
+        "id": "s8",
+        "category": "sandvic",
+        "name": "Et Bombası Schiacciatta",
+        "desc": "Schiacciatta, dana salam, pastırma, dana füme, karamelize soğan, sour chilli sos.",
+        "price": 400,
+        "image": "/placeholders/sandwich-et-bombasi.svg",
+        "badges": ["Yeni", "Popüler"]
+      },
+      {
+        "id": "s9",
+        "category": "sandvic",
+        "name": "Pesto Hindi",
+        "desc": "Ciabatta, hindi füme, mozzarella, pesto sos, domates, marul.",
+        "price": 200,
+        "image": "/placeholders/sandwich-pesto-hindi.svg",
+        "badges": []
+      },
+      {
+        "id": "s10",
+        "category": "sandvic",
+        "name": "Trüflü Füme Schiacciatta",
+        "desc": "Schiacciatta, dana füme, mozzarella, karamelize soğan, jalapeno, trüflü mayonez.",
+        "price": 275,
+        "image": "/placeholders/sandwich-truflu-fume.svg",
+        "badges": ["Yeni"]
+      },
+      {
+        "id": "s11",
+        "category": "sandvic",
+        "name": "Tulum & Salam Schiacciatta",
+        "desc": "Schiacciatta, tulum peyniri, dana salam, köz kapya, kornişon, hardal.",
+        "price": 275,
+        "image": "/placeholders/sandwich-tulum-salam.svg",
+        "badges": []
+      },
+      {
+        "id": "s12",
+        "category": "sandvic",
+        "name": "Parmesan Pesto Veggie",
+        "desc": "Ciabatta, parmesan, köz kapya, domates, roka, pesto sos, zeytin ezmesi.",
+        "price": 230,
+        "image": "/placeholders/sandwich-parmesan-veggie.svg",
+        "badges": ["Vegan"]
+      },
+      {
+        "id": "s13",
+        "category": "sandvic",
+        "name": "Labneli Jalapeno Bomb",
+        "desc": "Ciabatta, labne krem, jalapeno, kornişon, sour chilli sos, yeşil biber.",
+        "price": 155,
+        "image": "/placeholders/sandwich-labneli-jalapeno.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "s14",
+        "category": "sandvic",
+        "name": "Margherita Sandviç",
+        "desc": "Ciabatta, mozzarella, domates dilimleri, fesleğen, zeytin ezmesi.",
+        "price": 150,
+        "image": "/placeholders/sandwich-margherita.svg",
+        "badges": []
+      },
+      {
+        "id": "s15",
+        "category": "sandvic",
+        "name": "Sarımsaklı Hindi Schiacciatta",
+        "desc": "Schiacciatta, hindi füme, kaşar, sarımsaklı yoğurt, marul, karamelize soğan.",
+        "price": 175,
+        "image": "/placeholders/sandwich-sarimsakli-hindi.svg",
+        "badges": []
+      },
+      {
+        "id": "s16",
+        "category": "sandvic",
+        "name": "Dana Trio",
+        "desc": "Ciabatta, dana salam, dana füme, pastırma, domates, marul, hardal.",
+        "price": 400,
+        "image": "/placeholders/sandwich-dana-trio.svg",
+        "badges": ["Yeni", "Popüler"]
+      },
+      {
+        "id": "s17",
+        "category": "sandvic",
+        "name": "Taze Otlu Peynir",
+        "desc": "Ciabatta, kaşar, labne krem, fesleğen, roka, pesto sos.",
+        "price": 200,
+        "image": "/placeholders/sandwich-taze-otlu.svg",
+        "badges": []
+      },
+      {
+        "id": "s18",
+        "category": "sandvic",
+        "name": "Acılı Domates Mozzarella",
+        "desc": "Schiacciatta, mozzarella, acılı domates sosu, jalapeno, yeşil biber, roka.",
+        "price": 167,
+        "image": "/placeholders/sandwich-acili-domates-mozz.svg",
+        "badges": ["Acılı"]
+      },
+      {
+        "id": "s19",
+        "category": "sandvic",
+        "name": "Pickle Lovers",
+        "desc": "Ciabatta, kornişon, jalapeno, zeytin ezmesi, marul, mozzarella.",
+        "price": 160,
+        "image": "/placeholders/sandwich-pickle-lovers.svg",
+        "badges": ["Yeni"]
+      },
+      {
+        "id": "s20",
+        "category": "sandvic",
+        "name": "Full House Schiacciatta",
+        "desc": "Schiacciatta, mozzarella, dana salam, köz kapya, karamelize soğan, kornişon, trüflü mayonez.",
+        "price": 265,
+        "image": "/placeholders/sandwich-full-house.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "d1",
+        "category": "icecek",
+        "name": "Kola",
+        "desc": "330ml kutu",
+        "price": 25,
+        "image": "/placeholders/drink-1.svg",
+        "badges": []
+      },
+      {
+        "id": "d2",
+        "category": "icecek",
+        "name": "Limonata",
+        "desc": "Taze sıkılmış, ev yapımı",
+        "price": 35,
+        "image": "/placeholders/drink-1.svg",
+        "badges": ["Yeni"]
+      },
+      {
+        "id": "d3",
+        "category": "icecek",
+        "name": "Ayran",
+        "desc": "Geleneksel, köpüklü",
+        "price": 20,
+        "image": "/placeholders/drink-1.svg",
+        "badges": []
+      },
+      {
+        "id": "t1",
+        "category": "tatli",
+        "name": "Tiramisu",
+        "desc": "İtalyan klasiği, kahve ve mascarpone",
+        "price": 75,
+        "image": "/placeholders/dessert-1.svg",
+        "badges": ["Popüler"]
+      },
+      {
+        "id": "t2",
+        "category": "tatli",
+        "name": "Çikolatalı Sufle",
+        "desc": "Sıcak servis, akan çikolata",
+        "price": 85,
+        "image": "/placeholders/dessert-1.svg",
+        "badges": ["Yeni"]
+      }
+    ]
+  },
+  "about": {
+    "storyTitle": "High Five Hikayesi",
+    "storyParagraphs": [
+      "2018 yılında küçük bir mutfakta başlayan yolculuğumuz, bugün binlerce mutlu müşteriye ulaştı. High Five, 'beşlik çak' anlamına geliyor - çünkü biz her siparişte size beşlik çakıyoruz!",
+      "Felsefemiz basit: Taze malzemeler, geleneksel tarifler ve bol sevgi. Her hamuru el ile açıyor, her sosu taze malzemelerden yapıyoruz. Hiçbir şey dondurulmuş ya da hazır değil.",
+      "Ekibimiz pizza ve makarna konusunda tutkulu insanlardan oluşuyor. Amacımız her lokmanızda İtalya'yı hissettirmek ve yüzünüzde bir gülümseme bırakmak."
+    ],
+    "galleryImages": [
+      "/placeholders/gallery-1.svg",
+      "/placeholders/gallery-2.svg",
+      "/placeholders/gallery-3.svg",
+      "/placeholders/gallery-4.svg"
+    ]
+  },
+  "contact": {
+    "address": "Bağdat Caddesi No:123, Kadıköy, İstanbul",
+    "hours": [
+      { "day": "Pazartesi", "open": "11:00", "close": "23:00" },
+      { "day": "Salı", "open": "11:00", "close": "23:00" },
+      { "day": "Çarşamba", "open": "11:00", "close": "23:00" },
+      { "day": "Perşembe", "open": "11:00", "close": "23:00" },
+      { "day": "Cuma", "open": "11:00", "close": "00:00" },
+      { "day": "Cumartesi", "open": "11:00", "close": "00:00" },
+      { "day": "Pazar", "open": "12:00", "close": "23:00" }
+    ],
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3011.6504900327975!2d29.0!3d40.98!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDDCsDU4JzQ4LjAiTiAyOcKwMDAnMDAuMCJF!5e0!3m2!1str!2str!4v1234567890"
+  },
+  "seo": {
+    "title": "High Five | Pizza • Makarna • Sandviç",
+    "description": "En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur, hızlı teslimat! Hemen sipariş ver.",
+    "ogImage": "/placeholders/og-default.svg"
+  }
+}

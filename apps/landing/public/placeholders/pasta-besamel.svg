@@ -1,0 +1,39 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Bechamel sauce base (creamy white) -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#FFFFF0"/>
+  
+  <!-- Pasta noodles (penne) -->
+  <rect x="60" y="100" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-15 72 104)"/>
+  <rect x="85" y="95" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(10 97 99)"/>
+  <rect x="110" y="105" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-5 122 109)"/>
+  <rect x="70" y="115" width="25" height="8" rx="3" fill="#F5D742" transform="rotate(20 82 119)"/>
+  <rect x="100" y="120" width="25" height="8" rx="3" fill="#F4D03F" transform="rotate(-10 112 124)"/>
+  <rect x="55" y="125" width="22" height="7" rx="3" fill="#F5D742" transform="rotate(5 66 128)"/>
+  <rect x="120" y="115" width="22" height="7" rx="3" fill="#F4D03F" transform="rotate(-20 131 118)"/>
+  
+  <!-- Kaşar cheese melted patches -->
+  <ellipse cx="75" cy="105" rx="14" ry="9" fill="#FFD700" opacity="0.7"/>
+  <ellipse cx="115" cy="100" rx="12" ry="8" fill="#FFD700" opacity="0.6"/>
+  <ellipse cx="95" cy="125" rx="13" ry="8" fill="#FFD700" opacity="0.7"/>
+  <ellipse cx="130" cy="118" rx="10" ry="6" fill="#FFD700" opacity="0.6"/>
+  
+  <!-- Bechamel drizzle -->
+  <path d="M60,105 Q80,95 100,105 T140,100" stroke="#FFFFF0" stroke-width="5" fill="none" opacity="0.8"/>
+  <path d="M70,120 Q90,110 110,120 T145,115" stroke="#FFFFF0" stroke-width="4" fill="none" opacity="0.7"/>
+  
+  <!-- Nutmeg specks -->
+  <circle cx="80" cy="100" r="1" fill="#8B4513"/>
+  <circle cx="110" cy="108" r="1" fill="#8B4513"/>
+  <circle cx="95" cy="115" r="1" fill="#8B4513"/>
+  
+  <!-- Steam -->
+  <path d="M85,70 Q80,55 85,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,65 Q95,50 100,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,70 Q120,55 115,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

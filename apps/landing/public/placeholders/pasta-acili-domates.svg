@@ -1,0 +1,40 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Spicy tomato sauce base (dark red) -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#8B0000"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#B22222"/>
+  
+  <!-- Pasta noodles (spaghetti style) -->
+  <path d="M50,95 Q70,85 90,95 T130,95 T160,90" stroke="#F4D03F" stroke-width="4" fill="none"/>
+  <path d="M45,105 Q65,95 85,105 T125,105 T155,100" stroke="#F5D742" stroke-width="4" fill="none"/>
+  <path d="M55,115 Q75,105 95,115 T135,115 T160,110" stroke="#F4D03F" stroke-width="4" fill="none"/>
+  <path d="M50,125 Q70,115 90,125 T130,125 T155,120" stroke="#F5D742" stroke-width="4" fill="none"/>
+  <path d="M60,135 Q80,125 100,135 T140,135" stroke="#F4D03F" stroke-width="4" fill="none"/>
+  
+  <!-- Garlic cloves -->
+  <ellipse cx="70" cy="100" rx="6" ry="9" fill="#F5F5DC" transform="rotate(-15 70 100)"/>
+  <ellipse cx="70" cy="100" rx="4" ry="6" fill="#FFFFF0" transform="rotate(-15 70 100)"/>
+  <ellipse cx="110" cy="95" rx="6" ry="9" fill="#F5F5DC" transform="rotate(20 110 95)"/>
+  <ellipse cx="110" cy="95" rx="4" ry="6" fill="#FFFFF0" transform="rotate(20 110 95)"/>
+  <ellipse cx="85" cy="120" rx="5" ry="8" fill="#F5F5DC" transform="rotate(-10 85 120)"/>
+  <ellipse cx="85" cy="120" rx="3" ry="5" fill="#FFFFF0" transform="rotate(-10 85 120)"/>
+  <ellipse cx="125" cy="115" rx="5" ry="8" fill="#F5F5DC" transform="rotate(15 125 115)"/>
+  <ellipse cx="125" cy="115" rx="3" ry="5" fill="#FFFFF0" transform="rotate(15 125 115)"/>
+  
+  <!-- Chili flakes -->
+  <circle cx="75" cy="105" r="2" fill="#FF4500" opacity="0.8"/>
+  <circle cx="95" cy="100" r="1.5" fill="#FF4500" opacity="0.8"/>
+  <circle cx="115" cy="108" r="2" fill="#FF4500" opacity="0.8"/>
+  <circle cx="90" cy="125" r="1.5" fill="#FF4500" opacity="0.8"/>
+  <circle cx="105" cy="115" r="2" fill="#FF4500" opacity="0.8"/>
+  <circle cx="130" cy="105" r="1.5" fill="#FF4500" opacity="0.8"/>
+  
+  <!-- Steam -->
+  <path d="M85,65 Q80,50 85,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,60 Q95,45 100,35" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,65 Q120,50 115,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

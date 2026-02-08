@@ -1,0 +1,574 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Titan+One&family=Nunito:wght@400;500;600;700;800&family=Permanent+Marker&family=Patrick+Hand&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   HIGH FIVE - Retro Diner Design System
+   Five Guys inspired warm, playful aesthetic
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Core palette */
+    --color-red: #C41E3A;
+    --color-red-dark: #8B0000;
+    --color-red-light: #E63946;
+    --color-cream: #FFF8F0;
+    --color-cream-dark: #F5E6D3;
+    --color-paper: #FFFBF5;
+    --color-kraft: #D4A574;
+    --color-mustard: #F4A300;
+    --color-mustard-light: #FFD166;
+    --color-chocolate: #3D2314;
+    --color-chocolate-light: #5D4037;
+    --color-charcoal: #2C2C2C;
+    
+    /* Semantic tokens */
+    --color-primary: var(--color-red);
+    --color-secondary: var(--color-mustard);
+    --color-background: var(--color-cream);
+    --color-surface: var(--color-paper);
+    --color-foreground: var(--color-charcoal);
+    --color-foreground-muted: var(--color-chocolate-light);
+    
+    /* Shadows */
+    --shadow-diner: 4px 4px 0 0 rgba(61, 35, 20, 0.2);
+    --shadow-diner-lg: 6px 6px 0 0 rgba(61, 35, 20, 0.25);
+    --shadow-stamp: 2px 2px 0 0 rgba(196, 30, 58, 0.3);
+    
+    /* Radii */
+    --radius-diner: 1rem;
+    --radius-diner-lg: 1.5rem;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply font-body text-foreground antialiased;
+    background-color: var(--color-background);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Paper grain overlay for whole page */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    z-index: 9999;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+
+  h1 { @apply text-4xl md:text-5xl lg:text-6xl; }
+  h2 { @apply text-3xl md:text-4xl; }
+  h3 { @apply text-2xl md:text-3xl; }
+  h4 { @apply text-xl md:text-2xl; }
+
+  p {
+    @apply leading-relaxed;
+    text-wrap: pretty;
+  }
+
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  img {
+    @apply max-w-full h-auto;
+  }
+
+  /* Focus states */
+  :focus-visible {
+    @apply outline-none ring-2 ring-diner-mustard ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* ============================================
+     BUTTONS - Chunky diner style
+     ============================================ */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-display text-lg
+           px-6 py-3
+           rounded-diner
+           transition-all duration-200
+           cursor-pointer
+           select-none
+           active:translate-y-1
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: var(--shadow-diner);
+  }
+
+  .btn:active {
+    box-shadow: 2px 2px 0 0 rgba(61, 35, 20, 0.2);
+  }
+
+  .btn-primary {
+    @apply btn bg-diner-red text-white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-diner-red-dark;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-diner-lg);
+  }
+
+  .btn-secondary {
+    @apply btn bg-diner-mustard text-diner-chocolate;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-diner-mustard-light;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-diner-lg);
+  }
+
+  .btn-outline {
+    @apply btn bg-transparent border-3 border-diner-red text-diner-red;
+    box-shadow: none;
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    @apply bg-diner-red text-white;
+    box-shadow: var(--shadow-diner);
+  }
+
+  .btn-kraft {
+    @apply btn bg-diner-kraft text-diner-chocolate;
+  }
+
+  .btn-kraft:hover:not(:disabled) {
+    @apply brightness-110;
+    transform: translateY(-2px);
+  }
+
+  .btn-whatsapp {
+    @apply btn text-white;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  }
+
+  .btn-whatsapp:hover:not(:disabled) {
+    @apply brightness-110;
+    transform: translateY(-2px) scale(1.02);
+  }
+
+  /* ============================================
+     CARDS - Paper/kraft style
+     ============================================ */
+  .card {
+    @apply bg-surface rounded-diner-lg p-5 relative overflow-hidden;
+    box-shadow: var(--shadow-paper);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-paper-hover);
+    transform: translateY(-4px);
+  }
+
+  .card-kraft {
+    @apply card;
+    background: linear-gradient(135deg, #E8D5C4 0%, #D4A574 100%);
+  }
+
+  .card-menu {
+    @apply card border-2 border-diner-cream-dark;
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%);
+  }
+
+  .card-menu:hover {
+    @apply border-diner-mustard;
+    transform: translateY(-6px) rotate(-1deg);
+  }
+
+  /* ============================================
+     BADGES - Stamp/sticker style
+     ============================================ */
+  .badge {
+    @apply inline-flex items-center justify-center
+           font-chalk text-sm uppercase tracking-wide
+           px-3 py-1
+           rounded-stamp
+           transform -rotate-3;
+    box-shadow: var(--shadow-stamp);
+  }
+
+  .badge-new {
+    @apply badge bg-diner-mustard text-diner-chocolate;
+    animation: stampIn 0.3s ease-out;
+  }
+
+  .badge-popular {
+    @apply badge bg-diner-red text-white;
+  }
+
+  .badge-spicy {
+    @apply badge bg-orange-500 text-white;
+  }
+
+  .badge-vegan {
+    @apply badge bg-green-600 text-white;
+  }
+
+  /* ============================================
+     FORM INPUTS - Payment & Order forms
+     ============================================ */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-diner
+           border-2 border-diner-kraft
+           bg-white text-diner-chocolate
+           placeholder:text-diner-chocolate-light/50
+           focus:border-diner-red focus:outline-none
+           focus:ring-2 focus:ring-diner-red/20
+           transition-all duration-200;
+  }
+
+  .input-field:hover:not(:focus) {
+    @apply border-diner-chocolate-light/50;
+  }
+
+  /* Circular stamp badge */
+  .stamp {
+    @apply flex items-center justify-center
+           font-chalk text-xs uppercase
+           w-16 h-16
+           rounded-full
+           border-4 border-dashed
+           transform rotate-12;
+  }
+
+  .stamp-red {
+    @apply stamp border-diner-red text-diner-red;
+  }
+
+  .stamp-mustard {
+    @apply stamp border-diner-mustard text-diner-mustard;
+  }
+
+  /* ============================================
+     CHECKERED PATTERNS
+     ============================================ */
+  .checkered {
+    background: repeating-conic-gradient(
+      #E8D5C4 0% 25%,
+      transparent 0% 50%
+    ) 50% / 20px 20px;
+  }
+
+  .checkered-sm {
+    background: repeating-conic-gradient(
+      #E8D5C4 0% 25%,
+      transparent 0% 50%
+    ) 50% / 12px 12px;
+  }
+
+  .checkered-red {
+    background: repeating-conic-gradient(
+      rgba(196, 30, 58, 0.1) 0% 25%,
+      transparent 0% 50%
+    ) 50% / 24px 24px;
+  }
+
+  /* ============================================
+     DINER DECORATIONS
+     ============================================ */
+  .diner-border {
+    @apply border-4 border-diner-red;
+    border-style: dashed;
+  }
+
+  .diner-divider {
+    @apply w-full h-4 my-8;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-red) 0px,
+      var(--color-red) 20px,
+      transparent 20px,
+      transparent 30px,
+      var(--color-mustard) 30px,
+      var(--color-mustard) 50px,
+      transparent 50px,
+      transparent 60px
+    );
+  }
+
+  .wavy-underline {
+    text-decoration: underline wavy var(--color-mustard);
+    text-underline-offset: 4px;
+  }
+
+  /* Kraft paper texture card */
+  .kraft-paper {
+    background: linear-gradient(135deg, #E8D5C4 0%, #D4A574 100%);
+    position: relative;
+  }
+
+  .kraft-paper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* ============================================
+     CHALKBOARD STYLE
+     ============================================ */
+  .chalkboard {
+    @apply bg-diner-chocolate text-white font-chalk p-6 rounded-diner;
+    position: relative;
+  }
+
+  .chalkboard::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* ============================================
+     MENU BOARD STYLE
+     ============================================ */
+  .menu-board {
+    @apply bg-diner-charcoal text-diner-cream p-8 rounded-diner-lg;
+    background: linear-gradient(180deg, #2C2C2C 0%, #1a1a1a 100%);
+    box-shadow: 
+      inset 0 2px 4px rgba(0,0,0,0.3),
+      0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .menu-board-item {
+    @apply flex justify-between items-baseline
+           py-2 border-b border-dashed border-diner-kraft/30;
+  }
+
+  .menu-board-item:last-child {
+    @apply border-b-0;
+  }
+
+  .menu-board-price {
+    @apply font-display text-diner-mustard;
+  }
+
+  /* ============================================
+     NAVIGATION
+     ============================================ */
+  .nav-link {
+    @apply font-display text-lg px-4 py-2
+           text-diner-chocolate
+           relative
+           transition-all duration-200;
+  }
+
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-1/2 -translate-x-1/2
+           w-0 h-1 bg-diner-mustard rounded-full
+           transition-all duration-300;
+  }
+
+  .nav-link:hover::after,
+  .nav-link.active::after {
+    @apply w-3/4;
+  }
+
+  .nav-link:hover {
+    @apply text-diner-red;
+    transform: translateY(-2px);
+  }
+
+  .nav-link.active {
+    @apply text-diner-red;
+  }
+
+  /* ============================================
+     FOOD-SPECIFIC DECORATIONS
+     ============================================ */
+  .pizza-slice-bg {
+    background: conic-gradient(
+      from 0deg,
+      #F4A300 0deg 60deg,
+      #C41E3A 60deg 120deg,
+      #F4A300 120deg 180deg,
+      #C41E3A 180deg 240deg,
+      #F4A300 240deg 300deg,
+      #C41E3A 300deg 360deg
+    );
+  }
+
+  .steam {
+    @apply opacity-60;
+    animation: steam 2s ease-in-out infinite;
+  }
+
+  @keyframes steam {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(-10px) scale(1.1);
+      opacity: 0.3;
+    }
+  }
+
+  /* ============================================
+     FORM INPUTS - Diner style
+     ============================================ */
+  .input-diner {
+    @apply w-full px-4 py-3
+           font-body text-foreground
+           bg-white
+           border-3 border-diner-kraft
+           rounded-diner
+           transition-all duration-200;
+  }
+
+  .input-diner:focus {
+    @apply border-diner-mustard outline-none;
+    box-shadow: 0 0 0 3px rgba(244, 163, 0, 0.2);
+  }
+
+  .input-diner::placeholder {
+    @apply text-diner-chocolate-light/50;
+  }
+
+  /* ============================================
+     PRICE TAGS
+     ============================================ */
+  .price-tag {
+    @apply inline-flex items-center
+           font-display text-xl
+           text-diner-red;
+  }
+
+  .price-tag-big {
+    @apply font-display text-3xl text-diner-red;
+  }
+
+  /* ============================================
+     ANIMATIONS
+     ============================================ */
+  .hover-wiggle:hover {
+    animation: wiggle 0.3s ease-in-out;
+  }
+
+  .hover-bounce:hover {
+    animation: bounce 0.5s ease-in-out;
+  }
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+  }
+
+  /* Neon glow effect for special items */
+  .neon-glow {
+    text-shadow: 
+      0 0 5px var(--color-red),
+      0 0 10px var(--color-red),
+      0 0 20px var(--color-red);
+  }
+
+  /* ============================================
+     SOCIAL PROOF
+     ============================================ */
+  .rating-stars {
+    @apply flex gap-1 text-diner-mustard;
+  }
+
+  .customer-count {
+    @apply font-display text-diner-red;
+  }
+
+  /* ============================================
+     RESPONSIVE CONTAINER
+     ============================================ */
+  .container-diner {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ============================================
+     SECTION BACKGROUNDS
+     ============================================ */
+  .section-cream {
+    @apply bg-diner-cream;
+  }
+
+  .section-paper {
+    @apply bg-surface;
+  }
+
+  .section-kraft {
+    background: linear-gradient(180deg, #E8D5C4 0%, #D4A574 100%);
+  }
+
+  .section-red {
+    @apply bg-diner-red text-white;
+  }
+
+  /* ============================================
+     UTILITY BORDERS
+     ============================================ */
+  .border-3 {
+    border-width: 3px;
+  }
+
+  .border-dashed-wide {
+    border-style: dashed;
+    border-width: 3px;
+  }
+}
+
+@layer utilities {
+  .text-shadow-diner {
+    text-shadow: 2px 2px 0 rgba(61, 35, 20, 0.2);
+  }
+
+  .rotate-stamp {
+    transform: rotate(-3deg);
+  }
+
+  .rotate-stamp-alt {
+    transform: rotate(3deg);
+  }
+
+  /* Prevent text selection on decorative elements */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}

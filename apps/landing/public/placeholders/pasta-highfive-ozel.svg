@@ -1,0 +1,60 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate (premium golden rim) -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#D4AF37"/>
+  <ellipse cx="100" cy="157" rx="82" ry="23" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Special sauce base (rich brown with golden tint) -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#8B4513"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#A0522D"/>
+  <!-- Golden highlight -->
+  <ellipse cx="85" cy="105" rx="20" ry="10" fill="#D4AF37" opacity="0.2"/>
+  
+  <!-- Pasta noodles (premium tagliatelle) -->
+  <path d="M50,93 Q70,83 90,93 T130,93 T160,88" stroke="#F4D03F" stroke-width="6" fill="none"/>
+  <path d="M45,106 Q65,96 85,106 T125,106 T155,101" stroke="#F5D742" stroke-width="6" fill="none"/>
+  <path d="M55,119 Q75,109 95,119 T135,119 T160,114" stroke="#F4D03F" stroke-width="6" fill="none"/>
+  <path d="M50,132 Q70,122 90,132 T130,132" stroke="#F5D742" stroke-width="6" fill="none"/>
+  
+  <!-- Füme et (smoked meat) strips -->
+  <rect x="60" y="92" width="24" height="8" rx="2" fill="#4A2020" transform="rotate(-15 72 96)"/>
+  <rect x="105" y="88" width="26" height="8" rx="2" fill="#4A2020" transform="rotate(12 118 92)"/>
+  <rect x="70" y="115" width="22" height="8" rx="2" fill="#4A2020" transform="rotate(5 81 119)"/>
+  <rect x="118" y="118" width="24" height="8" rx="2" fill="#4A2020" transform="rotate(-8 130 122)"/>
+  
+  <!-- Parmesan shavings -->
+  <ellipse cx="75" cy="100" rx="8" ry="4" fill="#FFFACD" transform="rotate(-25 75 100)"/>
+  <ellipse cx="115" cy="105" rx="7" ry="3" fill="#FFFACD" transform="rotate(15 115 105)"/>
+  <ellipse cx="90" cy="125" rx="8" ry="4" fill="#FFFACD" transform="rotate(-10 90 125)"/>
+  <ellipse cx="130" cy="110" rx="6" ry="3" fill="#FFFACD" transform="rotate(20 130 110)"/>
+  
+  <!-- Kaşar cheese melted patches -->
+  <ellipse cx="85" cy="108" rx="14" ry="8" fill="#FFD700" opacity="0.6"/>
+  <ellipse cx="120" cy="115" rx="12" ry="7" fill="#FFD700" opacity="0.5"/>
+  <ellipse cx="70" cy="120" rx="10" ry="6" fill="#FFD700" opacity="0.6"/>
+  
+  <!-- Premium garnish - basil and pepper -->
+  <ellipse cx="95" cy="85" rx="8" ry="5" fill="#228B22" transform="rotate(-15 95 85)"/>
+  <ellipse cx="105" cy="88" rx="7" ry="4" fill="#2E8B2E" transform="rotate(10 105 88)"/>
+  <circle cx="100" cy="82" r="2" fill="#2E8B2E"/>
+  
+  <!-- Black pepper specks -->
+  <circle cx="80" cy="105" r="1" fill="#1C1C1C"/>
+  <circle cx="110" cy="100" r="1" fill="#1C1C1C"/>
+  <circle cx="95" cy="120" r="1" fill="#1C1C1C"/>
+  <circle cx="125" cy="108" r="1" fill="#1C1C1C"/>
+  
+  <!-- Special star decoration -->
+  <g transform="translate(100, 75)" opacity="0.4">
+    <polygon points="0,-6 1.5,-1.5 6,-1.5 2.5,1.5 4,6 0,3 -4,6 -2.5,1.5 -6,-1.5 -1.5,-1.5" fill="#D4AF37"/>
+  </g>
+  
+  <!-- Premium shine effect -->
+  <ellipse cx="70" cy="95" rx="15" ry="8" fill="white" opacity="0.1" transform="rotate(-20 70 95)"/>
+  
+  <!-- Steam (more prominent) -->
+  <path d="M80,55 Q75,40 80,28" stroke="#DDD" stroke-width="2.5" fill="none" opacity="0.6"/>
+  <path d="M100,50 Q95,35 100,23" stroke="#DDD" stroke-width="2.5" fill="none" opacity="0.6"/>
+  <path d="M120,55 Q125,40 120,28" stroke="#DDD" stroke-width="2.5" fill="none" opacity="0.6"/>
+</svg>

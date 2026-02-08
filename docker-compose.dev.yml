@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Development configuration - only runs database and redis
+# Apps run locally via nx serve
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: highfive-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: highfive
+      POSTGRES_PASSWORD: highfive123
+      POSTGRES_DB: highfive_suite
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U highfive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: highfive-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Adminer - Database GUI
+  adminer:
+    image: adminer:latest
+    container_name: highfive-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+

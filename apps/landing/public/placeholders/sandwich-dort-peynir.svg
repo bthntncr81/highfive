@@ -1,0 +1,48 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread -->
+  <path d="M15,115 Q100,125 185,115 L182,108 Q100,118 18,108 Z" fill="#B8860B"/>
+  <path d="M18,108 Q100,118 182,108 L180,103 Q100,112 20,103 Z" fill="#D4A574"/>
+  
+  <!-- Fresh basil leaves -->
+  <ellipse cx="50" cy="95" rx="10" ry="5" fill="#228B22" transform="rotate(-20 50 95)"/>
+  <ellipse cx="100" cy="93" rx="12" ry="6" fill="#2E8B2E" transform="rotate(10 100 93)"/>
+  <ellipse cx="150" cy="95" rx="10" ry="5" fill="#228B22" transform="rotate(-10 150 95)"/>
+  
+  <!-- Labne cream base -->
+  <ellipse cx="100" cy="85" rx="65" ry="6" fill="#FFFAFA" opacity="0.8"/>
+  
+  <!-- Mozzarella (white) -->
+  <ellipse cx="45" cy="75" rx="18" ry="8" fill="#FFF8DC"/>
+  <ellipse cx="45" cy="75" rx="14" ry="5" fill="#FFFFF0"/>
+  
+  <!-- Kaşar (yellow) -->
+  <rect x="75" y="68" width="25" height="12" rx="2" fill="#FFD700"/>
+  <rect x="77" y="70" width="21" height="8" rx="1" fill="#FFEC8B"/>
+  
+  <!-- Parmesan shavings -->
+  <path d="M120,72 Q125,68 130,73 Q135,69 140,74" fill="none" stroke="#FFF8DC" stroke-width="3"/>
+  <path d="M125,78 Q130,74 135,79" fill="none" stroke="#FFFACD" stroke-width="2"/>
+  <path d="M140,70 Q145,66 150,71" fill="none" stroke="#FFF8DC" stroke-width="3"/>
+  
+  <!-- Grana/extra parmesan -->
+  <ellipse cx="160" cy="75" rx="12" ry="6" fill="#FFDAB9"/>
+  
+  <!-- Melted cheese drip effect -->
+  <path d="M40,85 Q42,92 40,98" stroke="#FFF8DC" stroke-width="3" fill="none"/>
+  <path d="M90,85 Q92,95 90,102" stroke="#FFD700" stroke-width="3" fill="none"/>
+  <path d="M145,85 Q147,90 145,95" stroke="#FFFACD" stroke-width="2" fill="none"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,62 Q100,42 185,62 L185,57 Q100,35 15,57 Z" fill="#A67C52"/>
+  <path d="M15,57 Q100,35 185,57 L182,52 Q100,32 18,52 Z" fill="#B8860B"/>
+  <path d="M18,52 Q100,32 182,52 L180,48 Q100,30 20,48 Z" fill="#D4A574"/>
+  
+  <!-- Grill marks -->
+  <line x1="45" y1="45" x2="55" y2="48" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="85" y1="40" x2="95" y2="43" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="125" y1="40" x2="135" y2="43" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="160" y1="45" x2="170" y2="48" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+</svg>

@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: highfive-db
+    environment:
+      POSTGRES_USER: highfive
+      POSTGRES_PASSWORD: highfive123
+      POSTGRES_DB: highfive_suite
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U highfive -d highfive_suite"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # API Backend
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: highfive-api
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://highfive:highfive123@postgres:5432/highfive_suite
+      JWT_SECRET: highfive-super-secret-key-2026
+      PORT: 3000
+      IYZICO_API_KEY: sandbox-ifkcjkaPdtshoWkt36gjOwpZ9Z5XsUZM
+      IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # POS Frontend
+  pos:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pos
+      args:
+        VITE_API_URL: http://localhost:3000
+        VITE_WS_URL: ws://localhost:3000/ws
+    container_name: highfive-pos
+    ports:
+      - "5501:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Kitchen Frontend
+  kitchen:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.kitchen
+      args:
+        VITE_API_URL: http://localhost:3000
+        VITE_WS_URL: ws://localhost:3000/ws
+    container_name: highfive-kitchen
+    ports:
+      - "5502:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Customer Landing Page
+  landing:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.landing
+      args:
+        VITE_API_URL: http://localhost:3000
+    container_name: highfive-landing
+    ports:
+      - "5503:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

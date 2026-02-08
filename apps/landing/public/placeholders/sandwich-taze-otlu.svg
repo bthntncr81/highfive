@@ -1,0 +1,48 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom ciabatta bread -->
+  <path d="M20,110 Q100,125 180,110 L175,100 Q100,115 25,100 Z" fill="#D4A574"/>
+  <path d="M25,100 Q100,115 175,100 L170,95 Q100,108 30,95 Z" fill="#E8C9A0"/>
+  
+  <!-- Pesto sauce -->
+  <path d="M35,92 Q100,96 165,92" stroke="#4A7023" stroke-width="4" fill="none"/>
+  
+  <!-- Arugula leaves -->
+  <ellipse cx="45" cy="85" rx="14" ry="6" fill="#228B22" transform="rotate(-15 45 85)"/>
+  <ellipse cx="80" cy="83" rx="15" ry="7" fill="#2E8B2E" transform="rotate(10 80 83)"/>
+  <ellipse cx="120" cy="84" rx="14" ry="6" fill="#228B22" transform="rotate(-8 120 84)"/>
+  <ellipse cx="155" cy="85" rx="13" ry="6" fill="#2E8B2E" transform="rotate(12 155 85)"/>
+  
+  <!-- Fresh basil leaves -->
+  <ellipse cx="55" cy="77" rx="10" ry="5" fill="#228B22" transform="rotate(20 55 77)"/>
+  <ellipse cx="100" cy="75" rx="12" ry="6" fill="#2E8B2E" transform="rotate(-15 100 75)"/>
+  <ellipse cx="145" cy="77" rx="10" ry="5" fill="#228B22" transform="rotate(15 145 77)"/>
+  
+  <!-- Labne cream layer -->
+  <ellipse cx="100" cy="68" rx="60" ry="7" fill="#FFFAFA"/>
+  <ellipse cx="60" cy="67" rx="18" ry="4" fill="#FFFFFF" opacity="0.8"/>
+  <ellipse cx="140" cy="67" rx="18" ry="4" fill="#FFFFFF" opacity="0.8"/>
+  
+  <!-- Kaşar cheese slices -->
+  <rect x="40" y="55" width="35" height="9" rx="2" fill="#FFD700"/>
+  <rect x="42" y="57" width="31" height="5" rx="1" fill="#FFEC8B"/>
+  <rect x="85" y="53" width="40" height="10" rx="2" fill="#FFD700"/>
+  <rect x="87" y="55" width="36" height="6" rx="1" fill="#FFEC8B"/>
+  <rect x="135" y="55" width="35" height="9" rx="2" fill="#FFD700"/>
+  <rect x="137" y="57" width="31" height="5" rx="1" fill="#FFEC8B"/>
+  
+  <!-- Top ciabatta bread -->
+  <path d="M20,48 Q100,28 180,48 L180,43 Q100,20 20,43 Z" fill="#C9956C"/>
+  <path d="M20,43 Q100,20 180,43 L175,39 Q100,18 25,39 Z" fill="#D4A574"/>
+  <path d="M25,39 Q100,18 175,39 L170,36 Q100,16 30,36 Z" fill="#E8C9A0"/>
+  
+  <!-- Herb decoration on top -->
+  <ellipse cx="90" cy="30" rx="8" ry="4" fill="#228B22" transform="rotate(-20 90 30)"/>
+  <ellipse cx="110" cy="30" rx="8" ry="4" fill="#2E8B2E" transform="rotate(20 110 30)"/>
+  
+  <!-- Flour spots -->
+  <circle cx="55" cy="33" r="2" fill="#F5DEB3" opacity="0.6"/>
+  <circle cx="145" cy="33" r="2" fill="#F5DEB3" opacity="0.6"/>
+</svg>

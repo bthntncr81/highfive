@@ -1,0 +1,48 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom ciabatta bread -->
+  <path d="M20,110 Q100,125 180,110 L175,100 Q100,115 25,100 Z" fill="#D4A574"/>
+  <path d="M25,100 Q100,115 175,100 L170,95 Q100,108 30,95 Z" fill="#E8C9A0"/>
+  
+  <!-- Olive tapenade + pesto mix -->
+  <path d="M35,92 Q60,88 85,92" stroke="#2F4F4F" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M90,90 Q115,86 140,90" stroke="#4A7023" stroke-width="3" fill="none"/>
+  <path d="M145,92 Q160,88 165,92" stroke="#2F4F4F" stroke-width="3" fill="none" opacity="0.8"/>
+  
+  <!-- Arugula leaves -->
+  <ellipse cx="45" cy="84" rx="14" ry="5" fill="#228B22" transform="rotate(-15 45 84)"/>
+  <ellipse cx="85" cy="82" rx="15" ry="6" fill="#2E8B2E" transform="rotate(8 85 82)"/>
+  <ellipse cx="125" cy="84" rx="14" ry="5" fill="#228B22" transform="rotate(-10 125 84)"/>
+  <ellipse cx="160" cy="83" rx="13" ry="5" fill="#2E8B2E" transform="rotate(5 160 83)"/>
+  
+  <!-- Tomato slices -->
+  <circle cx="60" cy="74" r="11" fill="#DC3545"/>
+  <circle cx="60" cy="74" r="7" fill="#E63946"/>
+  <circle cx="100" cy="72" r="12" fill="#DC3545"/>
+  <circle cx="100" cy="72" r="8" fill="#E63946"/>
+  <circle cx="140" cy="74" r="11" fill="#DC3545"/>
+  <circle cx="140" cy="74" r="7" fill="#E63946"/>
+  
+  <!-- Roasted red peppers -->
+  <rect x="35" y="62" width="28" height="5" rx="2" fill="#8B0000" transform="rotate(-5 49 64)"/>
+  <rect x="85" y="60" width="30" height="5" rx="2" fill="#8B0000" transform="rotate(3 100 62)"/>
+  <rect x="135" y="62" width="28" height="5" rx="2" fill="#8B0000" transform="rotate(-3 149 64)"/>
+  
+  <!-- Parmesan shavings -->
+  <path d="M40,52 Q45,48 50,53 Q55,49 60,54" fill="none" stroke="#FFF8DC" stroke-width="3"/>
+  <path d="M80,50 Q85,46 90,51 Q95,47 100,52" fill="none" stroke="#FFFACD" stroke-width="3"/>
+  <path d="M120,52 Q125,48 130,53 Q135,49 140,54" fill="none" stroke="#FFF8DC" stroke-width="3"/>
+  <path d="M155,50 Q160,46 165,51" fill="none" stroke="#FFFACD" stroke-width="2"/>
+  
+  <!-- Top ciabatta bread -->
+  <path d="M20,45 Q100,25 180,45 L180,40 Q100,18 20,40 Z" fill="#C9956C"/>
+  <path d="M20,40 Q100,18 180,40 L175,36 Q100,16 25,36 Z" fill="#D4A574"/>
+  <path d="M25,36 Q100,16 175,36 L170,33 Q100,14 30,33 Z" fill="#E8C9A0"/>
+  
+  <!-- Flour spots -->
+  <circle cx="55" cy="30" r="2" fill="#F5DEB3" opacity="0.6"/>
+  <circle cx="100" cy="25" r="2.5" fill="#F5DEB3" opacity="0.6"/>
+  <circle cx="145" cy="30" r="2" fill="#F5DEB3" opacity="0.6"/>
+</svg>

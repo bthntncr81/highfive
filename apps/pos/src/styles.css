@@ -1,0 +1,595 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   HIGH FIVE POS - RETRO DINER THEME
+   ============================================ */
+
+:root {
+  /* Primary Colors */
+  --color-red: #C41E3A;
+  --color-red-dark: #9B1730;
+  --color-red-light: #E85A70;
+  
+  /* Accent Colors */
+  --color-gold: #F4A300;
+  --color-gold-dark: #CC8800;
+  --color-gold-light: #FFB733;
+  
+  /* Neutral Colors */
+  --color-cream: #FDF6E3;
+  --color-kraft: #D4A574;
+  --color-brown: #5D4037;
+  --color-brown-dark: #3E2723;
+  
+  /* Background Patterns */
+  --checkered-pattern: repeating-conic-gradient(
+    #F5E6D3 0% 25%,
+    #EBD9C4 0% 50%
+  ) 50% / 20px 20px;
+  
+  --paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  html {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  body {
+    background: var(--color-cream);
+    color: var(--color-brown-dark);
+    position: relative;
+  }
+  
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    background: var(--paper-texture);
+    pointer-events: none;
+    z-index: 9999;
+  }
+}
+
+@layer components {
+  /* ============================================
+     BUTTONS
+     ============================================ */
+  .btn {
+    @apply px-5 py-2.5 rounded-xl font-semibold transition-all duration-200;
+    @apply focus:outline-none focus:ring-4 focus:ring-offset-2;
+    @apply transform active:scale-95;
+    @apply shadow-md hover:shadow-lg;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
+    @apply text-white;
+    @apply hover:brightness-110 focus:ring-red-500/30;
+    box-shadow: 0 4px 0 var(--color-red-dark), 0 6px 20px rgba(196, 30, 58, 0.3);
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--color-red-dark), 0 8px 25px rgba(196, 30, 58, 0.4);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--color-red-dark), 0 2px 10px rgba(196, 30, 58, 0.3);
+  }
+  
+  .btn-secondary {
+    background: linear-gradient(135deg, #FFF 0%, #F5F5F5 100%);
+    @apply text-gray-700 border-2 border-gray-200;
+    @apply hover:bg-gray-50 focus:ring-gray-500/20;
+    box-shadow: 0 4px 0 #E5E5E5, 0 6px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #E5E5E5, 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .btn-secondary:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #E5E5E5, 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-gold {
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+    @apply text-white;
+    @apply hover:brightness-110 focus:ring-yellow-500/30;
+    box-shadow: 0 4px 0 var(--color-gold-dark), 0 6px 20px rgba(244, 163, 0, 0.3);
+  }
+  
+  .btn-success {
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+    @apply text-white;
+    @apply hover:brightness-110 focus:ring-green-500/30;
+    box-shadow: 0 4px 0 #15803D, 0 6px 20px rgba(34, 197, 94, 0.3);
+  }
+  
+  .btn-danger {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    @apply text-white;
+    @apply hover:brightness-110 focus:ring-red-500/30;
+    box-shadow: 0 4px 0 #B91C1C, 0 6px 20px rgba(239, 68, 68, 0.3);
+  }
+  
+  /* ============================================
+     CARDS
+     ============================================ */
+  .card {
+    @apply rounded-2xl p-5;
+    background: white;
+    border: 3px solid #E5E0D5;
+    box-shadow: 
+      0 8px 0 #E5E0D5,
+      0 12px 40px rgba(93, 64, 55, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+      0 12px 0 #E5E0D5,
+      0 16px 50px rgba(93, 64, 55, 0.15);
+  }
+  
+  .card-kraft {
+    background: linear-gradient(135deg, #E8D5BC 0%, #D4A574 100%);
+    border: 3px solid #C49A6C;
+    box-shadow: 
+      0 8px 0 #B58B5D,
+      0 12px 40px rgba(93, 64, 55, 0.2);
+  }
+  
+  .card-red {
+    background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
+    border: 3px solid var(--color-red-dark);
+    @apply text-white;
+    box-shadow: 
+      0 8px 0 #7A1122,
+      0 12px 40px rgba(196, 30, 58, 0.3);
+  }
+  
+  .card-checkered {
+    background: var(--checkered-pattern);
+    border: 3px solid #D4C5B0;
+  }
+  
+  /* ============================================
+     INPUTS
+     ============================================ */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl;
+    @apply border-2 border-gray-200;
+    @apply focus:outline-none focus:border-transparent;
+    @apply focus:ring-4 focus:ring-yellow-500/30;
+    background: white;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .input:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 4px rgba(244, 163, 0, 0.2);
+  }
+  
+  /* ============================================
+     BADGES
+     ============================================ */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
+    @apply uppercase tracking-wide;
+    border: 2px solid currentColor;
+  }
+  
+  .badge-red {
+    background: rgba(196, 30, 58, 0.1);
+    color: var(--color-red);
+    border-color: var(--color-red);
+  }
+  
+  .badge-gold {
+    background: rgba(244, 163, 0, 0.1);
+    color: var(--color-gold-dark);
+    border-color: var(--color-gold);
+  }
+  
+  .badge-green {
+    @apply bg-green-100 text-green-700 border-green-500;
+  }
+  
+  .badge-blue {
+    @apply bg-blue-100 text-blue-700 border-blue-500;
+  }
+  
+  /* ============================================
+     STAMPS & STICKERS
+     ============================================ */
+  .stamp {
+    @apply inline-flex items-center justify-center;
+    @apply px-4 py-2 rounded-lg;
+    @apply font-bold uppercase tracking-wider;
+    @apply transform -rotate-3;
+    border: 4px double currentColor;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  
+  .stamp-red {
+    color: var(--color-red);
+    background: rgba(196, 30, 58, 0.1);
+  }
+  
+  .stamp-gold {
+    color: var(--color-gold-dark);
+    background: rgba(244, 163, 0, 0.1);
+  }
+  
+  /* ============================================
+     TABLE CARD SPECIFIC
+     ============================================ */
+  .table-card {
+    @apply rounded-2xl p-4 cursor-pointer;
+    background: white;
+    border: 3px solid #E5E0D5;
+    box-shadow: 0 6px 0 #D5D0C5, 0 10px 30px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .table-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #E5E0D5;
+    transition: background 0.3s;
+  }
+  
+  .table-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 12px 0 #D5D0C5, 0 16px 40px rgba(0, 0, 0, 0.12);
+  }
+  
+  .table-card.table-free::before {
+    background: linear-gradient(90deg, #22C55E, #16A34A);
+  }
+  
+  .table-card.table-occupied::before {
+    background: linear-gradient(90deg, var(--color-red), var(--color-red-dark));
+  }
+  
+  .table-card.table-reserved::before {
+    background: linear-gradient(90deg, #3B82F6, #2563EB);
+  }
+  
+  .table-card.table-cleaning::before {
+    background: linear-gradient(90deg, var(--color-gold), var(--color-gold-dark));
+  }
+  
+  /* ============================================
+     NAVIGATION
+     ============================================ */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl;
+    @apply font-semibold transition-all duration-200;
+    position: relative;
+  }
+  
+  .nav-link:not(.active) {
+    @apply text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+  }
+  
+  .nav-link.active {
+    background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
+    @apply text-white;
+    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.3);
+  }
+  
+  /* ============================================
+     STAT CARDS
+     ============================================ */
+  .stat-card {
+    @apply rounded-2xl p-5 relative overflow-hidden;
+    background: white;
+    border: 3px solid #E5E0D5;
+    box-shadow: 0 6px 0 #D5D0C5, 0 10px 30px rgba(0, 0, 0, 0.08);
+  }
+  
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(244, 163, 0, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  
+  .stat-card .stat-icon {
+    @apply w-14 h-14 rounded-2xl flex items-center justify-center;
+    @apply shadow-lg;
+  }
+  
+  .stat-card .stat-value {
+    @apply text-3xl font-extrabold;
+    background: linear-gradient(135deg, var(--color-brown) 0%, var(--color-brown-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* ============================================
+     PIN PAD
+     ============================================ */
+  .pin-button {
+    @apply h-20 rounded-2xl text-2xl font-bold;
+    @apply transition-all duration-150;
+    @apply flex items-center justify-center;
+    background: white;
+    border: 3px solid #E5E0D5;
+    box-shadow: 0 4px 0 #D5D0C5, 0 6px 15px rgba(0, 0, 0, 0.08);
+    color: var(--color-brown);
+  }
+  
+  .pin-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #D5D0C5, 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pin-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #D5D0C5, 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  
+  .pin-button.clear {
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    border-color: #FECACA;
+    color: var(--color-red);
+  }
+  
+  .pin-button.delete {
+    background: linear-gradient(135deg, #F5F5F5 0%, #E5E5E5 100%);
+    border-color: #E5E5E5;
+    color: #666;
+  }
+  
+  .pin-dot {
+    @apply w-5 h-5 rounded-full;
+    @apply transition-all duration-200;
+    background: #E5E0D5;
+  }
+  
+  .pin-dot.filled {
+    background: var(--color-red);
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(196, 30, 58, 0.4);
+  }
+  
+  /* ============================================
+     ORDER STATUS BADGES
+     ============================================ */
+  .status-pending {
+    @apply bg-amber-50 text-amber-700 border-amber-300;
+  }
+  
+  .status-confirmed {
+    @apply bg-blue-50 text-blue-700 border-blue-300;
+  }
+  
+  .status-preparing {
+    @apply bg-orange-50 text-orange-700 border-orange-300;
+  }
+  
+  .status-ready {
+    @apply bg-green-50 text-green-700 border-green-300;
+  }
+  
+  .status-served {
+    @apply bg-teal-50 text-teal-700 border-teal-300;
+  }
+  
+  .status-completed {
+    @apply bg-gray-50 text-gray-700 border-gray-300;
+  }
+  
+  .status-cancelled {
+    @apply bg-red-50 text-red-700 border-red-300;
+  }
+  
+  /* ============================================
+     KITCHEN DISPLAY
+     ============================================ */
+  .kitchen-order-card {
+    @apply rounded-2xl p-4;
+    background: white;
+    border: 4px solid;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.1), 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+  }
+  
+  .kitchen-order-card.pending {
+    border-color: #F59E0B;
+    animation: pulse-border 2s infinite;
+  }
+  
+  .kitchen-order-card.preparing {
+    border-color: #3B82F6;
+  }
+  
+  .kitchen-order-card.ready {
+    border-color: #22C55E;
+    animation: glow-green 1.5s infinite;
+  }
+  
+  @keyframes pulse-border {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    }
+  }
+  
+  @keyframes glow-green {
+    0%, 100% {
+      box-shadow: 0 6px 0 rgba(34, 197, 94, 0.3), 0 0 20px rgba(34, 197, 94, 0.2);
+    }
+    50% {
+      box-shadow: 0 6px 0 rgba(34, 197, 94, 0.3), 0 0 30px rgba(34, 197, 94, 0.4);
+    }
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Stagger animations for lists */
+.stagger-item {
+  animation: slide-up 0.4s ease-out backwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+.stagger-item:nth-child(6) { animation-delay: 0.3s; }
+.stagger-item:nth-child(7) { animation-delay: 0.35s; }
+.stagger-item:nth-child(8) { animation-delay: 0.4s; }
+.stagger-item:nth-child(9) { animation-delay: 0.45s; }
+.stagger-item:nth-child(10) { animation-delay: 0.5s; }
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F0E8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4C5B0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C4B5A0;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.font-display {
+  font-family: 'Bebas Neue', 'Permanent Marker', cursive;
+  letter-spacing: 0.05em;
+}
+
+.font-handwritten {
+  font-family: 'Permanent Marker', cursive;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-red) 0%, var(--color-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-checkered {
+  background: var(--checkered-pattern);
+}
+
+.bg-paper {
+  background-color: var(--color-cream);
+  position: relative;
+}
+
+.bg-paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--paper-texture);
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Neon glow effect */
+.neon-red {
+  text-shadow: 
+    0 0 5px var(--color-red),
+    0 0 10px var(--color-red),
+    0 0 20px var(--color-red);
+}
+
+.neon-gold {
+  text-shadow: 
+    0 0 5px var(--color-gold),
+    0 0 10px var(--color-gold),
+    0 0 20px var(--color-gold);
+}

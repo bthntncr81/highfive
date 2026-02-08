@@ -1,0 +1,40 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Cheese sauce base (creamy yellow) -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#FFD700"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#FFEC8B"/>
+  
+  <!-- Pasta noodles (fettuccine style) -->
+  <path d="M50,100 Q70,90 90,100 T130,100 T150,95" stroke="#F4D03F" stroke-width="5" fill="none"/>
+  <path d="M55,110 Q75,100 95,110 T135,110 T155,105" stroke="#F5D742" stroke-width="5" fill="none"/>
+  <path d="M45,120 Q65,110 85,120 T125,120 T145,115" stroke="#F4D03F" stroke-width="5" fill="none"/>
+  <path d="M60,130 Q80,120 100,130 T140,130" stroke="#F5D742" stroke-width="5" fill="none"/>
+  
+  <!-- Four cheese patches -->
+  <!-- Mozzarella -->
+  <ellipse cx="70" cy="100" rx="12" ry="8" fill="#FFF8DC" opacity="0.9"/>
+  <!-- Cheddar -->
+  <ellipse cx="120" cy="105" rx="10" ry="7" fill="#FFA500" opacity="0.8"/>
+  <!-- Parmesan shavings -->
+  <ellipse cx="90" cy="120" rx="8" ry="5" fill="#FFFACD" opacity="0.9" transform="rotate(20 90 120)"/>
+  <ellipse cx="110" cy="115" rx="7" ry="4" fill="#FFFACD" opacity="0.9" transform="rotate(-15 110 115)"/>
+  <!-- Gorgonzola spots -->
+  <circle cx="80" cy="110" r="4" fill="#B8C4B8" opacity="0.7"/>
+  <circle cx="130" cy="115" r="3" fill="#B8C4B8" opacity="0.7"/>
+  
+  <!-- Melted cheese strings -->
+  <path d="M75,105 Q85,100 95,105" stroke="#FFFACD" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M100,115 Q110,110 120,115" stroke="#FFE4B5" stroke-width="3" fill="none" opacity="0.7"/>
+  
+  <!-- Cream drizzle -->
+  <path d="M65,125 Q100,115 135,125" stroke="#FFFDD0" stroke-width="3" fill="none" opacity="0.6"/>
+  
+  <!-- Steam -->
+  <path d="M85,70 Q80,55 85,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,65 Q95,50 100,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,70 Q120,55 115,45" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

@@ -1,0 +1,45 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pizza base -->
+  <circle cx="100" cy="100" r="95" fill="#D4A574"/>
+  <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
+  <!-- Tomato sauce -->
+  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <!-- Mozzarella -->
+  <circle cx="100" cy="100" r="78" fill="#FFD93D" opacity="0.85"/>
+  <!-- Sucuk slices (Turkish sausage - dark red) -->
+  <circle cx="60" cy="70" r="11" fill="#8B0000"/>
+  <circle cx="60" cy="70" r="7" fill="#A52A2A"/>
+  <circle cx="130" cy="115" r="11" fill="#8B0000"/>
+  <circle cx="130" cy="115" r="7" fill="#A52A2A"/>
+  <circle cx="85" cy="130" r="11" fill="#8B0000"/>
+  <circle cx="85" cy="130" r="7" fill="#A52A2A"/>
+  <!-- Salami slices (lighter pink-red with white spots) -->
+  <circle cx="115" cy="60" r="12" fill="#CD5C5C"/>
+  <circle cx="115" cy="60" r="2" fill="#FFF" cx="112" cy="57"/>
+  <circle cx="118" cy="63" r="1.5" fill="#FFF"/>
+  <circle cx="113" cy="62" r="1.5" fill="#FFF"/>
+  <circle cx="70" cy="105" r="12" fill="#CD5C5C"/>
+  <circle cx="67" cy="102" r="2" fill="#FFF"/>
+  <circle cx="73" cy="108" r="1.5" fill="#FFF"/>
+  <circle cx="68" cy="107" r="1.5" fill="#FFF"/>
+  <circle cx="140" cy="80" r="11" fill="#CD5C5C"/>
+  <circle cx="137" cy="77" r="2" fill="#FFF"/>
+  <circle cx="143" cy="83" r="1.5" fill="#FFF"/>
+  <!-- Mushroom slices -->
+  <g transform="translate(100, 85)">
+    <ellipse cx="0" cy="0" rx="10" ry="7" fill="#D2B48C"/>
+    <path d="M-8,0 Q0,-10 8,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(55, 90)">
+    <ellipse cx="0" cy="0" rx="9" ry="6" fill="#D2B48C"/>
+    <path d="M-7,0 Q0,-8 7,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(120, 140)">
+    <ellipse cx="0" cy="0" rx="9" ry="6" fill="#D2B48C"/>
+    <path d="M-7,0 Q0,-8 7,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(150, 100)">
+    <ellipse cx="0" cy="0" rx="8" ry="5" fill="#D2B48C"/>
+    <path d="M-6,0 Q0,-7 6,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+</svg>

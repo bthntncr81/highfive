@@ -1,0 +1,37 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pizza base -->
+  <circle cx="100" cy="100" r="95" fill="#D4A574"/>
+  <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
+  <!-- Tomato sauce -->
+  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <!-- Mozzarella -->
+  <circle cx="100" cy="100" r="78" fill="#FFD93D" opacity="0.85"/>
+  <!-- Sucuk slices (Turkish sausage - dark red) -->
+  <circle cx="65" cy="75" r="12" fill="#8B0000"/>
+  <circle cx="65" cy="75" r="8" fill="#A52A2A"/>
+  <circle cx="115" cy="65" r="12" fill="#8B0000"/>
+  <circle cx="115" cy="65" r="8" fill="#A52A2A"/>
+  <circle cx="135" cy="110" r="12" fill="#8B0000"/>
+  <circle cx="135" cy="110" r="8" fill="#A52A2A"/>
+  <circle cx="75" cy="125" r="12" fill="#8B0000"/>
+  <circle cx="75" cy="125" r="8" fill="#A52A2A"/>
+  <circle cx="100" cy="95" r="12" fill="#8B0000"/>
+  <circle cx="100" cy="95" r="8" fill="#A52A2A"/>
+  <!-- Jalapeno slices (green rings) -->
+  <circle cx="85" cy="70" r="6" fill="#228B22" stroke="#006400" stroke-width="2"/>
+  <circle cx="85" cy="70" r="3" fill="#FFD93D"/>
+  <circle cx="130" cy="85" r="6" fill="#228B22" stroke="#006400" stroke-width="2"/>
+  <circle cx="130" cy="85" r="3" fill="#FFD93D"/>
+  <circle cx="60" cy="105" r="6" fill="#228B22" stroke="#006400" stroke-width="2"/>
+  <circle cx="60" cy="105" r="3" fill="#FFD93D"/>
+  <circle cx="110" cy="130" r="6" fill="#228B22" stroke="#006400" stroke-width="2"/>
+  <circle cx="110" cy="130" r="3" fill="#FFD93D"/>
+  <!-- Red pepper strips -->
+  <rect x="90" y="115" width="25" height="6" rx="2" fill="#DC143C" transform="rotate(-20 102 118)"/>
+  <rect x="55" cy="85" width="20" height="5" rx="2" fill="#DC143C" transform="rotate(15 65 87)"/>
+  <rect x="120" y="70" width="22" height="5" rx="2" fill="#DC143C" transform="rotate(-10 131 72)"/>
+  <!-- Fire effect accents -->
+  <circle cx="95" cy="80" r="3" fill="#FF4500" opacity="0.6"/>
+  <circle cx="125" cy="100" r="2" fill="#FF4500" opacity="0.6"/>
+  <circle cx="80" cy="115" r="2.5" fill="#FF4500" opacity="0.6"/>
+</svg>

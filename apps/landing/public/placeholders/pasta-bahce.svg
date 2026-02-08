@@ -1,0 +1,55 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate -->
+  <ellipse cx="100" cy="160" rx="85" ry="25" fill="#E8E8E8"/>
+  <ellipse cx="100" cy="155" rx="80" ry="22" fill="#FFFFFF"/>
+  <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
+  
+  <!-- Olive oil base (light golden) -->
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#F0E68C"/>
+  <ellipse cx="100" cy="115" rx="55" ry="30" fill="#FFFACD"/>
+  
+  <!-- Pasta noodles (fusilli/spiral style) -->
+  <ellipse cx="65" cy="105" rx="10" ry="6" fill="#F4D03F" transform="rotate(-20 65 105)"/>
+  <ellipse cx="85" cy="100" rx="10" ry="6" fill="#F5D742" transform="rotate(15 85 100)"/>
+  <ellipse cx="110" cy="95" rx="10" ry="6" fill="#F4D03F" transform="rotate(-10 110 95)"/>
+  <ellipse cx="130" cy="105" rx="10" ry="6" fill="#F5D742" transform="rotate(25 130 105)"/>
+  <ellipse cx="75" cy="120" rx="10" ry="6" fill="#F4D03F" transform="rotate(10 75 120)"/>
+  <ellipse cx="100" cy="115" rx="10" ry="6" fill="#F5D742" transform="rotate(-15 100 115)"/>
+  <ellipse cx="120" cy="125" rx="10" ry="6" fill="#F4D03F" transform="rotate(20 120 125)"/>
+  <ellipse cx="60" cy="130" rx="9" ry="5" fill="#F5D742" transform="rotate(-5 60 130)"/>
+  
+  <!-- Mixed vegetables -->
+  <!-- Broccoli -->
+  <circle cx="70" cy="95" r="8" fill="#228B22"/>
+  <circle cx="66" cy="92" r="4" fill="#2E8B2E"/>
+  <circle cx="74" cy="92" r="4" fill="#2E8B2E"/>
+  <circle cx="70" cy="88" r="4" fill="#2E8B2E"/>
+  
+  <!-- Cherry tomatoes -->
+  <circle cx="115" cy="100" r="6" fill="#DC3545"/>
+  <circle cx="113" cy="98" r="2" fill="#FF6B6B" opacity="0.6"/>
+  <circle cx="90" cy="125" r="5" fill="#DC3545"/>
+  <circle cx="88" cy="123" r="1.5" fill="#FF6B6B" opacity="0.6"/>
+  
+  <!-- Zucchini slices -->
+  <ellipse cx="135" cy="115" rx="8" ry="5" fill="#90EE90"/>
+  <ellipse cx="135" cy="115" rx="5" ry="3" fill="#98FB98"/>
+  <ellipse cx="55" cy="115" rx="7" ry="4" fill="#90EE90"/>
+  <ellipse cx="55" cy="115" rx="4" ry="2" fill="#98FB98"/>
+  
+  <!-- Carrot pieces -->
+  <rect x="95" cy="90" width="12" height="5" rx="2" fill="#FFA500" transform="rotate(15 101 92)"/>
+  <rect x="125" cy="120" width="10" height="4" rx="2" fill="#FFA500" transform="rotate(-10 130 122)"/>
+  
+  <!-- Bell pepper strips -->
+  <rect x="80" y="108" width="15" height="4" rx="1" fill="#FFD700" transform="rotate(-15 87 110)"/>
+  <rect x="105" y="130" width="12" height="4" rx="1" fill="#FF4500" transform="rotate(10 111 132)"/>
+  
+  <!-- Olive oil drizzle -->
+  <path d="M70,130 Q100,120 130,130" stroke="#9ACD32" stroke-width="2" fill="none" opacity="0.6"/>
+  
+  <!-- Steam -->
+  <path d="M85,65 Q80,50 85,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M100,60 Q95,45 100,35" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M115,65 Q120,50 115,40" stroke="#DDD" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>

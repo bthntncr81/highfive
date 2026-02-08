@@ -1,0 +1,53 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread -->
+  <path d="M15,115 Q100,125 185,115 L182,108 Q100,118 18,108 Z" fill="#B8860B"/>
+  <path d="M18,108 Q100,118 182,108 L180,103 Q100,112 20,103 Z" fill="#D4A574"/>
+  
+  <!-- Dijon/honey mustard -->
+  <path d="M35,98 Q100,102 165,98" stroke="#DAA520" stroke-width="3" fill="none"/>
+  
+  <!-- Cornichon (pickle) slices -->
+  <ellipse cx="50" cy="90" rx="8" ry="4" fill="#6B8E23" transform="rotate(-10 50 90)"/>
+  <ellipse cx="90" cy="88" rx="9" ry="4" fill="#556B2F"/>
+  <ellipse cx="130" cy="90" rx="8" ry="4" fill="#6B8E23" transform="rotate(10 130 90)"/>
+  <ellipse cx="160" cy="89" rx="7" ry="3" fill="#556B2F"/>
+  
+  <!-- Roasted red pepper strips -->
+  <rect x="40" y="80" width="30" height="5" rx="2" fill="#8B0000" transform="rotate(-5 55 82)"/>
+  <rect x="85" y="78" width="35" height="5" rx="2" fill="#8B0000" transform="rotate(3 102 80)"/>
+  <rect x="135" y="80" width="28" height="5" rx="2" fill="#8B0000" transform="rotate(-3 149 82)"/>
+  
+  <!-- Tulum cheese (crumbly white) -->
+  <circle cx="45" cy="70" r="7" fill="#FFF8DC"/>
+  <circle cx="60" cy="68" r="6" fill="#FFFFF0"/>
+  <circle cx="85" cy="67" r="8" fill="#FFF8DC"/>
+  <circle cx="105" cy="69" r="7" fill="#FFFFF0"/>
+  <circle cx="130" cy="68" r="6" fill="#FFF8DC"/>
+  <circle cx="150" cy="70" r="7" fill="#FFFFF0"/>
+  
+  <!-- Dana salam slices -->
+  <circle cx="40" cy="58" r="13" fill="#C41E3A"/>
+  <circle cx="40" cy="58" r="10" fill="#DC143C"/>
+  <circle cx="38" cy="56" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="80" cy="55" r="14" fill="#C41E3A"/>
+  <circle cx="80" cy="55" r="11" fill="#DC143C"/>
+  <circle cx="78" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="120" cy="55" r="14" fill="#C41E3A"/>
+  <circle cx="120" cy="55" r="11" fill="#DC143C"/>
+  <circle cx="118" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
+  <circle cx="160" cy="58" r="13" fill="#C41E3A"/>
+  <circle cx="160" cy="58" r="10" fill="#DC143C"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,50 Q100,30 185,50 L185,45 Q100,23 15,45 Z" fill="#A67C52"/>
+  <path d="M15,45 Q100,23 185,45 L182,40 Q100,20 18,40 Z" fill="#B8860B"/>
+  <path d="M18,40 Q100,20 182,40 L180,36 Q100,18 20,36 Z" fill="#D4A574"/>
+  
+  <!-- Grill marks -->
+  <line x1="45" y1="33" x2="55" y2="36" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="90" y1="28" x2="100" y2="31" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="135" y1="28" x2="145" y2="31" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+</svg>

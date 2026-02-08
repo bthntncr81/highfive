@@ -1,0 +1,45 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread (flatter) -->
+  <path d="M15,115 Q100,125 185,115 L182,108 Q100,118 18,108 Z" fill="#B8860B"/>
+  <path d="M18,108 Q100,118 182,108 L180,103 Q100,112 20,103 Z" fill="#D4A574"/>
+  
+  <!-- Dijon mustard drizzle -->
+  <path d="M30,100 Q100,105 170,100" stroke="#DAA520" stroke-width="3" fill="none"/>
+  
+  <!-- Roasted red pepper strips -->
+  <rect x="40" y="92" width="30" height="5" rx="2" fill="#8B0000" transform="rotate(-5 55 94)"/>
+  <rect x="90" y="90" width="35" height="5" rx="2" fill="#8B0000" transform="rotate(3 107 92)"/>
+  <rect x="140" y="92" width="28" height="5" rx="2" fill="#8B0000" transform="rotate(-3 154 94)"/>
+  
+  <!-- Caramelized onion -->
+  <ellipse cx="60" cy="85" rx="12" ry="4" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="100" cy="83" rx="14" ry="5" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="140" cy="85" rx="12" ry="4" fill="#8B4513" opacity="0.8"/>
+  
+  <!-- Mozzarella -->
+  <ellipse cx="50" cy="75" rx="16" ry="7" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="72" rx="18" ry="8" fill="#FFF8DC"/>
+  <ellipse cx="150" cy="75" rx="16" ry="7" fill="#FFF8DC"/>
+  
+  <!-- Smoked beef slices (dana füme) -->
+  <path d="M35,62 Q55,58 75,65" fill="#4A2020" stroke="#3D1A1A" stroke-width="1"/>
+  <path d="M35,62 L35,68 Q55,75 75,68 L75,65 Q55,58 35,62 Z" fill="#5D2E2E"/>
+  <path d="M85,60 Q105,55 125,62" fill="#4A2020" stroke="#3D1A1A" stroke-width="1"/>
+  <path d="M85,60 L85,66 Q105,72 125,66 L125,62 Q105,55 85,60 Z" fill="#5D2E2E"/>
+  <path d="M135,62 Q155,58 175,65" fill="#4A2020" stroke="#3D1A1A" stroke-width="1"/>
+  <path d="M135,62 L135,68 Q155,75 175,68 L175,65 Q155,58 135,62 Z" fill="#5D2E2E"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,52 Q100,35 185,52 L185,48 Q100,30 15,48 Z" fill="#A67C52"/>
+  <path d="M15,48 Q100,30 185,48 L182,44 Q100,27 18,44 Z" fill="#B8860B"/>
+  <path d="M18,44 Q100,27 182,44 L180,41 Q100,25 20,41 Z" fill="#D4A574"/>
+  
+  <!-- Pressed grill marks -->
+  <line x1="40" y1="38" x2="50" y2="42" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="80" y1="33" x2="90" y2="37" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="120" y1="33" x2="130" y2="37" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="160" y1="38" x2="170" y2="42" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+</svg>

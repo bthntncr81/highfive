@@ -1,0 +1,32 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pizza base -->
+  <circle cx="100" cy="100" r="95" fill="#D4A574"/>
+  <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
+  <!-- Tomato sauce - rich and visible -->
+  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <!-- Sauce texture -->
+  <circle cx="70" cy="80" r="15" fill="#A01830" opacity="0.3"/>
+  <circle cx="130" cy="70" r="12" fill="#A01830" opacity="0.3"/>
+  <circle cx="90" cy="130" r="14" fill="#A01830" opacity="0.3"/>
+  <circle cx="120" cy="110" r="10" fill="#A01830" opacity="0.3"/>
+  <!-- Garlic cloves -->
+  <ellipse cx="65" cy="75" rx="8" ry="12" fill="#F5F5DC" transform="rotate(-20 65 75)"/>
+  <ellipse cx="65" cy="75" rx="5" ry="8" fill="#FFFFF0" transform="rotate(-20 65 75)"/>
+  <ellipse cx="95" cy="60" rx="8" ry="12" fill="#F5F5DC" transform="rotate(15 95 60)"/>
+  <ellipse cx="95" cy="60" rx="5" ry="8" fill="#FFFFF0" transform="rotate(15 95 60)"/>
+  <ellipse cx="135" cy="85" rx="8" ry="12" fill="#F5F5DC" transform="rotate(-10 135 85)"/>
+  <ellipse cx="135" cy="85" rx="5" ry="8" fill="#FFFFF0" transform="rotate(-10 135 85)"/>
+  <ellipse cx="75" cy="120" rx="8" ry="12" fill="#F5F5DC" transform="rotate(25 75 120)"/>
+  <ellipse cx="75" cy="120" rx="5" ry="8" fill="#FFFFF0" transform="rotate(25 75 120)"/>
+  <ellipse cx="120" cy="135" rx="8" ry="12" fill="#F5F5DC" transform="rotate(-15 120 135)"/>
+  <ellipse cx="120" cy="135" rx="5" ry="8" fill="#FFFFF0" transform="rotate(-15 120 135)"/>
+  <ellipse cx="100" cy="100" rx="8" ry="12" fill="#F5F5DC" transform="rotate(5 100 100)"/>
+  <ellipse cx="100" cy="100" rx="5" ry="8" fill="#FFFFF0" transform="rotate(5 100 100)"/>
+  <!-- Oregano sprinkles -->
+  <circle cx="80" cy="90" r="1.5" fill="#228B22"/>
+  <circle cx="110" cy="75" r="1.5" fill="#228B22"/>
+  <circle cx="90" cy="115" r="1.5" fill="#228B22"/>
+  <circle cx="130" cy="100" r="1.5" fill="#228B22"/>
+  <circle cx="70" cy="105" r="1.5" fill="#228B22"/>
+  <circle cx="115" cy="125" r="1.5" fill="#228B22"/>
+</svg>

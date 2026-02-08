@@ -1,0 +1,33 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pizza base -->
+  <circle cx="100" cy="100" r="95" fill="#D4A574"/>
+  <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
+  <!-- Tomato sauce -->
+  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <!-- Mozzarella -->
+  <circle cx="100" cy="100" r="78" fill="#FFD93D" opacity="0.85"/>
+  <!-- Smoked meat strips (dark brown) -->
+  <rect x="50" y="60" width="28" height="9" rx="2" fill="#4A2020" transform="rotate(-20 64 64)"/>
+  <rect x="120" y="55" width="30" height="9" rx="2" fill="#4A2020" transform="rotate(15 135 59)"/>
+  <rect x="55" y="115" width="26" height="9" rx="2" fill="#4A2020" transform="rotate(10 68 119)"/>
+  <rect x="115" y="125" width="28" height="9" rx="2" fill="#4A2020" transform="rotate(-15 129 129)"/>
+  <!-- Sucuk slices (Turkish sausage) -->
+  <circle cx="75" cy="85" r="12" fill="#8B0000"/>
+  <circle cx="75" cy="85" r="8" fill="#A52A2A"/>
+  <circle cx="125" cy="90" r="12" fill="#8B0000"/>
+  <circle cx="125" cy="90" r="8" fill="#A52A2A"/>
+  <circle cx="95" cy="65" r="11" fill="#8B0000"/>
+  <circle cx="95" cy="65" r="7" fill="#A52A2A"/>
+  <circle cx="100" cy="130" r="11" fill="#8B0000"/>
+  <circle cx="100" cy="130" r="7" fill="#A52A2A"/>
+  <circle cx="145" cy="110" r="10" fill="#8B0000"/>
+  <circle cx="145" cy="110" r="6" fill="#A52A2A"/>
+  <!-- Hot sauce drizzle (red-orange) -->
+  <path d="M60,75 Q80,90 70,110 Q85,100 95,115" stroke="#FF4500" stroke-width="3" fill="none" opacity="0.7"/>
+  <path d="M110,70 Q130,85 125,105 Q140,95 150,100" stroke="#FF4500" stroke-width="3" fill="none" opacity="0.7"/>
+  <path d="M85,120 Q100,135 115,125" stroke="#FF4500" stroke-width="2" fill="none" opacity="0.7"/>
+  <!-- Fire/spicy indicators -->
+  <circle cx="68" cy="95" r="3" fill="#FF6347" opacity="0.6"/>
+  <circle cx="135" cy="78" r="3" fill="#FF6347" opacity="0.6"/>
+  <circle cx="108" cy="108" r="3" fill="#FF6347" opacity="0.6"/>
+</svg>

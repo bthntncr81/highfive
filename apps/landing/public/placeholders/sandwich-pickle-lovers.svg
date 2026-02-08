@@ -1,0 +1,54 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom ciabatta bread -->
+  <path d="M20,110 Q100,125 180,110 L175,100 Q100,115 25,100 Z" fill="#D4A574"/>
+  <path d="M25,100 Q100,115 175,100 L170,95 Q100,108 30,95 Z" fill="#E8C9A0"/>
+  
+  <!-- Olive tapenade -->
+  <path d="M35,92 Q100,96 165,92" stroke="#2F4F4F" stroke-width="4" fill="none" opacity="0.8"/>
+  
+  <!-- Lettuce leaves -->
+  <path d="M30,85 Q50,78 70,85 Q55,82 30,85 Z" fill="#90EE90"/>
+  <path d="M65,83 Q90,76 115,83 Q95,80 65,83 Z" fill="#98FB98"/>
+  <path d="M110,85 Q135,78 160,85 Q140,82 110,85 Z" fill="#90EE90"/>
+  
+  <!-- Mozzarella -->
+  <ellipse cx="50" cy="75" rx="16" ry="6" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="73" rx="18" ry="7" fill="#FFF8DC"/>
+  <ellipse cx="150" cy="75" rx="16" ry="6" fill="#FFF8DC"/>
+  
+  <!-- Jalapeno slices (lots!) -->
+  <circle cx="40" cy="65" r="7" fill="#4A7023"/>
+  <circle cx="40" cy="65" r="4" fill="#6B8E23"/>
+  <circle cx="65" cy="63" r="8" fill="#4A7023"/>
+  <circle cx="65" cy="63" r="4.5" fill="#6B8E23"/>
+  <circle cx="95" cy="64" r="7" fill="#4A7023"/>
+  <circle cx="95" cy="64" r="4" fill="#6B8E23"/>
+  <circle cx="125" cy="63" r="8" fill="#4A7023"/>
+  <circle cx="125" cy="63" r="4.5" fill="#6B8E23"/>
+  <circle cx="155" cy="65" r="7" fill="#4A7023"/>
+  <circle cx="155" cy="65" r="4" fill="#6B8E23"/>
+  
+  <!-- Cornichon slices (lots!) -->
+  <ellipse cx="35" cy="55" rx="10" ry="5" fill="#6B8E23" transform="rotate(-20 35 55)"/>
+  <ellipse cx="55" cy="53" rx="11" ry="5" fill="#556B2F" transform="rotate(15 55 53)"/>
+  <ellipse cx="80" cy="54" rx="10" ry="5" fill="#6B8E23" transform="rotate(-10 80 54)"/>
+  <ellipse cx="105" cy="52" rx="12" ry="5" fill="#556B2F" transform="rotate(10 105 52)"/>
+  <ellipse cx="130" cy="54" rx="10" ry="5" fill="#6B8E23" transform="rotate(-15 130 54)"/>
+  <ellipse cx="155" cy="53" rx="11" ry="5" fill="#556B2F" transform="rotate(20 155 53)"/>
+  <ellipse cx="175" cy="55" rx="9" ry="4" fill="#6B8E23"/>
+  
+  <!-- Top ciabatta bread -->
+  <path d="M20,48 Q100,28 180,48 L180,43 Q100,20 20,43 Z" fill="#C9956C"/>
+  <path d="M20,43 Q100,20 180,43 L175,39 Q100,18 25,39 Z" fill="#D4A574"/>
+  <path d="M25,39 Q100,18 175,39 L170,36 Q100,16 30,36 Z" fill="#E8C9A0"/>
+  
+  <!-- Pickle decoration on top -->
+  <ellipse cx="100" cy="28" rx="12" ry="5" fill="#6B8E23" transform="rotate(10 100 28)"/>
+  
+  <!-- Flour spots -->
+  <circle cx="55" cy="32" r="2" fill="#F5DEB3" opacity="0.6"/>
+  <circle cx="145" cy="32" r="2" fill="#F5DEB3" opacity="0.6"/>
+</svg>

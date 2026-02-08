@@ -1,0 +1,41 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pizza base -->
+  <circle cx="100" cy="100" r="95" fill="#D4A574"/>
+  <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
+  <!-- Tomato sauce -->
+  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <!-- Mozzarella -->
+  <circle cx="100" cy="100" r="78" fill="#FFD93D" opacity="0.85"/>
+  <!-- Smoked meat strips (dark brown-red) -->
+  <rect x="55" y="65" width="30" height="8" rx="2" fill="#4A2020" transform="rotate(-15 70 69)"/>
+  <rect x="110" y="55" width="28" height="8" rx="2" fill="#4A2020" transform="rotate(20 124 59)"/>
+  <rect x="125" y="100" width="30" height="8" rx="2" fill="#4A2020" transform="rotate(-10 140 104)"/>
+  <rect x="60" y="120" width="28" height="8" rx="2" fill="#4A2020" transform="rotate(15 74 124)"/>
+  <rect x="90" y="90" width="25" height="8" rx="2" fill="#4A2020" transform="rotate(5 102 94)"/>
+  <!-- Mushroom slices -->
+  <g transform="translate(70, 80)">
+    <ellipse cx="0" cy="0" rx="12" ry="8" fill="#D2B48C"/>
+    <path d="M-10,0 Q0,-12 10,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(130, 75)">
+    <ellipse cx="0" cy="0" rx="10" ry="7" fill="#D2B48C"/>
+    <path d="M-8,0 Q0,-10 8,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(55, 110)">
+    <ellipse cx="0" cy="0" rx="11" ry="7" fill="#D2B48C"/>
+    <path d="M-9,0 Q0,-11 9,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(115, 125)">
+    <ellipse cx="0" cy="0" rx="10" ry="6" fill="#D2B48C"/>
+    <path d="M-8,0 Q0,-9 8,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <g transform="translate(95, 60)">
+    <ellipse cx="0" cy="0" rx="9" ry="6" fill="#D2B48C"/>
+    <path d="M-7,0 Q0,-8 7,0" fill="#F5DEB3" stroke="#C4A76C" stroke-width="1"/>
+  </g>
+  <!-- Onion rings -->
+  <circle cx="85" cy="105" r="8" fill="none" stroke="#E8DFD0" stroke-width="3" opacity="0.8"/>
+  <circle cx="145" cy="95" r="7" fill="none" stroke="#E8DFD0" stroke-width="3" opacity="0.8"/>
+  <circle cx="65" cy="90" r="6" fill="none" stroke="#E8DFD0" stroke-width="2" opacity="0.8"/>
+  <circle cx="120" cy="110" r="7" fill="none" stroke="#E8DFD0" stroke-width="3" opacity="0.8"/>
+</svg>

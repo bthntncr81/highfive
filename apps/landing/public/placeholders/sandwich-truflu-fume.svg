@@ -1,0 +1,54 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread -->
+  <path d="M15,115 Q100,125 185,115 L182,108 Q100,118 18,108 Z" fill="#B8860B"/>
+  <path d="M18,108 Q100,118 182,108 L180,103 Q100,112 20,103 Z" fill="#D4A574"/>
+  
+  <!-- Truffle mayo swirl -->
+  <path d="M35,98 Q55,93 75,98 Q95,93 115,98 Q135,93 155,98 Q165,95 170,98" stroke="#F5F5DC" stroke-width="3" fill="none"/>
+  <circle cx="50" cy="96" r="2" fill="#2F2F2F" opacity="0.4"/>
+  <circle cx="90" cy="95" r="1.5" fill="#2F2F2F" opacity="0.4"/>
+  <circle cx="130" cy="96" r="2" fill="#2F2F2F" opacity="0.4"/>
+  
+  <!-- Jalapeno slices -->
+  <circle cx="50" cy="88" r="5" fill="#4A7023"/>
+  <circle cx="50" cy="88" r="2.5" fill="#6B8E23"/>
+  <circle cx="95" cy="86" r="6" fill="#4A7023"/>
+  <circle cx="95" cy="86" r="3" fill="#6B8E23"/>
+  <circle cx="140" cy="88" r="5" fill="#4A7023"/>
+  <circle cx="140" cy="88" r="2.5" fill="#6B8E23"/>
+  
+  <!-- Caramelized onion -->
+  <ellipse cx="65" cy="80" rx="14" ry="4" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="115" cy="78" rx="16" ry="5" fill="#8B4513" opacity="0.8"/>
+  <ellipse cx="160" cy="80" rx="12" ry="4" fill="#8B4513" opacity="0.7"/>
+  
+  <!-- Mozzarella -->
+  <ellipse cx="50" cy="70" rx="16" ry="6" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="68" rx="18" ry="7" fill="#FFF8DC"/>
+  <ellipse cx="150" cy="70" rx="16" ry="6" fill="#FFF8DC"/>
+  
+  <!-- Dana füme slices -->
+  <path d="M30,60 Q50,55 70,62" fill="#4A2020"/>
+  <path d="M30,60 L30,65 Q50,72 70,65 L70,62 Q50,55 30,60 Z" fill="#5D2E2E"/>
+  <path d="M80,58 Q100,53 120,60" fill="#4A2020"/>
+  <path d="M80,58 L80,63 Q100,70 120,63 L120,60 Q100,53 80,58 Z" fill="#5D2E2E"/>
+  <path d="M130,60 Q150,55 170,62" fill="#4A2020"/>
+  <path d="M130,60 L130,65 Q150,72 170,65 L170,62 Q150,55 130,60 Z" fill="#5D2E2E"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,52 Q100,32 185,52 L185,47 Q100,25 15,47 Z" fill="#A67C52"/>
+  <path d="M15,47 Q100,25 185,47 L182,42 Q100,22 18,42 Z" fill="#B8860B"/>
+  <path d="M18,42 Q100,22 182,42 L180,38 Q100,20 20,38 Z" fill="#D4A574"/>
+  
+  <!-- Grill marks -->
+  <line x1="45" y1="35" x2="55" y2="38" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="90" y1="30" x2="100" y2="33" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="135" y1="30" x2="145" y2="33" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Truffle shavings decoration on top -->
+  <ellipse cx="85" cy="28" rx="4" ry="2" fill="#2F2F2F" opacity="0.5"/>
+  <ellipse cx="115" cy="27" rx="3" ry="1.5" fill="#2F2F2F" opacity="0.5"/>
+</svg>

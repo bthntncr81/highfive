@@ -1,0 +1,52 @@
+<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow -->
+  <ellipse cx="100" cy="140" rx="80" ry="8" fill="rgba(0,0,0,0.1)"/>
+  
+  <!-- Bottom schiacciatta bread -->
+  <path d="M15,115 Q100,125 185,115 L182,108 Q100,118 18,108 Z" fill="#B8860B"/>
+  <path d="M18,108 Q100,118 182,108 L180,103 Q100,112 20,103 Z" fill="#D4A574"/>
+  
+  <!-- Spicy tomato sauce -->
+  <path d="M35,98 Q100,102 165,98" stroke="#8B0000" stroke-width="5" fill="none"/>
+  
+  <!-- Arugula leaves -->
+  <ellipse cx="50" cy="90" rx="14" ry="5" fill="#228B22" transform="rotate(-15 50 90)"/>
+  <ellipse cx="95" cy="88" rx="15" ry="6" fill="#2E8B2E" transform="rotate(8 95 88)"/>
+  <ellipse cx="145" cy="90" rx="14" ry="5" fill="#228B22" transform="rotate(-10 145 90)"/>
+  
+  <!-- Green peppers -->
+  <ellipse cx="60" cy="82" rx="12" ry="5" fill="#228B22" transform="rotate(10 60 82)"/>
+  <ellipse cx="110" cy="80" rx="14" ry="6" fill="#2E8B2E" transform="rotate(-5 110 80)"/>
+  <ellipse cx="155" cy="82" rx="12" ry="5" fill="#228B22" transform="rotate(8 155 82)"/>
+  
+  <!-- Jalapeno slices -->
+  <circle cx="45" cy="73" r="7" fill="#4A7023"/>
+  <circle cx="45" cy="73" r="4" fill="#6B8E23"/>
+  <circle cx="85" cy="71" r="8" fill="#4A7023"/>
+  <circle cx="85" cy="71" r="4.5" fill="#6B8E23"/>
+  <circle cx="125" cy="71" r="8" fill="#4A7023"/>
+  <circle cx="125" cy="71" r="4.5" fill="#6B8E23"/>
+  <circle cx="165" cy="73" r="7" fill="#4A7023"/>
+  <circle cx="165" cy="73" r="4" fill="#6B8E23"/>
+  
+  <!-- Mozzarella slices -->
+  <ellipse cx="50" cy="60" rx="18" ry="8" fill="#FFF8DC"/>
+  <ellipse cx="50" cy="60" rx="14" ry="5" fill="#FFFFF0"/>
+  <ellipse cx="100" cy="58" rx="20" ry="9" fill="#FFF8DC"/>
+  <ellipse cx="100" cy="58" rx="16" ry="6" fill="#FFFFF0"/>
+  <ellipse cx="150" cy="60" rx="18" ry="8" fill="#FFF8DC"/>
+  <ellipse cx="150" cy="60" rx="14" ry="5" fill="#FFFFF0"/>
+  
+  <!-- Top schiacciatta bread -->
+  <path d="M15,52 Q100,32 185,52 L185,47 Q100,25 15,47 Z" fill="#A67C52"/>
+  <path d="M15,47 Q100,25 185,47 L182,42 Q100,22 18,42 Z" fill="#B8860B"/>
+  <path d="M18,42 Q100,22 182,42 L180,38 Q100,20 20,38 Z" fill="#D4A574"/>
+  
+  <!-- Grill marks -->
+  <line x1="45" y1="35" x2="55" y2="38" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="90" y1="30" x2="100" y2="33" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  <line x1="135" y1="30" x2="145" y2="33" stroke="#8B4513" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Fire icon -->
+  <path d="M175,18 Q178,12 181,18 Q184,8 187,18 Q181,24 175,18 Z" fill="#FF4500"/>
+</svg>

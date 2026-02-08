@@ -1,0 +1,6 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="700" rx="50" fill="#F0F4FF" />
+  <circle cx="700" cy="150" r="120" fill="#1739CF" fill-opacity="0.16" />
+  <text x="70" y="360" font-family="Fredoka, sans-serif" font-size="54" fill="#111111">Truffle Alfredo</text>
+  <text x="70" y="430" font-family="Plus Jakarta Sans, sans-serif" font-size="24" fill="#333333">Makarna</text>
+</svg>
