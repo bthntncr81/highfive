@@ -5,12 +5,26 @@ import { ChefHat, Clock, Check, RefreshCw, Volume2, VolumeX, Flame, Bell, Utensi
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000/ws';
 
+interface Ingredient {
+  id: string;
+  amount: number;
+  optional: boolean;
+  rawMaterial: {
+    id: string;
+    name: string;
+    unit: string;
+  };
+}
+
 interface OrderItem {
   id: string;
   quantity: number;
   notes?: string;
   status: string;
-  menuItem: { name: string };
+  menuItem: {
+    name: string;
+    ingredients?: Ingredient[];
+  };
 }
 
 interface Order {
@@ -471,49 +485,82 @@ function OrderCard({
 
       {/* Items */}
       <div className="p-4 space-y-2">
-        {order.items.map((item, index) => (
-          <div
-            key={item.id}
-            className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-              item.status === 'READY' 
-                ? 'bg-green-500/20 border border-green-500/30' 
-                : 'bg-white/5 border border-white/10'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${
-                item.status === 'READY'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-orange-500/20 text-orange-400'
-              }`}>
-                {item.quantity}x
-              </div>
-              <div>
-                <p className="font-semibold text-white">{item.menuItem.name}</p>
-                {item.notes && (
-                  <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
-                    <span>📝</span>
-                    <span>{item.notes}</span>
-                  </p>
+        {order.items.map((item) => {
+          const ingredients = item.menuItem.ingredients || [];
+          const unitShort: Record<string, string> = {
+            GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
+          };
+
+          return (
+            <div
+              key={item.id}
+              className={`rounded-xl transition-all ${
+                item.status === 'READY' 
+                  ? 'bg-green-500/20 border border-green-500/30' 
+                  : 'bg-white/5 border border-white/10'
+              }`}
+            >
+              {/* Item header */}
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold shrink-0 ${
+                    item.status === 'READY'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-orange-500/20 text-orange-400'
+                  }`}>
+                    {item.quantity}x
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">{item.menuItem.name}</p>
+                    {item.notes && (
+                      <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
+                        <span>📝</span>
+                        <span>{item.notes}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {item.status !== 'READY' && type === 'preparing' && (
+                  <button
+                    onClick={() => onItemStatusChange(order.id, item.id, 'READY')}
+                    className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 transition-all hover:scale-110"
+                  >
+                    <Check className="w-5 h-5" />
+                  </button>
+                )}
+                {item.status === 'READY' && (
+                  <div className="p-2 text-green-400">
+                    <Check className="w-5 h-5" />
+                  </div>
                 )}
               </div>
+
+              {/* Recipe / Ingredients */}
+              {ingredients.length > 0 && (
+                <div className="px-3 pb-3 ml-[52px]">
+                  <div className="flex flex-wrap gap-1.5">
+                    {ingredients.map((ing) => {
+                      const totalAmount = Number(ing.amount) * item.quantity;
+                      const unit = unitShort[ing.rawMaterial.unit] || ing.rawMaterial.unit;
+                      return (
+                        <span
+                          key={ing.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs"
+                        >
+                          <span className="text-gray-400">{ing.rawMaterial.name}</span>
+                          <span className="text-cyan-400 font-mono font-medium">
+                            {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(1)}{unit}
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-            
-            {item.status !== 'READY' && type === 'preparing' && (
-              <button
-                onClick={() => onItemStatusChange(order.id, item.id, 'READY')}
-                className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 transition-all hover:scale-110"
-              >
-                <Check className="w-5 h-5" />
-              </button>
-            )}
-            {item.status === 'READY' && (
-              <div className="p-2 text-green-400">
-                <Check className="w-5 h-5" />
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Action button */}

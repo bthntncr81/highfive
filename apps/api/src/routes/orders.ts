@@ -249,7 +249,14 @@ export default async function orderRoutes(server: FastifyInstance) {
         },
         items: {
           include: {
-            menuItem: true,
+            menuItem: {
+              include: {
+                ingredients: {
+                  include: { rawMaterial: true },
+                  orderBy: { rawMaterial: { name: 'asc' } },
+                },
+              },
+            },
           },
         },
       },

@@ -665,8 +665,14 @@ export const Order = () => {
               >
                 <span className="text-3xl">💵</span>
                 <div className="text-left">
-                  <span className="font-display text-diner-chocolate block">Nakit / Kredi Kartı Kasada</span>
-                  <span className="text-xs text-diner-chocolate-light">Ödemenizi kasada nakit veya kart ile yapın</span>
+                  <span className="font-display text-diner-chocolate block">
+                    {orderMode === 'delivery' ? 'Nakit / Kredi Kartı Kapıda' : 'Nakit / Kredi Kartı Kasada'}
+                  </span>
+                  <span className="text-xs text-diner-chocolate-light">
+                    {orderMode === 'delivery'
+                      ? 'Ödemenizi kapıda nakit veya kart ile yapın'
+                      : 'Ödemenizi kasada nakit veya kart ile yapın'}
+                  </span>
                 </div>
                 {paymentMethod === 'cash' && (
                   <span className="ml-auto text-diner-red text-xl">✓</span>
