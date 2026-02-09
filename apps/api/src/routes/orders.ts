@@ -106,6 +106,75 @@ async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: 
   }
 }
 
+// Sipariş verildiğinde ham madde stoklarını düş
+async function deductRawMaterialStock(
+  prisma: PrismaClient,
+  orderItems: { menuItemId: string; quantity: number }[]
+) {
+  try {
+    for (const orderItem of orderItems) {
+      // Bu menü ürününün içeriklerini getir
+      const ingredients = await prisma.menuItemIngredient.findMany({
+        where: { menuItemId: orderItem.menuItemId },
+        include: { rawMaterial: true },
+      });
+
+      for (const ingredient of ingredients) {
+        const deductAmount = Number(ingredient.amount) * orderItem.quantity;
+        if (deductAmount <= 0) continue;
+
+        const currentStock = Number(ingredient.rawMaterial.currentStock);
+        const newStock = Math.max(0, currentStock - deductAmount);
+
+        await prisma.rawMaterial.update({
+          where: { id: ingredient.rawMaterialId },
+          data: { currentStock: newStock },
+        });
+
+        console.log(
+          `📦 Stok düşüldü: ${ingredient.rawMaterial.name} -${deductAmount} (${currentStock} → ${newStock})`
+        );
+      }
+    }
+  } catch (error) {
+    console.error('❌ Ham madde stok düşüm hatası:', error);
+    // Sipariş yine de oluşturulsun, stok hatası engellemesin
+  }
+}
+
+// Sipariş iptal edildiğinde stokları geri ekle
+async function restoreRawMaterialStock(
+  prisma: PrismaClient,
+  orderItems: { menuItemId: string; quantity: number }[]
+) {
+  try {
+    for (const orderItem of orderItems) {
+      const ingredients = await prisma.menuItemIngredient.findMany({
+        where: { menuItemId: orderItem.menuItemId },
+        include: { rawMaterial: true },
+      });
+
+      for (const ingredient of ingredients) {
+        const restoreAmount = Number(ingredient.amount) * orderItem.quantity;
+        if (restoreAmount <= 0) continue;
+
+        await prisma.rawMaterial.update({
+          where: { id: ingredient.rawMaterialId },
+          data: {
+            currentStock: { increment: restoreAmount },
+          },
+        });
+
+        console.log(
+          `📦 Stok geri eklendi: ${ingredient.rawMaterial.name} +${restoreAmount}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error('❌ Ham madde stok geri ekleme hatası:', error);
+  }
+}
+
 export default async function orderRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
 
@@ -399,6 +468,9 @@ export default async function orderRoutes(server: FastifyInstance) {
       },
     });
 
+    // Ham madde stoklarını düş
+    await deductRawMaterialStock(prisma, items);
+
     // Update table status if table order
     if (tableId) {
       const table = await prisma.table.update({
@@ -502,6 +574,9 @@ export default async function orderRoutes(server: FastifyInstance) {
         },
       },
     });
+
+    // Ham madde stoklarını düş
+    await deductRawMaterialStock(prisma, items);
 
     // Update table status if table order
     if (tableId) {
@@ -663,6 +738,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     await prisma.orderItem.createMany({
       data: newItems,
     });
+
+    // Ham madde stoklarını düş (eklenen ürünler için)
+    await deductRawMaterialStock(prisma, items);
 
     // Update order totals
     const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
@@ -904,6 +982,13 @@ export default async function orderRoutes(server: FastifyInstance) {
     if (order.status === OrderStatus.COMPLETED) {
       return reply.status(400).send({ error: 'Tamamlanmış sipariş iptal edilemez' });
     }
+
+    // İptal edilen siparişin ürünlerini al ve stokları geri ekle
+    const cancelledItems = await prisma.orderItem.findMany({
+      where: { orderId: id },
+      select: { menuItemId: true, quantity: true },
+    });
+    await restoreRawMaterialStock(prisma, cancelledItems);
 
     const updatedOrder = await prisma.order.update({
       where: { id },
