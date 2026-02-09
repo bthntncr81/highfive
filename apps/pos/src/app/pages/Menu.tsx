@@ -137,12 +137,10 @@ export default function Menu() {
     );
   };
 
-  // Ürünün çıkarılabilir (optional) içeriklerini getir
+  // Ürünün tüm içeriklerini "olmasın" listesi için getir
   const getRemovableIngredients = (item: MenuItem): string[] => {
     if (!item.ingredients || item.ingredients.length === 0) return [];
-    return item.ingredients
-      .filter(ing => ing.optional)
-      .map(ing => ing.rawMaterial.name);
+    return item.ingredients.map(ing => ing.rawMaterial.name);
   };
 
   const handleSubmitOrder = async () => {
