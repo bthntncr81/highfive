@@ -135,6 +135,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
     return {
       customer: {
         id: customer.id,
+        phone: customer.phone,
         name: customer.name,
         totalPoints: customer.totalPoints,
         loyaltyTier: customer.loyaltyTier,

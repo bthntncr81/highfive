@@ -50,7 +50,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await loyaltyApi.lookupCustomer(phone)
       if (response.success && response.data?.customer) {
-        const updatedMember = response.data.customer
+        // API'den dönen veriye phone'u ekle (kaybolmasın)
+        const updatedMember = { ...response.data.customer, phone }
         setMember(updatedMember)
         localStorage.setItem(LOYALTY_STORAGE_KEY, JSON.stringify(updatedMember))
       }

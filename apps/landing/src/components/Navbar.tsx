@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useContent } from '../lib/contentStore'
@@ -25,6 +26,7 @@ export const Navbar = () => {
   const isActive = (path: string) => location.pathname === path
 
   return (
+    <>
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -280,7 +282,10 @@ export const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* Login/Register Modal */}
+    </motion.nav>
+  
+    {/* Login/Register Modal - Portal ile body'e render et (motion.nav transform sorunu) */}
+    {createPortal(
       <AnimatePresence>
         {showLoginModal && (
           <LoginModal 
@@ -295,8 +300,10 @@ export const Navbar = () => {
             setLoginError={setLoginError}
           />
         )}
-      </AnimatePresence>
-    </motion.nav>
+      </AnimatePresence>,
+      document.body
+    )}
+    </>
   )
 }
 
@@ -364,7 +371,7 @@ const LoginModal = ({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+        className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
       >
         {success ? (
           <motion.div
