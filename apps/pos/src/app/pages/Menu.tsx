@@ -11,6 +11,18 @@ interface Category {
   icon?: string;
 }
 
+interface MenuItemIngredient {
+  id: string;
+  rawMaterialId: string;
+  amount: number;
+  optional: boolean;
+  rawMaterial: {
+    id: string;
+    name: string;
+    unit: string;
+  };
+}
+
 interface MenuItem {
   id: string;
   name: string;
@@ -20,15 +32,8 @@ interface MenuItem {
   badges: string[];
   available: boolean;
   categoryId: string;
+  ingredients?: MenuItemIngredient[];
 }
-
-// Malzeme listesi - ürün tipine göre
-const INGREDIENTS: Record<string, string[]> = {
-  'Pizza': ['Domates Sos', 'Mozzarella', 'Fesleğen', 'Sarımsak', 'Sucuk', 'Salam', 'Mantar', 'Mısır', 'Jalapeno', 'Biber', 'Soğan', 'Zeytin', 'Cheddar', 'Parmesan'],
-  'Makarna': ['Krema', 'Domates Sos', 'Peynir Sos', 'Mantar', 'Sosis', 'Köz Biber', 'Patlıcan', 'Füme Et', 'Parmesan', 'Kaşar', 'Sarımsak'],
-  'Sandviç': ['Mozzarella', 'Domates', 'Roka', 'Marul', 'Pesto Sos', 'Mayonez', 'Hardal', 'Kornişon', 'Jalapeno', 'Karamelize Soğan', 'Köz Biber'],
-  'default': ['Tuz', 'Karabiber', 'Pul Biber', 'Kekik', 'Soğan', 'Sarımsak']
-};
 
 export default function Menu() {
   const { token } = useAuth();
@@ -132,14 +137,12 @@ export default function Menu() {
     );
   };
 
-  const getIngredientsForCategory = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return INGREDIENTS['default'];
-    
-    if (category.name.includes('Pizza')) return INGREDIENTS['Pizza'];
-    if (category.name.includes('Makarna')) return INGREDIENTS['Makarna'];
-    if (category.name.includes('Sandviç')) return INGREDIENTS['Sandviç'];
-    return INGREDIENTS['default'];
+  // Ürünün çıkarılabilir (optional) içeriklerini getir
+  const getRemovableIngredients = (item: MenuItem): string[] => {
+    if (!item.ingredients || item.ingredients.length === 0) return [];
+    return item.ingredients
+      .filter(ing => ing.optional)
+      .map(ing => ing.rawMaterial.name);
   };
 
   const handleSubmitOrder = async () => {
@@ -483,22 +486,26 @@ export default function Menu() {
                 <span className="text-red-500">❌</span>
                 Olmasın (Çıkarılacak Malzemeler)
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {getIngredientsForCategory(selectedItem.categoryId).map((ingredient) => (
-                  <button
-                    key={ingredient}
-                    onClick={() => toggleIngredient(ingredient)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      excludedIngredients.includes(ingredient)
-                        ? 'bg-red-500 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {excludedIngredients.includes(ingredient) && '❌ '}
-                    {ingredient}
-                  </button>
-                ))}
-              </div>
+              {getRemovableIngredients(selectedItem).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {getRemovableIngredients(selectedItem).map((ingredient) => (
+                    <button
+                      key={ingredient}
+                      onClick={() => toggleIngredient(ingredient)}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                        excludedIngredients.includes(ingredient)
+                          ? 'bg-red-500 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {excludedIngredients.includes(ingredient) && '❌ '}
+                      {ingredient}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">Bu ürün için çıkarılabilir içerik tanımlanmamış</p>
+              )}
             </div>
 
             {/* Seçilen Çıkarılacaklar */}

@@ -1,4 +1,4 @@
-import { AlertCircle, Edit2, Image, Link2, Plus, Trash2, X } from 'lucide-react';
+import { AlertCircle, Edit2, Image, Link2, Plus, Trash2, X, Beaker, Scale } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
@@ -7,6 +7,20 @@ interface Category {
   id: string;
   name: string;
   icon: string;
+}
+
+interface RawMaterial {
+  id: string;
+  name: string;
+  unit: string;
+}
+
+interface MenuItemIngredient {
+  id: string;
+  rawMaterialId: string;
+  amount: number;
+  optional: boolean;
+  rawMaterial: RawMaterial;
 }
 
 interface MenuItem {
@@ -23,6 +37,7 @@ interface MenuItem {
   featured: boolean;
   category: Category;
   categoryId: string;
+  ingredients?: MenuItemIngredient[];
 }
 
 const ALLERGEN_OPTIONS = [
@@ -66,6 +81,13 @@ export default function MenuManagement() {
   const [crossSellItem, setCrossSellItem] = useState<MenuItem | null>(null);
   const [crossSellTargets, setCrossSellTargets] = useState<string[]>([]);
 
+  // Ingredient management
+  const [showIngredientModal, setShowIngredientModal] = useState(false);
+  const [ingredientItem, setIngredientItem] = useState<MenuItem | null>(null);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [itemIngredients, setItemIngredients] = useState<{ rawMaterialId: string; amount: string; optional: boolean }[]>([]);
+  const [isSavingIngredients, setIsSavingIngredients] = useState(false);
+
   const [formData, setFormData] = useState({
     categoryId: '',
     name: '',
@@ -86,12 +108,14 @@ export default function MenuManagement() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [menuRes, catRes] = await Promise.all([
+      const [menuRes, catRes, matRes] = await Promise.all([
         api.get('/api/menu', token!),
         api.get('/api/categories', token!),
+        api.get('/api/raw-materials', token!),
       ]);
       setMenuItems(menuRes.items || []);
       setCategories(catRes.categories || []);
+      setRawMaterials((matRes.materials || []).filter((m: any) => m.active));
     } catch (error) {
       console.error('Data fetch error:', error);
     } finally {
@@ -207,6 +231,72 @@ export default function MenuManagement() {
       console.error('Cross-sell save error:', error);
       alert('Kayıt başarısız');
     }
+  };
+
+  // Ingredient management functions
+  const openIngredientModal = (item: MenuItem) => {
+    setIngredientItem(item);
+    // Load existing ingredients
+    const existing = (item.ingredients || []).map((ing) => ({
+      rawMaterialId: ing.rawMaterialId,
+      amount: Number(ing.amount).toString(),
+      optional: ing.optional,
+    }));
+    setItemIngredients(existing.length > 0 ? existing : []);
+    setShowIngredientModal(true);
+  };
+
+  const addIngredientRow = () => {
+    setItemIngredients([...itemIngredients, { rawMaterialId: '', amount: '', optional: false }]);
+  };
+
+  const removeIngredientRow = (index: number) => {
+    setItemIngredients(itemIngredients.filter((_, i) => i !== index));
+  };
+
+  const updateIngredientRow = (index: number, field: string, value: any) => {
+    const updated = [...itemIngredients];
+    updated[index] = { ...updated[index], [field]: value };
+    setItemIngredients(updated);
+  };
+
+  const handleSaveIngredients = async () => {
+    if (!ingredientItem) return;
+    setIsSavingIngredients(true);
+
+    try {
+      const validIngredients = itemIngredients.filter(
+        (ing) => ing.rawMaterialId && ing.amount && parseFloat(ing.amount) > 0
+      );
+
+      await api.post(
+        `/api/raw-materials/menu-item/${ingredientItem.id}/ingredients/bulk`,
+        {
+          ingredients: validIngredients.map((ing) => ({
+            rawMaterialId: ing.rawMaterialId,
+            amount: parseFloat(ing.amount),
+            optional: ing.optional,
+          })),
+        },
+        token!
+      );
+
+      setShowIngredientModal(false);
+      setIngredientItem(null);
+      fetchData();
+    } catch (error) {
+      console.error('Save ingredients error:', error);
+      alert('İçerik kaydetme başarısız');
+    } finally {
+      setIsSavingIngredients(false);
+    }
+  };
+
+  const getUnitShort = (unit: string) => {
+    const map: Record<string, string> = {
+      GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
+    };
+    return map[unit] || unit;
   };
 
   const filteredItems = menuItems.filter((item) => {
@@ -357,6 +447,16 @@ export default function MenuManagement() {
               <p className="text-xs text-gray-400">
                 {item.category?.icon} {item.category?.name}
               </p>
+
+              {/* Ingredients count */}
+              {item.ingredients && item.ingredients.length > 0 && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Beaker className="w-3 h-3 text-purple-500" />
+                  <span className="text-xs text-purple-600 font-medium">
+                    {item.ingredients.length} içerik
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -370,6 +470,13 @@ export default function MenuManagement() {
                 }`}
               >
                 {item.available ? '❌ Kapat' : '✅ Aç'}
+              </button>
+              <button
+                onClick={() => openIngredientModal(item)}
+                className="p-2 hover:bg-purple-100 rounded-lg text-purple-600"
+                title="İçerik Yönetimi"
+              >
+                <Beaker className="w-4 h-4" />
               </button>
               <button
                 onClick={() => openCrossSellModal(item)}
@@ -598,6 +705,131 @@ export default function MenuManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient Modal */}
+      {showIngredientModal && ingredientItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6 my-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Beaker className="w-5 h-5 text-purple-500" />
+                  İçerik Yönetimi
+                </h2>
+                <p className="text-sm text-gray-500">
+                  "{ingredientItem.name}" ürününün içerikleri
+                </p>
+              </div>
+              <button onClick={() => setShowIngredientModal(false)}>
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Ingredients list */}
+            <div className="space-y-3 mb-4 max-h-[50vh] overflow-y-auto">
+              {itemIngredients.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Scale className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Henüz içerik eklenmemiş</p>
+                  <p className="text-sm">Aşağıdaki butonla içerik ekleyin</p>
+                </div>
+              ) : (
+                itemIngredients.map((ing, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    {/* Material select */}
+                    <div className="flex-1 min-w-0">
+                      <select
+                        value={ing.rawMaterialId}
+                        onChange={(e) => updateIngredientRow(index, 'rawMaterialId', e.target.value)}
+                        className="input text-sm"
+                      >
+                        <option value="">Ham madde seçin...</option>
+                        {rawMaterials.map((mat) => (
+                          <option key={mat.id} value={mat.id}>
+                            {mat.name} ({getUnitShort(mat.unit)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="w-28">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={ing.amount}
+                        onChange={(e) => updateIngredientRow(index, 'amount', e.target.value)}
+                        className="input text-sm text-center"
+                        placeholder="Miktar"
+                      />
+                    </div>
+
+                    {/* Unit label */}
+                    <div className="w-10 text-xs text-gray-500 text-center">
+                      {ing.rawMaterialId
+                        ? getUnitShort(rawMaterials.find((m) => m.id === ing.rawMaterialId)?.unit || '')
+                        : ''}
+                    </div>
+
+                    {/* Optional toggle */}
+                    <label className="flex items-center gap-1 cursor-pointer" title="Çıkarılabilir (Olmasın seçeneği)">
+                      <input
+                        type="checkbox"
+                        checked={ing.optional}
+                        onChange={(e) => updateIngredientRow(index, 'optional', e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-purple-600"
+                      />
+                      <span className="text-xs text-gray-500 whitespace-nowrap">Çıkarılabilir</span>
+                    </label>
+
+                    {/* Remove */}
+                    <button
+                      onClick={() => removeIngredientRow(index)}
+                      className="p-1.5 hover:bg-red-100 rounded-lg text-red-500"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add ingredient button */}
+            <button
+              onClick={addIngredientRow}
+              className="w-full py-3 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 font-medium flex items-center justify-center gap-2 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              İçerik Ekle
+            </button>
+
+            {rawMaterials.length === 0 && (
+              <p className="text-sm text-amber-600 mt-2 text-center">
+                Henüz ham madde tanımlanmamış. Önce "Ham Madde Yönetimi" sayfasından ham madde ekleyin.
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowIngredientModal(false)} className="btn btn-secondary flex-1">
+                İptal
+              </button>
+              <button
+                onClick={handleSaveIngredients}
+                disabled={isSavingIngredients}
+                className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                {isSavingIngredients ? 'Kaydediliyor...' : (
+                  <>
+                    <Beaker className="w-4 h-4" />
+                    İçerikleri Kaydet ({itemIngredients.filter((i) => i.rawMaterialId && i.amount).length})
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

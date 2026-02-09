@@ -191,6 +191,7 @@ model MenuItem {
 
   category       Category           @relation(fields: [categoryId], references: [id])
   modifiers      Modifier[]
+  ingredients    MenuItemIngredient[]
   orderItems     OrderItem[]
   upsellItems    MenuItemUpsell[]   @relation("UpsellFrom")
   upsoldBy       MenuItemUpsell[]   @relation("UpsellTo")
@@ -259,6 +260,47 @@ model Modifier {
   createdAt  DateTime @default(now())
 
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+// ==================== RAW MATERIALS (HAM MADDE) ====================
+
+enum RawMaterialUnit {
+  GRAM
+  KILOGRAM
+  LITRE
+  MILLILITRE
+  ADET
+  PORSIYON
+}
+
+model RawMaterial {
+  id            String          @id @default(cuid())
+  name          String          @unique
+  unit          RawMaterialUnit @default(GRAM)
+  currentStock  Decimal         @default(0) @db.Decimal(10, 2) // Mevcut stok miktarı
+  minStock      Decimal         @default(0) @db.Decimal(10, 2) // Min stok uyarı seviyesi
+  costPerUnit   Decimal         @default(0) @db.Decimal(10, 2) // Birim maliyet
+  supplier      String?         // Tedarikçi
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  ingredients   MenuItemIngredient[]
+}
+
+// Menü ürünü - Ham madde ilişkisi (gramajlı)
+model MenuItemIngredient {
+  id            String   @id @default(cuid())
+  menuItemId    String
+  rawMaterialId String
+  amount        Decimal  @db.Decimal(10, 2) // Miktar (gramaj)
+  optional      Boolean  @default(false) // Çıkarılabilir mi (olmasın seçeneği)
+  createdAt     DateTime @default(now())
+
+  menuItem    MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, rawMaterialId])
 }
 
 // Happy Hours - Zamanlı indirimler/menü değişiklikleri

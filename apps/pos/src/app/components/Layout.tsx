@@ -44,6 +44,7 @@ export default function Layout() {
 
   const adminItems = [
     { to: '/menu-management', icon: ClipboardList, label: 'Menü Yönetimi', emoji: '🍴' },
+    { to: '/raw-materials', icon: ClipboardList, label: 'Ham Madde Yönetimi', emoji: '🧪' },
     { to: '/happy-hour', icon: ClipboardList, label: 'Happy Hour', emoji: '🍹' },
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },

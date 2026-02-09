@@ -22,6 +22,7 @@ import tipRoutes from './routes/tip';
 import locationRoutes from './routes/location';
 import loyaltyRoutes from './routes/loyalty';
 import campaignsRoutes from './routes/campaigns';
+import rawMaterialRoutes from './routes/rawmaterials';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -71,6 +72,7 @@ server.register(tipRoutes, { prefix: '/api' }); // tip routes
 server.register(locationRoutes, { prefix: '/api' }); // /api/locations
 server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
+server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 
 // WebSocket
 setupWebSocket(server);

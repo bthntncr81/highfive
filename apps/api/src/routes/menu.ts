@@ -40,6 +40,10 @@ export default async function menuRoutes(server: FastifyInstance) {
         include: {
           category: true,
           modifiers: true,
+          ingredients: {
+            include: { rawMaterial: true },
+            orderBy: { rawMaterial: { name: 'asc' } },
+          },
         },
         orderBy: [
           { category: { sortOrder: 'asc' } },
@@ -60,6 +64,10 @@ export default async function menuRoutes(server: FastifyInstance) {
       include: {
         category: true,
         modifiers: true,
+        ingredients: {
+          include: { rawMaterial: true },
+          orderBy: { rawMaterial: { name: 'asc' } },
+        },
       },
     });
 

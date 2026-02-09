@@ -18,6 +18,7 @@ import StockManagement from './pages/StockManagement';
 import MenuManagement from './pages/MenuManagement';
 import HappyHourManagement from './pages/HappyHourManagement';
 import CampaignsLoyalty from './pages/CampaignsLoyalty';
+import RawMaterialsManagement from './pages/RawMaterialsManagement';
 import CourierDashboard from './pages/CourierDashboard';
 
 // Components
@@ -132,6 +133,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <HappyHourManagement />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="raw-materials"
+                element={
+                  <AdminRoute>
+                    <RawMaterialsManagement />
                   </AdminRoute>
                 }
               />
