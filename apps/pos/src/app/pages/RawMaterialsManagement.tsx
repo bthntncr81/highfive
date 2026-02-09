@@ -408,8 +408,9 @@ export default function RawMaterialsManagement() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <h2 className="text-xl font-semibold">
                 {editingMaterial ? 'Ham Madde Düzenle' : 'Yeni Ham Madde'}
               </h2>
@@ -418,7 +419,8 @@ export default function RawMaterialsManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="overflow-y-auto p-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ham Madde Adı *
@@ -502,8 +504,10 @@ export default function RawMaterialsManagement() {
                   placeholder="Opsiyonel"
                 />
               </div>
+            </div>
 
-              <div className="flex gap-2 pt-4">
+              {/* Sticky Footer */}
+              <div className="flex gap-2 p-6 pt-4 border-t shrink-0">
                 <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
                   İptal
                 </button>

@@ -510,9 +510,10 @@ export default function MenuManagement() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-2xl p-6 my-8">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <h2 className="text-xl font-semibold">
                 {editingItem ? 'Ürün Düzenle' : 'Yeni Ürün'}
               </h2>
@@ -521,7 +522,8 @@ export default function MenuManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="overflow-y-auto p-6 py-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -687,8 +689,10 @@ export default function MenuManagement() {
                 />
                 <span className="text-sm font-medium text-gray-700">⭐ Öne Çıkan Ürün</span>
               </label>
+            </div>
 
-              <div className="flex gap-2 pt-4">
+              {/* Sticky Footer */}
+              <div className="flex gap-2 p-6 pt-4 border-t shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -711,9 +715,10 @@ export default function MenuManagement() {
 
       {/* Ingredient Modal */}
       {showIngredientModal && ingredientItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-2xl p-6 my-8">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <div>
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <Beaker className="w-5 h-5 text-purple-500" />
@@ -728,8 +733,10 @@ export default function MenuManagement() {
               </button>
             </div>
 
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-6 py-4 flex-1 min-h-0">
             {/* Ingredients list */}
-            <div className="space-y-3 mb-4 max-h-[50vh] overflow-y-auto">
+            <div className="space-y-3 mb-4">
               {itemIngredients.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <Scale className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -811,9 +818,10 @@ export default function MenuManagement() {
                 Henüz ham madde tanımlanmamış. Önce "Ham Madde Yönetimi" sayfasından ham madde ekleyin.
               </p>
             )}
+            </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 mt-6">
+            {/* Sticky Footer */}
+            <div className="flex gap-2 p-6 pt-4 border-t shrink-0">
               <button onClick={() => setShowIngredientModal(false)} className="btn btn-secondary flex-1">
                 İptal
               </button>
@@ -837,8 +845,9 @@ export default function MenuManagement() {
       {/* Cross-sell Modal */}
       {showCrossSellModal && crossSellItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <div>
                 <h2 className="text-xl font-semibold">Cross-sell Ayarla</h2>
                 <p className="text-sm text-gray-500">
@@ -850,7 +859,9 @@ export default function MenuManagement() {
               </button>
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-6 py-4 flex-1 min-h-0">
+            <div className="space-y-2">
               {menuItems
                 .filter((item) => item.id !== crossSellItem.id)
                 .map((item) => (
@@ -882,8 +893,10 @@ export default function MenuManagement() {
                   </label>
                 ))}
             </div>
+            </div>
 
-            <div className="flex gap-2 mt-6">
+            {/* Sticky Footer */}
+            <div className="flex gap-2 p-6 pt-4 border-t shrink-0">
               <button
                 onClick={() => setShowCrossSellModal(false)}
                 className="btn btn-secondary flex-1"

@@ -461,11 +461,11 @@ export default function Menu() {
       {showCustomizeModal && selectedItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCustomizeModal(false)}>
           <div 
-            className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-auto"
+            className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{selectedItem.name}</h2>
                 <p className="text-sm text-gray-500">{selectedItem.price.toLocaleString('tr-TR')} ₺</p>
@@ -478,6 +478,8 @@ export default function Menu() {
               </button>
             </div>
 
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-6 py-4 flex-1 min-h-0">
             {/* Çıkarılacak Malzemeler */}
             <div className="mb-6">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -530,7 +532,7 @@ export default function Menu() {
             </div>
 
             {/* Hızlı Notlar */}
-            <div className="mb-6">
+            <div>
               <div className="flex flex-wrap gap-2">
                 {['Az pişmiş', 'Çok pişmiş', 'Ekstra sos', 'Yanında ketçap', 'Acısız'].map((note) => (
                   <button
@@ -543,9 +545,10 @@ export default function Menu() {
                 ))}
               </div>
             </div>
+            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            {/* Sticky Footer */}
+            <div className="flex gap-3 p-6 pt-4 border-t shrink-0">
               <button
                 onClick={() => setShowCustomizeModal(false)}
                 className="btn btn-secondary flex-1"

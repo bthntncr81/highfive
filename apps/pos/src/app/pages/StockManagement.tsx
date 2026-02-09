@@ -356,11 +356,16 @@ export default function StockManagement() {
       {/* Out of Stock Modal */}
       {showModal && selectedItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              🚫 "{selectedItem.name}" Tükendi
-            </h2>
+          <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl">
+            {/* Sticky Header */}
+            <div className="p-6 pb-4 border-b shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">
+                🚫 "{selectedItem.name}" Tükendi
+              </h2>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-6 py-4 flex-1 min-h-0">
             {/* Quick Reasons */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -398,7 +403,7 @@ export default function StockManagement() {
             </div>
 
             {/* Auto-restore Time */}
-            <div className="mb-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Otomatik Açılma Zamanı (Opsiyonel)
               </label>
@@ -412,9 +417,10 @@ export default function StockManagement() {
                 Bu zamanda otomatik olarak satışa açılır
               </p>
             </div>
+            </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
+            {/* Sticky Footer */}
+            <div className="flex gap-3 p-6 pt-4 border-t shrink-0">
               <button
                 onClick={() => setShowModal(false)}
                 className="btn btn-secondary flex-1"
