@@ -5,20 +5,23 @@ WORKDIR /app
 
 # Copy package files first for caching
 COPY apps/landing/package*.json ./
+COPY package*.json /root-package/
 
-# Install dependencies fresh in container
-RUN npm install
+# Install dependencies including vite and react (using Tailwind v3)
+RUN npm install && \
+    npm install vite@^5 @vitejs/plugin-react typescript @types/react @types/react-dom react react-dom \
+    tailwindcss@^3 postcss autoprefixer lucide-react framer-motion react-router-dom socket.io-client
 
-# Copy source code (excluding node_modules via .dockerignore)
+# Copy source code
 COPY apps/landing/src ./src
 COPY apps/landing/public ./public
 COPY apps/landing/index.html ./
-COPY apps/landing/vite.config.ts ./
-COPY apps/landing/tsconfig.json ./
-COPY apps/landing/tsconfig.app.json ./
-COPY apps/landing/tsconfig.node.json ./
+COPY apps/landing/vite.config.mts ./
 COPY apps/landing/tailwind.config.ts ./
-COPY apps/landing/postcss.config.cjs ./
+COPY apps/landing/postcss.config.js ./
+
+# Create standalone tsconfig
+RUN echo '{"compilerOptions":{"target":"ES2020","useDefineForClassFields":true,"lib":["ES2020","DOM","DOM.Iterable"],"module":"ESNext","skipLibCheck":true,"moduleResolution":"bundler","allowImportingTsExtensions":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true,"jsx":"react-jsx","strict":true,"noUnusedLocals":true,"noUnusedParameters":true,"noFallthroughCasesInSwitch":true,"esModuleInterop":true},"include":["src"]}' > tsconfig.json
 
 # Build args for environment
 ARG VITE_API_URL=http://localhost:3000
@@ -27,7 +30,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
 # Build the app
-RUN npm run build
+RUN npx vite build
 
 # Production image with nginx
 FROM nginx:alpine
