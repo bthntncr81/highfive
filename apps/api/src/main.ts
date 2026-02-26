@@ -2,7 +2,11 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import formbody from '@fastify/formbody';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 import { PrismaClient } from '@prisma/client';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -23,6 +27,7 @@ import locationRoutes from './routes/location';
 import loyaltyRoutes from './routes/loyalty';
 import campaignsRoutes from './routes/campaigns';
 import rawMaterialRoutes from './routes/rawmaterials';
+import uploadRoutes from './routes/upload';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -45,6 +50,18 @@ server.register(cors, {
 
 server.register(websocket);
 server.register(formbody); // For 3DS callback form data
+server.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB max
+
+// Serve uploaded files statically
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+server.register(fastifyStatic, {
+  root: uploadsDir,
+  prefix: '/uploads/',
+  decorateReply: false,
+});
 
 // Decorate with prisma
 server.decorate('prisma', prisma);
@@ -73,6 +90,7 @@ server.register(locationRoutes, { prefix: '/api' }); // /api/locations
 server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
+server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 
 // WebSocket
 setupWebSocket(server);

@@ -46,6 +46,8 @@
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/formbody": "^8.0.2",
+    "@fastify/multipart": "^9.0.0",
+    "@fastify/static": "^8.0.0",
     "@fastify/websocket": "^11.2.0",
     "@prisma/client": "^5.10.2",
     "bcryptjs": "^3.0.3",

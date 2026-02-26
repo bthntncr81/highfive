@@ -1,12 +1,18 @@
-import { AlertCircle, Edit2, Image, Link2, Plus, Trash2, X, Beaker, Scale } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertCircle, Edit2, Image, Film, Plus, Trash2, X, Beaker, Scale, Link2, Upload, Eye, FolderPlus, GripVertical } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface Category {
   id: string;
   name: string;
   icon: string;
+  image?: string;
+  sortOrder: number;
+  active: boolean;
+  _count?: { items: number };
 }
 
 interface RawMaterial {
@@ -65,6 +71,27 @@ const BADGE_OPTIONS = [
   { value: 'aci', label: 'Acılı', color: 'bg-red-100 text-red-800' },
 ];
 
+const CATEGORY_ICONS = [
+  '🍕', '🍝', '🥪', '🥤', '🍰', '🍔', '🌮', '🥗', '🍣', '🍜',
+  '🥩', '🍗', '🐟', '🥘', '🧁', '☕', '🍺', '🍷', '🧃', '🥐',
+  '🍟', '🌯', '🥙', '🍲', '🥧', '🫔', '🥚', '🧀', '🍩', '🎂',
+];
+
+// Helper: check if URL is a video
+function isVideoUrl(url?: string): boolean {
+  if (!url) return false;
+  const videoExts = ['.mp4', '.webm', '.ogg', '.mov'];
+  const lower = url.toLowerCase();
+  return videoExts.some((ext) => lower.includes(ext));
+}
+
+// Helper: build full media URL
+function getMediaUrl(path?: string): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${API_URL}${path}`;
+}
+
 export default function MenuManagement() {
   const { token } = useAuth();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -87,6 +114,19 @@ export default function MenuManagement() {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [itemIngredients, setItemIngredients] = useState<{ rawMaterialId: string; amount: string; optional: boolean }[]>([]);
   const [isSavingIngredients, setIsSavingIngredients] = useState(false);
+
+  // Category management
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', icon: '🍽️' });
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+
+  // Media viewer
+  const [mediaViewer, setMediaViewer] = useState<{ url: string; isVideo: boolean; title: string } | null>(null);
+
+  // File upload
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     categoryId: '',
@@ -123,6 +163,50 @@ export default function MenuManagement() {
     }
   };
 
+  // ==================== FILE UPLOAD ====================
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+      'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Desteklenmeyen dosya formatı! JPG, PNG, WebP, GIF, SVG, MP4, WebM, OGG desteklenir.');
+      return;
+    }
+
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Dosya boyutu çok büyük! Maksimum 50MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await api.upload('/api/upload', file, token!);
+      if (result.file?.url) {
+        setFormData({ ...formData, image: result.file.url });
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      alert('Dosya yükleme hatası: ' + (error.message || 'Bilinmeyen hata'));
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveMedia = () => {
+    setFormData({ ...formData, image: '' });
+  };
+
+  // ==================== MENU ITEM CRUD ====================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -189,11 +273,14 @@ export default function MenuManagement() {
     if (!confirm('Bu ürünü silmek istediğinize emin misiniz?')) return;
 
     try {
-      await api.delete(`/api/menu/${itemId}`, token!);
+      const result = await api.delete(`/api/menu/${itemId}`, token!);
+      if (result.softDeleted) {
+        alert(result.message || 'Ürün siparişlerde kullanıldığı için pasife alındı.');
+      }
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Delete error:', error);
-      alert('Silme işlemi başarısız');
+      alert('Silme işlemi başarısız: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
@@ -208,7 +295,68 @@ export default function MenuManagement() {
     }
   };
 
-  // Cross-sell functions
+  // ==================== CATEGORY CRUD ====================
+  const openCategoryModal = (category?: Category) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryForm({ name: category.name, icon: category.icon || '🍽️' });
+    } else {
+      setEditingCategory(null);
+      setCategoryForm({ name: '', icon: '🍽️' });
+    }
+    setShowCategoryModal(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name.trim()) {
+      alert('Kategori adı gerekli');
+      return;
+    }
+    setIsSavingCategory(true);
+    try {
+      if (editingCategory) {
+        await api.put(`/api/categories/${editingCategory.id}`, {
+          name: categoryForm.name,
+          icon: categoryForm.icon,
+        }, token!);
+      } else {
+        await api.post('/api/categories', {
+          name: categoryForm.name,
+          icon: categoryForm.icon,
+          sortOrder: categories.length,
+        }, token!);
+      }
+      setShowCategoryModal(false);
+      setEditingCategory(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Category save error:', error);
+      alert('Kategori kaydedilemedi: ' + (error.message || ''));
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string) => {
+    const cat = categories.find((c) => c.id === catId);
+    const itemCount = cat?._count?.items || menuItems.filter((m) => m.categoryId === catId).length;
+
+    if (itemCount > 0) {
+      if (!confirm(`Bu kategoride ${itemCount} ürün var. Kategori pasife alınacak. Devam edilsin mi?`)) return;
+    } else {
+      if (!confirm('Bu kategoriyi silmek istediğinize emin misiniz?')) return;
+    }
+
+    try {
+      await api.delete(`/api/categories/${catId}`, token!);
+      fetchData();
+    } catch (error: any) {
+      console.error('Delete category error:', error);
+      alert('Kategori silinemedi: ' + (error.message || ''));
+    }
+  };
+
+  // ==================== CROSS-SELL ====================
   const openCrossSellModal = (item: MenuItem) => {
     setCrossSellItem(item);
     setCrossSellTargets([]);
@@ -217,7 +365,7 @@ export default function MenuManagement() {
 
   const handleSaveCrossSells = async () => {
     if (!crossSellItem) return;
-    
+
     try {
       for (const targetId of crossSellTargets) {
         await api.post('/api/crosssells', {
@@ -233,10 +381,9 @@ export default function MenuManagement() {
     }
   };
 
-  // Ingredient management functions
+  // ==================== INGREDIENT MANAGEMENT ====================
   const openIngredientModal = (item: MenuItem) => {
     setIngredientItem(item);
-    // Load existing ingredients
     const existing = (item.ingredients || []).map((ing) => ({
       rawMaterialId: ing.rawMaterialId,
       amount: Number(ing.amount).toString(),
@@ -299,6 +446,7 @@ export default function MenuManagement() {
     return map[unit] || unit;
   };
 
+  // ==================== FILTERING ====================
   const filteredItems = menuItems.filter((item) => {
     const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -325,22 +473,90 @@ export default function MenuManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Menü Yönetimi</h1>
-          <p className="text-gray-500">{menuItems.length} ürün</p>
+          <p className="text-gray-500">{menuItems.length} ürün &middot; {categories.length} kategori</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingItem(null);
-            resetForm();
-            setShowModal(true);
-          }}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Ürün Ekle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => openCategoryModal()}
+            className="btn btn-secondary flex items-center gap-2"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Kategori Ekle
+          </button>
+          <button
+            onClick={() => {
+              setEditingItem(null);
+              resetForm();
+              setShowModal(true);
+            }}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Ürün Ekle
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Category Management Bar */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Kategoriler</h3>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedCategory === 'all'
+                ? 'bg-primary-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Tümü ({menuItems.length})
+          </button>
+          {categories.map((cat) => {
+            const count = menuItems.filter((m) => m.categoryId === cat.id).length;
+            return (
+              <div key={cat.id} className="relative group">
+                <button
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedCategory === cat.id
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.icon} {cat.name} ({count})
+                </button>
+                {/* Category edit/delete on hover */}
+                <div className="absolute -top-1 -right-1 hidden group-hover:flex gap-0.5 z-10">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openCategoryModal(cat); }}
+                    className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-blue-600 shadow"
+                    title="Düzenle"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                    className="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 shadow"
+                    title="Sil"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <button
+            onClick={() => openCategoryModal()}
+            className="px-4 py-2 rounded-lg text-sm font-medium border-2 border-dashed border-gray-300 text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-all flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> Yeni
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
       <div className="card">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-64">
@@ -352,18 +568,6 @@ export default function MenuManagement() {
               className="input"
             />
           </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="input w-auto"
-          >
-            <option value="all">Tüm Kategoriler</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -374,20 +578,54 @@ export default function MenuManagement() {
             key={item.id}
             className={`card relative ${!item.available ? 'opacity-60' : ''}`}
           >
-            {/* Image */}
-            <div className="relative h-40 -mx-4 -mt-4 mb-4 overflow-hidden rounded-t-xl bg-gray-100">
+            {/* Image / Video Preview */}
+            <div
+              className="relative h-40 -mx-4 -mt-4 mb-4 overflow-hidden rounded-t-xl bg-gray-100 cursor-pointer group"
+              onClick={() => {
+                if (item.image) {
+                  setMediaViewer({
+                    url: getMediaUrl(item.image),
+                    isVideo: isVideoUrl(item.image),
+                    title: item.name,
+                  });
+                }
+              }}
+            >
               {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
+                isVideoUrl(item.image) ? (
+                  // Video thumbnail
+                  <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                    <video
+                      src={getMediaUrl(item.image)}
+                      className="w-full h-full object-cover"
+                      muted
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-all">
+                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                        <Film className="w-6 h-6 text-gray-800" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Image
+                  <>
+                    <img
+                      src={getMediaUrl(item.image)}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <Eye className="w-8 h-8 text-white drop-shadow-lg" />
+                    </div>
+                  </>
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                   <Image className="w-12 h-12" />
                 </div>
               )}
-              
+
               {/* Availability Badge */}
               {!item.available && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -508,7 +746,7 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* ==================== ADD/EDIT MENU ITEM MODAL ==================== */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
@@ -529,19 +767,29 @@ export default function MenuManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Kategori *
                   </label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="input"
-                    required
-                  >
-                    <option value="">Seçin</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                      className="input flex-1"
+                      required
+                    >
+                      <option value="">Seçin</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => openCategoryModal()}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 transition-colors"
+                      title="Yeni Kategori Ekle"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -584,17 +832,78 @@ export default function MenuManagement() {
                 />
               </div>
 
+              {/* ===== MEDIA UPLOAD SECTION ===== */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Görsel URL
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Görsel / Video
                 </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="input"
-                  placeholder="https://..."
-                />
+
+                {/* Current media preview */}
+                {formData.image ? (
+                  <div className="relative mb-3 rounded-xl overflow-hidden border-2 border-gray-200">
+                    {isVideoUrl(formData.image) ? (
+                      <video
+                        src={getMediaUrl(formData.image)}
+                        className="w-full h-48 object-cover bg-black"
+                        controls
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img
+                        src={getMediaUrl(formData.image)}
+                        alt="Ürün görseli"
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleRemoveMedia}
+                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      {isVideoUrl(formData.image) ? '🎥 Video' : '🖼️ Görsel'}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Upload area */}
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/ogg,video/quicktime"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="media-upload"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className={`flex-1 py-3 border-2 border-dashed rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+                      isUploading
+                        ? 'border-gray-300 text-gray-400 cursor-wait'
+                        : 'border-primary-300 text-primary-600 hover:bg-primary-50 hover:border-primary-400'
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent"></div>
+                        Yükleniyor...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        {formData.image ? 'Değiştir' : 'Görsel veya Video Yükle'}
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  JPG, PNG, WebP, GIF, SVG, MP4, WebM, OGG (max 50MB)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -713,7 +1022,87 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* Ingredient Modal */}
+      {/* ==================== CATEGORY MODAL ==================== */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <h2 className="text-xl font-semibold">
+                {editingCategory ? 'Kategori Düzenle' : 'Yeni Kategori'}
+              </h2>
+              <button onClick={() => setShowCategoryModal(false)}>
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Category Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Kategori Adı *
+                </label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="input"
+                  placeholder="Ör: Pizza, İçecekler..."
+                  autoFocus
+                />
+              </div>
+
+              {/* Icon Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  İkon
+                </label>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-14 h-14 bg-primary-50 rounded-xl flex items-center justify-center text-3xl border-2 border-primary-200">
+                    {categoryForm.icon}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Aşağıdan bir ikon seçin
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl max-h-32 overflow-y-auto">
+                  {CATEGORY_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={() => setCategoryForm({ ...categoryForm, icon })}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${
+                        categoryForm.icon === icon
+                          ? 'bg-primary-500 shadow-md scale-110 ring-2 ring-primary-300'
+                          : 'bg-white hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 p-6 pt-0">
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="btn btn-secondary flex-1"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleSaveCategory}
+                disabled={isSavingCategory || !categoryForm.name.trim()}
+                className="btn btn-primary flex-1"
+              >
+                {isSavingCategory ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== INGREDIENT MODAL ==================== */}
       {showIngredientModal && ingredientItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
@@ -842,7 +1231,7 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* Cross-sell Modal */}
+      {/* ==================== CROSS-SELL MODAL ==================== */}
       {showCrossSellModal && crossSellItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-lg flex flex-col max-h-[90vh]">
@@ -907,13 +1296,54 @@ export default function MenuManagement() {
                 onClick={handleSaveCrossSells}
                 className="btn btn-primary flex-1"
               >
-                💡 Kaydet ({crossSellTargets.length} ürün)
+                Kaydet ({crossSellTargets.length} ürün)
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MEDIA VIEWER (LIGHTBOX) ==================== */}
+      {mediaViewer && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[70] p-4"
+          onClick={() => setMediaViewer(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setMediaViewer(null)}
+              className="absolute -top-12 right-0 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Title */}
+            <div className="absolute -top-12 left-0 text-white text-lg font-medium">
+              {mediaViewer.title}
+            </div>
+
+            {/* Content */}
+            {mediaViewer.isVideo ? (
+              <video
+                src={mediaViewer.url}
+                className="w-full max-h-[85vh] rounded-xl"
+                controls
+                autoPlay
+              />
+            ) : (
+              <img
+                src={mediaViewer.url}
+                alt={mediaViewer.title}
+                className="w-full max-h-[85vh] object-contain rounded-xl"
+              />
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
-

@@ -21,6 +21,9 @@ RUN cd packages/database && npm install && npx prisma generate
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
 # Expose port
 EXPOSE 3000
 

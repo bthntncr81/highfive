@@ -33,6 +33,8 @@ services:
       PORT: 3000
       IYZICO_API_KEY: sandbox-ifkcjkaPdtshoWkt36gjOwpZ9Z5XsUZM
       IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,3 +86,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

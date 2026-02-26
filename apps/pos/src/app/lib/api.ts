@@ -40,19 +40,52 @@ async function request(endpoint: string, options: RequestOptions = {}) {
 }
 
 export const api = {
-  get: (endpoint: string, token?: string) => 
+  get: (endpoint: string, token?: string) =>
     request(endpoint, { token }),
-  
-  post: (endpoint: string, body: any, token?: string) => 
+
+  post: (endpoint: string, body: any, token?: string) =>
     request(endpoint, { method: 'POST', body, token }),
-  
-  put: (endpoint: string, body: any, token?: string) => 
+
+  put: (endpoint: string, body: any, token?: string) =>
     request(endpoint, { method: 'PUT', body, token }),
-  
-  patch: (endpoint: string, body: any, token?: string) => 
+
+  patch: (endpoint: string, body: any, token?: string) =>
     request(endpoint, { method: 'PATCH', body, token }),
-  
-  delete: (endpoint: string, token?: string) => 
+
+  delete: (endpoint: string, token?: string) =>
     request(endpoint, { method: 'DELETE', token }),
+
+  // File upload - uses FormData instead of JSON
+  upload: async (endpoint: string, file: File, token?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Do NOT set Content-Type - browser will set it with boundary
+
+    try {
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Yükleme hatası');
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Bağlantı hatası');
+    }
+  },
 };
 
