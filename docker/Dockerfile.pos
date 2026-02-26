@@ -23,9 +23,9 @@ COPY apps/pos/postcss.config.js ./
 # Create standalone tsconfig
 RUN echo '{"compilerOptions":{"target":"ES2020","useDefineForClassFields":true,"lib":["ES2020","DOM","DOM.Iterable"],"module":"ESNext","skipLibCheck":true,"moduleResolution":"bundler","allowImportingTsExtensions":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true,"jsx":"react-jsx","strict":true,"noUnusedLocals":true,"noUnusedParameters":true,"noFallthroughCasesInSwitch":true,"esModuleInterop":true},"include":["src"]}' > tsconfig.json
 
-# Build args for environment
-ARG VITE_API_URL=http://localhost:3000
-ARG VITE_WS_URL=ws://localhost:3000/ws
+# Build args for environment - empty means relative paths, nginx will proxy
+ARG VITE_API_URL=
+ARG VITE_WS_URL=
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
@@ -39,7 +39,7 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx config
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/pos/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

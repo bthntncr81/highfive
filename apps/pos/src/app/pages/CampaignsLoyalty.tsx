@@ -5,6 +5,7 @@ import {
   Plus, Trash2, Edit2, Check, X, Search, Award, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 
 interface LoyaltyTier {
   id: string;
@@ -72,45 +73,6 @@ interface Coupon {
   usageLimit?: number;
 }
 
-const API_BASE = 'http://localhost:3000';
-
-const api = {
-  async get(endpoint: string, token: string) {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
-  async post(endpoint: string, data: any, token: string) {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-  async put(endpoint: string, data: any, token: string) {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-  async delete(endpoint: string, token: string) {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
-};
 
 type TabType = 'loyalty' | 'customers' | 'campaigns' | 'bundles' | 'coupons';
 

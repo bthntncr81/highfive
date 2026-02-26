@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChefHat, Clock, Check, RefreshCw, Volume2, VolumeX, Flame, Bell, Utensils } from 'lucide-react';
 
-// API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000/ws';
+// API URL - empty string means relative paths, nginx will proxy to API container
+const API_URL = import.meta.env.VITE_API_URL || '';
+const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
 interface Ingredient {
   id: string;

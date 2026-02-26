@@ -281,7 +281,7 @@ export const Payment = () => {
 
   const completePayment = async (paymentId: string, conversationId: string) => {
     try {
-      const response = await fetch('http://localhost:3000/api/payment/complete-3ds', {
+      const response = await fetch('/api/payment/complete-3ds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentId, conversationId, orderId }),
@@ -339,7 +339,7 @@ export const Payment = () => {
     try {
       const [expMonth, expYear] = expiry.split('/');
       
-      const response = await fetch('http://localhost:3000/api/payment/initialize-3ds', {
+      const response = await fetch('/api/payment/initialize-3ds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

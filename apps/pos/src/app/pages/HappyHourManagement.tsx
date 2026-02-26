@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Plus, Trash2, Edit2, Calendar, Tag, Percent, Check, X, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 
 interface MenuItem {
   id: string;
@@ -47,44 +48,6 @@ interface HappyHour {
 }
 
 const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-
-const api = {
-  async get(endpoint: string, token: string) {
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
-  async post(endpoint: string, data: any, token: string) {
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-  async put(endpoint: string, data: any, token: string) {
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-  async delete(endpoint: string, token: string) {
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
-};
 
 export default function HappyHourManagement() {
   const { token } = useAuth();

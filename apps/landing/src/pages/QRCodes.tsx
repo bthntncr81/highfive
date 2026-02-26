@@ -21,7 +21,7 @@ export const QRCodes = () => {
   const fetchTables = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/tables/public');
+      const response = await fetch('/api/tables/public');
       const data = await response.json();
       setTables(data.tables || []);
     } catch (err) {

@@ -1,5 +1,5 @@
 // API Client for connecting to HighFive Suite backend
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 interface ApiResponse<T = any> {
   success: boolean;
