@@ -45,9 +45,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.pos
-      args:
-        VITE_API_URL: http://localhost:3000
-        VITE_WS_URL: ws://localhost:3000/ws
     container_name: highfive-pos
     ports:
       - "5501:80"
@@ -60,9 +57,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.kitchen
-      args:
-        VITE_API_URL: http://localhost:3000
-        VITE_WS_URL: ws://localhost:3000/ws
     container_name: highfive-kitchen
     ports:
       - "5502:80"
@@ -75,8 +69,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.landing
-      args:
-        VITE_API_URL: http://localhost:3000
     container_name: highfive-landing
     ports:
       - "5503:80"
