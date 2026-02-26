@@ -9,10 +9,12 @@ interface RequestOptions {
 async function request(endpoint: string, options: RequestOptions = {}) {
   const { method = 'GET', body, token } = options;
   
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  
+  const headers: HeadersInit = {};
+
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
