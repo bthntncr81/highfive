@@ -199,16 +199,6 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
 
   // Get low stock materials
   server.get('/alerts/low-stock', { preHandler: verifyAuth }, async () => {
-    const materials = await prisma.rawMaterial.findMany({
-      where: {
-        active: true,
-        currentStock: {
-          lte: prisma.rawMaterial.fields.minStock as any,
-        },
-      },
-      orderBy: { currentStock: 'asc' },
-    });
-
     // Manual filter since Prisma doesn't support comparing two columns directly
     const allActive = await prisma.rawMaterial.findMany({
       where: { active: true },
