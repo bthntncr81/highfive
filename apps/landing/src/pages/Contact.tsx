@@ -115,7 +115,7 @@ export const Contact = () => {
                     href={content.links.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-foreground rounded-xl text-xl text-white hover:bg-primary transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-accent rounded-xl text-xl text-white hover:bg-primary transition-colors"
                   >
                     📸
                   </a>
@@ -125,7 +125,7 @@ export const Contact = () => {
                     href={content.links.tiktok}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-foreground rounded-xl text-xl text-white hover:bg-primary transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-accent rounded-xl text-xl text-white hover:bg-primary transition-colors"
                   >
                     🎵
                   </a>
@@ -140,7 +140,7 @@ export const Contact = () => {
           <div className="max-w-2xl mx-auto">
             <SectionHeading title="Çalışma Saatleri 🕐" />
 
-            <div className="bg-foreground text-white rounded-xl p-6">
+            <div className="bg-accent text-white rounded-xl p-6">
               {content.contact.hours.map((hour, index) => (
                 <motion.div
                   key={index}

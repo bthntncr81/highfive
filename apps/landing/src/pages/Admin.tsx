@@ -157,7 +157,7 @@ export const Admin = () => {
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-foreground text-white px-6 py-3 rounded-xl shadow-xl font-display"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-accent text-white px-6 py-3 rounded-xl shadow-xl font-display"
           >
             {toast}
           </motion.div>
@@ -165,7 +165,7 @@ export const Admin = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="bg-foreground text-white p-4 sticky top-0 z-40">
+      <header className="bg-accent text-white p-4 sticky top-0 z-40">
         <div className="container-diner flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button

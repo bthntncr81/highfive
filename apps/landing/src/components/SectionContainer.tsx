@@ -20,7 +20,7 @@ export const SectionContainer = ({
     paper: 'bg-surface',
     kraft: 'bg-white',
     red: 'bg-primary text-white',
-    chocolate: 'bg-foreground text-white',
+    chocolate: 'bg-accent text-white',
   }
 
   return (

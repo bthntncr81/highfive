@@ -308,7 +308,7 @@
      DARK SECTION (replaces chalkboard/menu-board)
      ============================================ */
   .dark-section {
-    @apply bg-foreground text-white p-8 rounded-2xl;
+    @apply bg-accent text-white p-8 rounded-2xl;
   }
 
   /* ============================================

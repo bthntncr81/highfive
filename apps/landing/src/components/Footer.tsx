@@ -8,7 +8,7 @@ export const Footer = () => {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="relative bg-foreground text-white overflow-hidden">
+    <footer className="relative bg-accent text-white overflow-hidden">
       {/* Main footer content */}
       <div className="container-diner py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">

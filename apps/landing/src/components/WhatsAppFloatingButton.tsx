@@ -56,10 +56,10 @@ export const WhatsAppFloatingButton = () => {
         <motion.div
           initial={{ opacity: 0, x: 10 }}
           whileHover={{ opacity: 1, x: 0 }}
-          className="hidden lg:block absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-foreground text-white font-body text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none"
+          className="hidden lg:block absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-accent text-white font-body text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none"
         >
           Hızlı sipariş için tıkla!
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full border-8 border-transparent border-l-foreground" />
+          <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full border-8 border-transparent border-l-accent" />
         </motion.div>
       </motion.div>
     </AnimatePresence>
