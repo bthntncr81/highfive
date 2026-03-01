@@ -76,7 +76,7 @@ export default function PinLogin() {
         />
         
         {/* Floating circles */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#C41E3A]/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#CF1D00]/10 rounded-full blur-3xl animate-float" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#F4A300]/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
       </div>
 
@@ -93,7 +93,7 @@ export default function PinLogin() {
 
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#C41E3A] to-[#9B1730] p-6 relative">
+          <div className="bg-gradient-to-r from-[#CF1D00] to-[#A01600] p-6 relative">
             <div 
               className="absolute inset-0 opacity-10"
               style={{
@@ -129,7 +129,7 @@ export default function PinLogin() {
                   key={i}
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                     pin.length > i
-                      ? 'bg-gradient-to-br from-[#C41E3A] to-[#9B1730] shadow-lg scale-110'
+                      ? 'bg-gradient-to-br from-[#CF1D00] to-[#A01600] shadow-lg scale-110'
                       : 'bg-gray-100 border-2 border-gray-200'
                   }`}
                 >
@@ -187,7 +187,7 @@ export default function PinLogin() {
               <div className="mt-6 flex flex-col items-center gap-3">
                 <div className="relative">
                   <div className="w-12 h-12 rounded-full border-4 border-gray-200"></div>
-                  <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-[#C41E3A] border-t-transparent animate-spin"></div>
+                  <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-[#CF1D00] border-t-transparent animate-spin"></div>
                 </div>
                 <p className="text-gray-500 font-medium">Giriş yapılıyor...</p>
               </div>

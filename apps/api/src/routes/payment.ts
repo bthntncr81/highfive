@@ -382,7 +382,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
               align-items: center;
               justify-content: center;
               min-height: 100vh;
-              background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
+              background: linear-gradient(135deg, #CF1D00 0%, #A01600 100%);
               color: white;
             }
             .container {

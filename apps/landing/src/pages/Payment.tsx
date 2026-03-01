@@ -497,9 +497,9 @@ export const Payment = () => {
           className="text-center mb-6"
         >
           <motion.img
-            src="/logo.png"
+            src="/logo.svg"
             alt="High Five"
-            className="w-20 h-20 mx-auto mb-2"
+            className="w-20 h-20 mx-auto mb-2 object-contain"
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ repeat: Infinity, duration: 4 }}
           />

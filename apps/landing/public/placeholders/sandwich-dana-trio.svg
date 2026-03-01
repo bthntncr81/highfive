@@ -23,15 +23,15 @@
   <circle cx="145" cy="78" r="6" fill="#E63946"/>
   
   <!-- Dana salam layer -->
-  <circle cx="45" cy="68" r="12" fill="#C41E3A"/>
+  <circle cx="45" cy="68" r="12" fill="#CF1D00"/>
   <circle cx="45" cy="68" r="9" fill="#DC143C"/>
   <circle cx="43" cy="66" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="85" cy="65" r="13" fill="#C41E3A"/>
+  <circle cx="85" cy="65" r="13" fill="#CF1D00"/>
   <circle cx="85" cy="65" r="10" fill="#DC143C"/>
   <circle cx="83" cy="63" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="125" cy="65" r="13" fill="#C41E3A"/>
+  <circle cx="125" cy="65" r="13" fill="#CF1D00"/>
   <circle cx="125" cy="65" r="10" fill="#DC143C"/>
-  <circle cx="165" cy="68" r="12" fill="#C41E3A"/>
+  <circle cx="165" cy="68" r="12" fill="#CF1D00"/>
   <circle cx="165" cy="68" r="9" fill="#DC143C"/>
   
   <!-- Dana füme layer -->

@@ -14,11 +14,11 @@ module.exports = {
           200: '#fecaca',
           300: '#fca5a5',
           400: '#f87171',
-          500: '#C41E3A', // High Five Red
-          600: '#b91c35',
-          700: '#9f1a2f',
-          800: '#851829',
-          900: '#6b1522',
+          500: '#CF1D00', // High Five Red
+          600: '#b91900',
+          700: '#A01600',
+          800: '#851200',
+          900: '#6b0f00',
         },
         accent: {
           50: '#fffbeb',
@@ -36,7 +36,7 @@ module.exports = {
           cream: '#FDF6E3',
           kraft: '#D4A574',
           brown: '#5D4037',
-          red: '#C41E3A',
+          red: '#CF1D00',
           gold: '#F4A300',
         },
       },

@@ -5,25 +5,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Five Guys inspired warm palette
+        // HighFive brand palette
         diner: {
-          red: '#C41E3A',        // Classic diner red
-          'red-dark': '#8B0000', // Deep red
-          'red-light': '#E63946',
+          red: '#CF1D00',        // HighFive brand red
+          'red-dark': '#A01600', // Deep red
+          'red-light': '#E84530',
           cream: '#FFF8F0',      // Warm cream background
           'cream-dark': '#F5E6D3',
           paper: '#FFFBF5',      // Paper white
           kraft: '#D4A574',      // Kraft paper brown
           mustard: '#F4A300',    // Mustard yellow accent
           'mustard-light': '#FFD166',
-          ketchup: '#CF1D00',    // Ketchup red (original)
+          ketchup: '#CF1D00',    // Brand red (same as primary)
           chocolate: '#3D2314',  // Dark chocolate brown
           'chocolate-light': '#5D4037',
           charcoal: '#2C2C2C',   // Near black
           checkers: '#E8D5C4',   // Checkered pattern color
         },
         // Semantic aliases
-        primary: '#C41E3A',
+        primary: '#CF1D00',
         secondary: '#F4A300',
         background: '#FFF8F0',
         surface: '#FFFBF5',
@@ -43,7 +43,7 @@ export default {
         'diner': '4px 4px 0 0 rgba(61, 35, 20, 0.2)',
         'diner-lg': '6px 6px 0 0 rgba(61, 35, 20, 0.25)',
         'diner-xl': '8px 8px 0 0 rgba(61, 35, 20, 0.3)',
-        'stamp': '2px 2px 0 0 rgba(196, 30, 58, 0.3)',
+        'stamp': '2px 2px 0 0 rgba(207, 29, 0, 0.3)',
         'paper': '0 2px 8px rgba(61, 35, 20, 0.1)',
         'paper-hover': '0 4px 16px rgba(61, 35, 20, 0.15)',
       },

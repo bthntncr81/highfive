@@ -58,7 +58,7 @@ export const QRCodes = () => {
               box-sizing: border-box;
             }
             .card {
-              border: 3px solid #C41E3A;
+              border: 3px solid #CF1D00;
               border-radius: 16px;
               padding: 30px;
               text-align: center;
@@ -71,7 +71,7 @@ export const QRCodes = () => {
             .title {
               font-size: 24px;
               font-weight: bold;
-              color: #C41E3A;
+              color: #CF1D00;
               margin-bottom: 5px;
             }
             .table-name {
@@ -162,14 +162,14 @@ export const QRCodes = () => {
               gap: 20px;
             }
             .card {
-              border: 2px solid #C41E3A;
+              border: 2px solid #CF1D00;
               border-radius: 12px;
               padding: 20px;
               text-align: center;
               page-break-inside: avoid;
             }
             .logo { font-size: 32px; }
-            .title { font-size: 16px; font-weight: bold; color: #C41E3A; }
+            .title { font-size: 16px; font-weight: bold; color: #CF1D00; }
             .table-name { font-size: 24px; font-weight: bold; color: #3D2314; margin: 10px 0; }
             .qr-placeholder { margin: 10px auto; }
             .qr-placeholder img { width: 150px; height: 150px; }

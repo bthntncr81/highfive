@@ -18,8 +18,8 @@ export const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="inline-block mb-6 group">
-              <motion.img 
-                src="/logow.png"
+              <motion.img
+                src="/logo-white.svg"
                 alt={content.site.logoText}
                 className="h-24 w-auto drop-shadow-lg"
                 whileHover={{ scale: 1.05 }}

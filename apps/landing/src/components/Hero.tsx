@@ -84,7 +84,7 @@ export const Hero = () => {
               style={{ margin: "0" }}
             >
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt={content.site.logoText}
                 className="h-32 md:h-44 w-auto"
                 style={{ height: "20rem", margin: "auto" }}

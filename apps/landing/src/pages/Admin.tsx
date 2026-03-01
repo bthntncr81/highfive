@@ -175,7 +175,7 @@ export const Admin = () => {
               ☰
             </button>
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="High Five" className="h-12 w-auto" />
+            <img src="/logo.svg" alt="High Five" className="h-12 w-auto" />
             <span className="font-heading text-xl md:text-2xl">Admin</span>
           </div>
           </div>

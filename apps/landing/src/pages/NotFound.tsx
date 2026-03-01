@@ -15,7 +15,7 @@ export const NotFound = () => {
           className="mb-8"
         >
           <img 
-            src="/logo.png" 
+            src="/logo.svg"
             alt="High Five" 
             className="h-40 w-auto mx-auto"
           />

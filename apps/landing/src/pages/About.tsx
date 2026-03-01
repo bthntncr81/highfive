@@ -16,7 +16,7 @@ export const About = () => {
           className="text-center"
         >
           <motion.img
-            src="/logo.png"
+            src="/logo-white.svg"
             alt="High Five"
             className="h-28 md:h-36 w-auto mx-auto mb-4"
             animate={{ scale: [1, 1.05, 1] }}

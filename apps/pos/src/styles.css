@@ -10,9 +10,9 @@
 
 :root {
   /* Primary Colors */
-  --color-red: #C41E3A;
-  --color-red-dark: #9B1730;
-  --color-red-light: #E85A70;
+  --color-red: #CF1D00;
+  --color-red-dark: #A01600;
+  --color-red-light: #E84530;
   
   /* Accent Colors */
   --color-gold: #F4A300;
@@ -74,17 +74,17 @@
     background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
     @apply text-white;
     @apply hover:brightness-110 focus:ring-red-500/30;
-    box-shadow: 0 4px 0 var(--color-red-dark), 0 6px 20px rgba(196, 30, 58, 0.3);
+    box-shadow: 0 4px 0 var(--color-red-dark), 0 6px 20px rgba(207, 29, 0, 0.3);
   }
   
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 0 var(--color-red-dark), 0 8px 25px rgba(196, 30, 58, 0.4);
+    box-shadow: 0 6px 0 var(--color-red-dark), 0 8px 25px rgba(207, 29, 0, 0.4);
   }
   
   .btn-primary:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 var(--color-red-dark), 0 2px 10px rgba(196, 30, 58, 0.3);
+    box-shadow: 0 2px 0 var(--color-red-dark), 0 2px 10px rgba(207, 29, 0, 0.3);
   }
   
   .btn-secondary {
@@ -159,7 +159,7 @@
     @apply text-white;
     box-shadow: 
       0 8px 0 #7A1122,
-      0 12px 40px rgba(196, 30, 58, 0.3);
+      0 12px 40px rgba(207, 29, 0, 0.3);
   }
   
   .card-checkered {
@@ -195,7 +195,7 @@
   }
   
   .badge-red {
-    background: rgba(196, 30, 58, 0.1);
+    background: rgba(207, 29, 0, 0.1);
     color: var(--color-red);
     border-color: var(--color-red);
   }
@@ -228,7 +228,7 @@
   
   .stamp-red {
     color: var(--color-red);
-    background: rgba(196, 30, 58, 0.1);
+    background: rgba(207, 29, 0, 0.1);
   }
   
   .stamp-gold {
@@ -297,7 +297,7 @@
   .nav-link.active {
     background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
     @apply text-white;
-    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.3);
+    box-shadow: 0 4px 15px rgba(207, 29, 0, 0.3);
   }
   
   /* ============================================
@@ -378,7 +378,7 @@
   .pin-dot.filled {
     background: var(--color-red);
     transform: scale(1.2);
-    box-shadow: 0 0 10px rgba(196, 30, 58, 0.4);
+    box-shadow: 0 0 10px rgba(207, 29, 0, 0.4);
   }
   
   /* ============================================

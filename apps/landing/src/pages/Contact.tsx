@@ -17,7 +17,7 @@ export const Contact = () => {
           className="text-center"
         >
           <motion.img
-            src="/logo.png"
+            src="/logo-white.svg"
             alt="High Five"
             className="h-24 md:h-32 w-auto mx-auto mb-4"
             animate={{ scale: [1, 1.05, 1] }}

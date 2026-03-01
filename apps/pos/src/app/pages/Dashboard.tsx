@@ -124,7 +124,7 @@ export default function Dashboard() {
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-[#C41E3A] border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-[#CF1D00] border-t-transparent animate-spin"></div>
             <span className="absolute inset-0 flex items-center justify-center text-3xl animate-float">
               🍕
             </span>
@@ -167,7 +167,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <Link 
               to="/tables"
-              className="btn bg-white text-[#C41E3A] hover:bg-white/90 flex items-center gap-2"
+              className="btn bg-white text-[#CF1D00] hover:bg-white/90 flex items-center gap-2"
             >
               <span>🍽️</span>
               Yeni Sipariş
@@ -260,7 +260,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <Link
               to="/tables"
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#C41E3A]/5 hover:to-[#C41E3A]/10 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#CF1D00]/5 hover:to-[#CF1D00]/10 transition-all group"
             >
               <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 🍽️
@@ -269,7 +269,7 @@ export default function Dashboard() {
                 <p className="font-semibold text-gray-900">Yeni Masa Siparişi</p>
                 <p className="text-sm text-gray-500">Masadan sipariş al</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#C41E3A] group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#CF1D00] group-hover:translate-x-1 transition-all" />
             </Link>
             
             <Link
@@ -311,7 +311,7 @@ export default function Dashboard() {
             </div>
             <Link 
               to="/orders" 
-              className="text-[#C41E3A] hover:text-[#9B1730] text-sm font-semibold flex items-center gap-1"
+              className="text-[#CF1D00] hover:text-[#A01600] text-sm font-semibold flex items-center gap-1"
             >
               Tümünü Gör
               <ArrowRight className="w-4 h-4" />

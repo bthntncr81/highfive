@@ -39,8 +39,8 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <motion.img 
-              src="/logo.png"
+            <motion.img
+              src="/logo.svg"
               alt={content.site.logoText}
               className="h-16 md:h-20 w-auto"
               whileHover={{ scale: 1.05 }}

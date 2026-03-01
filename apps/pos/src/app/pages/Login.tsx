@@ -31,7 +31,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#C41E3A] via-[#9B1730] to-[#5D4037]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#CF1D00] via-[#A01600] to-[#5D4037]">
         {/* Checkered pattern overlay */}
         <div 
           className="absolute inset-0 opacity-10"
@@ -69,8 +69,8 @@ export default function Login() {
             />
             <div className="relative text-center">
               {/* Logo */}
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4">
-                <span className="text-4xl">🖐️</span>
+              <div className="inline-flex items-center justify-center mb-4">
+                <img src="/logo.svg" alt="High Five" className="h-16 w-auto brightness-0 invert" />
               </div>
               <h1 className="font-display text-4xl text-white tracking-wider drop-shadow-lg">
                 HIGH FIVE

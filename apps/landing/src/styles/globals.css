@@ -12,9 +12,9 @@
 @layer base {
   :root {
     /* Core palette */
-    --color-red: #C41E3A;
-    --color-red-dark: #8B0000;
-    --color-red-light: #E63946;
+    --color-red: #CF1D00;
+    --color-red-dark: #A01600;
+    --color-red-light: #E84530;
     --color-cream: #FFF8F0;
     --color-cream-dark: #F5E6D3;
     --color-paper: #FFFBF5;
@@ -36,7 +36,7 @@
     /* Shadows */
     --shadow-diner: 4px 4px 0 0 rgba(61, 35, 20, 0.2);
     --shadow-diner-lg: 6px 6px 0 0 rgba(61, 35, 20, 0.25);
-    --shadow-stamp: 2px 2px 0 0 rgba(196, 30, 58, 0.3);
+    --shadow-stamp: 2px 2px 0 0 rgba(207, 29, 0, 0.3);
     
     /* Radii */
     --radius-diner: 1rem;
@@ -293,7 +293,7 @@
 
   .checkered-red {
     background: repeating-conic-gradient(
-      rgba(196, 30, 58, 0.1) 0% 25%,
+      rgba(207, 29, 0, 0.1) 0% 25%,
       transparent 0% 50%
     ) 50% / 24px 24px;
   }
@@ -420,11 +420,11 @@
     background: conic-gradient(
       from 0deg,
       #F4A300 0deg 60deg,
-      #C41E3A 60deg 120deg,
+      #CF1D00 60deg 120deg,
       #F4A300 120deg 180deg,
-      #C41E3A 180deg 240deg,
+      #CF1D00 180deg 240deg,
       #F4A300 240deg 300deg,
-      #C41E3A 300deg 360deg
+      #CF1D00 300deg 360deg
     );
   }
 

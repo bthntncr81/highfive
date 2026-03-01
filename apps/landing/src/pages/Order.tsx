@@ -283,7 +283,7 @@ export const Order = () => {
           className="text-center mb-8"
         >
           <img
-            src="/logo.png"
+            src="/logo.svg"
             alt="High Five"
             className="w-24 h-24 mx-auto mb-4 object-contain"
           />

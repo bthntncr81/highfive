@@ -3,7 +3,7 @@
   <circle cx="100" cy="100" r="95" fill="#D4A574"/>
   <circle cx="100" cy="100" r="88" fill="#F5DEB3"/>
   <!-- Tomato sauce -->
-  <circle cx="100" cy="100" r="82" fill="#C41E3A"/>
+  <circle cx="100" cy="100" r="82" fill="#CF1D00"/>
   <!-- Four cheese quadrants -->
   <!-- Mozzarella (top-left) -->
   <path d="M100,100 L100,22 A78,78 0 0,0 22,100 Z" fill="#FFD93D"/>

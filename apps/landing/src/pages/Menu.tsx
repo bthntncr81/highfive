@@ -177,7 +177,7 @@ export const Menu = () => {
           className="text-center"
         >
           <motion.img
-            src="/logow.png"
+            src="/logo-white.svg"
             alt="High Five"
             className="h-28 md:h-36 w-auto mx-auto mb-4 drop-shadow-2xl"
             animate={{ scale: [1, 1.05, 1] }}

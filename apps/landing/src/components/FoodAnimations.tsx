@@ -16,7 +16,7 @@ export const PizzaAnimation = () => {
           <circle cx="100" cy="100" r="85" fill="#F5DEB3" />
           
           {/* Tomato sauce */}
-          <circle cx="100" cy="100" r="78" fill="#C41E3A" />
+          <circle cx="100" cy="100" r="78" fill="#CF1D00" />
           
           {/* Cheese base */}
           <circle cx="100" cy="100" r="75" fill="#FFD93D" opacity="0.9" />
@@ -142,9 +142,9 @@ export const PastaAnimation = () => {
         </g>
         
         {/* Tomato sauce */}
-        <circle cx="65" cy="88" r="6" fill="#C41E3A" opacity="0.8" />
-        <circle cx="85" cy="92" r="5" fill="#C41E3A" opacity="0.7" />
-        <circle cx="75" cy="85" r="4" fill="#C41E3A" opacity="0.6" />
+        <circle cx="65" cy="88" r="6" fill="#CF1D00" opacity="0.8" />
+        <circle cx="85" cy="92" r="5" fill="#CF1D00" opacity="0.7" />
+        <circle cx="75" cy="85" r="4" fill="#CF1D00" opacity="0.6" />
         
         {/* Basil */}
         <ellipse cx="80" cy="80" rx="6" ry="4" fill="#228B22" transform="rotate(-20 80 80)" />
@@ -254,11 +254,11 @@ export const SandwichAnimation = () => {
           animate="animate"
           transition={{ delay: 0.2 }}
         >
-          <circle cx="40" cy="72" r="12" fill="#C41E3A" />
+          <circle cx="40" cy="72" r="12" fill="#CF1D00" />
           <circle cx="40" cy="72" r="8" fill="#E63946" />
-          <circle cx="80" cy="70" r="12" fill="#C41E3A" />
+          <circle cx="80" cy="70" r="12" fill="#CF1D00" />
           <circle cx="80" cy="70" r="8" fill="#E63946" />
-          <circle cx="120" cy="72" r="12" fill="#C41E3A" />
+          <circle cx="120" cy="72" r="12" fill="#CF1D00" />
           <circle cx="120" cy="72" r="8" fill="#E63946" />
         </motion.g>
         
@@ -328,7 +328,7 @@ export const SandwichAnimation = () => {
       >
         <svg viewBox="0 0 30 50" className="w-8 h-12">
           <line x1="15" y1="50" x2="15" y2="5" stroke="#8B4513" strokeWidth="2" />
-          <path d="M15,5 L28,12 L15,19 Z" fill="#C41E3A" />
+          <path d="M15,5 L28,12 L15,19 Z" fill="#CF1D00" />
         </svg>
       </motion.div>
     </div>
@@ -343,7 +343,7 @@ export const PizzaSlice = ({ className = '' }: { className?: string }) => (
     whileHover={{ rotate: 10, scale: 1.1 }}
   >
     <path d="M30,5 L55,75 L5,75 Z" fill="#F5DEB3" />
-    <path d="M30,10 L50,70 L10,70 Z" fill="#C41E3A" />
+    <path d="M30,10 L50,70 L10,70 Z" fill="#CF1D00" />
     <path d="M30,12 L48,68 L12,68 Z" fill="#FFD93D" opacity="0.9" />
     <circle cx="25" cy="40" r="6" fill="#8B0000" />
     <circle cx="35" cy="55" r="6" fill="#8B0000" />
@@ -372,7 +372,7 @@ export const DrinkAnimation = ({ className = '' }: { className?: string }) => (
       <rect x="32" y="50" width="8" height="8" rx="2" fill="white" opacity="0.5" transform="rotate(-10 36 54)" />
       
       {/* Straw */}
-      <rect x="35" y="5" width="4" height="80" rx="2" fill="#C41E3A" />
+      <rect x="35" y="5" width="4" height="80" rx="2" fill="#CF1D00" />
       
       {/* Bubbles */}
       <motion.circle

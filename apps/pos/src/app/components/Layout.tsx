@@ -81,7 +81,7 @@ export default function Layout() {
         shadow-2xl lg:shadow-xl
       `}>
         {/* Logo Section */}
-        <div className="p-6 border-b-4 border-[#E5E0D5] bg-gradient-to-r from-[#C41E3A] to-[#9B1730] relative overflow-hidden">
+        <div className="p-6 border-b-4 border-[#E5E0D5] bg-gradient-to-r from-[#CF1D00] to-[#A01600] relative overflow-hidden">
           <div 
             className="absolute inset-0 opacity-10"
             style={{
@@ -90,11 +90,12 @@ export default function Layout() {
             }}
           />
           <div className="relative flex items-center gap-4">
-            <div className="w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center">
-              <span className="text-3xl">🖐️</span>
-            </div>
+            <img
+              src="/logo.svg"
+              alt="High Five"
+              className="h-12 w-auto brightness-0 invert"
+            />
             <div>
-              <h1 className="font-display text-2xl text-white tracking-wider">HIGH FIVE</h1>
               <p className="text-white/70 text-xs font-medium">POS SİSTEMİ v1.0</p>
             </div>
           </div>
@@ -166,7 +167,7 @@ export default function Layout() {
         <div className="p-4 border-t-4 border-[#E5E0D5] bg-gray-50">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#C41E3A] to-[#9B1730] rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#CF1D00] to-[#A01600] rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
@@ -178,7 +179,7 @@ export default function Layout() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
               <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-0.5 bg-[#C41E3A]/10 text-[#C41E3A] rounded-full font-medium">
+                <span className="text-xs px-2 py-0.5 bg-[#CF1D00]/10 text-[#CF1D00] rounded-full font-medium">
                   {user?.role}
                 </span>
                 <span className="text-xs text-gray-400 flex items-center gap-1">
