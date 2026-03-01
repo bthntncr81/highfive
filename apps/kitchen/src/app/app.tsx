@@ -491,12 +491,32 @@ function OrderCard({
             GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
           };
 
+          // Parse excluded ingredients from notes (format: "❌ NAME1, NAME2 OLMASIN")
+          const excludedNames: string[] = [];
+          let customerNote = '';
+          if (item.notes) {
+            const excludeMatch = item.notes.match(/❌\s*(.+?)\s*OLMASIN/i);
+            if (excludeMatch) {
+              excludedNames.push(...excludeMatch[1].split(',').map(s => s.trim().toLowerCase()));
+              customerNote = item.notes.replace(/\|?\s*❌\s*.+?OLMASIN/i, '').trim();
+            } else {
+              customerNote = item.notes;
+            }
+          }
+
+          const includedIngredients = ingredients.filter(
+            (ing) => !excludedNames.includes(ing.rawMaterial.name.toLowerCase())
+          );
+          const removedIngredients = ingredients.filter(
+            (ing) => excludedNames.includes(ing.rawMaterial.name.toLowerCase())
+          );
+
           return (
             <div
               key={item.id}
               className={`rounded-xl transition-all ${
-                item.status === 'READY' 
-                  ? 'bg-green-500/20 border border-green-500/30' 
+                item.status === 'READY'
+                  ? 'bg-green-500/20 border border-green-500/30'
                   : 'bg-white/5 border border-white/10'
               }`}
             >
@@ -511,16 +531,16 @@ function OrderCard({
                     {item.quantity}x
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{item.menuItem.name}</p>
-                    {item.notes && (
+                    <p className="font-semibold text-white text-lg">{item.menuItem.name}</p>
+                    {customerNote && (
                       <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
                         <span>📝</span>
-                        <span>{item.notes}</span>
+                        <span>{customerNote}</span>
                       </p>
                     )}
                   </div>
                 </div>
-                
+
                 {item.status !== 'READY' && type === 'preparing' && (
                   <button
                     onClick={() => onItemStatusChange(order.id, item.id, 'READY')}
@@ -536,25 +556,73 @@ function OrderCard({
                 )}
               </div>
 
-              {/* Recipe / Ingredients */}
+              {/* Recipe - Ingredients with amounts */}
               {ingredients.length > 0 && (
-                <div className="px-3 pb-3 ml-[52px]">
+                <div className="px-3 pb-3">
+                  {/* Included ingredients */}
                   <div className="flex flex-wrap gap-1.5">
-                    {ingredients.map((ing) => {
+                    {includedIngredients.map((ing) => {
                       const totalAmount = Number(ing.amount) * item.quantity;
                       const unit = unitShort[ing.rawMaterial.unit] || ing.rawMaterial.unit;
                       return (
                         <span
                           key={ing.id}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/8 border border-white/15 text-sm"
                         >
-                          <span className="text-gray-400">{ing.rawMaterial.name}</span>
-                          <span className="text-cyan-400 font-mono font-medium">
+                          <span className="text-gray-300 font-medium">{ing.rawMaterial.name}</span>
+                          <span className="text-cyan-400 font-mono font-bold">
                             {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(1)}{unit}
                           </span>
                         </span>
                       );
                     })}
+                  </div>
+
+                  {/* Excluded ingredients */}
+                  {removedIngredients.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
+                      <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                      {removedIngredients.map((ing) => (
+                        <span
+                          key={ing.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                        >
+                          <span className="text-red-400">{ing.rawMaterial.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Excluded ingredients from notes that don't match recipe */}
+                  {excludedNames.length > 0 && removedIngredients.length === 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
+                      <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                      {excludedNames.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                        >
+                          <span className="text-red-400">{name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* If no recipe ingredients but has exclusions in notes */}
+              {ingredients.length === 0 && excludedNames.length > 0 && (
+                <div className="px-3 pb-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                    {excludedNames.map((name) => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                      >
+                        <span className="text-red-400">{name}</span>
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
