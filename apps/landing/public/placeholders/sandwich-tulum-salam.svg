@@ -29,16 +29,16 @@
   <circle cx="150" cy="70" r="7" fill="#FFFFF0"/>
   
   <!-- Dana salam slices -->
-  <circle cx="40" cy="58" r="13" fill="#CF1D00"/>
+  <circle cx="40" cy="58" r="13" fill="#bb1e10"/>
   <circle cx="40" cy="58" r="10" fill="#DC143C"/>
   <circle cx="38" cy="56" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="80" cy="55" r="14" fill="#CF1D00"/>
+  <circle cx="80" cy="55" r="14" fill="#bb1e10"/>
   <circle cx="80" cy="55" r="11" fill="#DC143C"/>
   <circle cx="78" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="120" cy="55" r="14" fill="#CF1D00"/>
+  <circle cx="120" cy="55" r="14" fill="#bb1e10"/>
   <circle cx="120" cy="55" r="11" fill="#DC143C"/>
   <circle cx="118" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="160" cy="58" r="13" fill="#CF1D00"/>
+  <circle cx="160" cy="58" r="13" fill="#bb1e10"/>
   <circle cx="160" cy="58" r="10" fill="#DC143C"/>
   
   <!-- Top schiacciatta bread -->

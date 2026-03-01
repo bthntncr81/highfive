@@ -33,16 +33,16 @@
   <path d="M135,70 L135,75 Q155,82 175,75 L175,72 Q155,65 135,70 Z" fill="#A52A2A"/>
   
   <!-- Dana salam layer -->
-  <circle cx="45" cy="58" r="13" fill="#CF1D00"/>
+  <circle cx="45" cy="58" r="13" fill="#bb1e10"/>
   <circle cx="45" cy="58" r="10" fill="#DC143C"/>
   <circle cx="43" cy="56" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="85" cy="55" r="14" fill="#CF1D00"/>
+  <circle cx="85" cy="55" r="14" fill="#bb1e10"/>
   <circle cx="85" cy="55" r="11" fill="#DC143C"/>
   <circle cx="83" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="125" cy="55" r="14" fill="#CF1D00"/>
+  <circle cx="125" cy="55" r="14" fill="#bb1e10"/>
   <circle cx="125" cy="55" r="11" fill="#DC143C"/>
   <circle cx="123" cy="53" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="160" cy="58" r="13" fill="#CF1D00"/>
+  <circle cx="160" cy="58" r="13" fill="#bb1e10"/>
   <circle cx="160" cy="58" r="10" fill="#DC143C"/>
   
   <!-- Top schiacciatta bread -->

@@ -36,16 +36,16 @@
   <ellipse cx="150" cy="65" rx="14" ry="4" fill="#FFFFF0"/>
   
   <!-- Dana salam slices -->
-  <circle cx="45" cy="52" r="14" fill="#CF1D00"/>
+  <circle cx="45" cy="52" r="14" fill="#bb1e10"/>
   <circle cx="45" cy="52" r="11" fill="#DC143C"/>
   <circle cx="43" cy="50" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="90" cy="50" r="15" fill="#CF1D00"/>
+  <circle cx="90" cy="50" r="15" fill="#bb1e10"/>
   <circle cx="90" cy="50" r="12" fill="#DC143C"/>
   <circle cx="88" cy="48" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="135" cy="50" r="15" fill="#CF1D00"/>
+  <circle cx="135" cy="50" r="15" fill="#bb1e10"/>
   <circle cx="135" cy="50" r="12" fill="#DC143C"/>
   <circle cx="133" cy="48" r="2" fill="#FFFAFA" opacity="0.5"/>
-  <circle cx="170" cy="52" r="12" fill="#CF1D00"/>
+  <circle cx="170" cy="52" r="12" fill="#bb1e10"/>
   <circle cx="170" cy="52" r="9" fill="#DC143C"/>
   
   <!-- Top schiacciatta bread -->

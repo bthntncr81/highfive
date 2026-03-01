@@ -5,7 +5,7 @@
   <ellipse cx="100" cy="150" rx="70" ry="18" fill="#F5F5F5"/>
   
   <!-- Tomato sauce base -->
-  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#CF1D00"/>
+  <ellipse cx="100" cy="120" rx="60" ry="35" fill="#bb1e10"/>
   <ellipse cx="100" cy="115" rx="55" ry="30" fill="#DC3545"/>
   
   <!-- Pasta noodles -->

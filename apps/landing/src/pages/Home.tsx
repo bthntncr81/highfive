@@ -6,6 +6,30 @@ import { useLoyalty } from '../lib/loyaltyStore'
 import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
 
+// SVG Icon components for highlights
+const highlightIcons: Record<string, JSX.Element> = {
+  '🚀': (
+    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  ),
+  '🥬': (
+    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+  '👨‍🍳': (
+    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  '🧀': (
+    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  ),
+}
+
 export const Home = () => {
   const { content } = useContent()
   const { member } = useLoyalty()
@@ -30,7 +54,11 @@ export const Home = () => {
                 className="card text-center h-full"
               >
                 <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">{highlight.icon}</span>
+                  {highlightIcons[highlight.icon] || (
+                    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  )}
                 </div>
                 <h3 className="font-display font-bold text-xl text-foreground mb-2">
                   {highlight.title}
@@ -54,7 +82,7 @@ export const Home = () => {
 
           {/* Featured items */}
           <StaggerContainer className="grid md:grid-cols-3 gap-8 mb-12">
-            {content.menu.items.slice(0, 3).map((item, index) => (
+            {content.menu.items.slice(0, 3).map((item) => (
               <StaggerItem key={item.id}>
                 <motion.div
                   whileHover={{ y: -4 }}
@@ -66,20 +94,12 @@ export const Home = () => {
                       src={item.image}
                       alt={item.name}
                       loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     {/* Popular badge */}
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.3, type: 'spring' }}
-                      className="absolute top-3 right-3"
-                    >
-                      <span className="badge-popular">
-                        FAVORİ
-                      </span>
-                    </motion.div>
+                    <div className="absolute top-3 right-3">
+                      <span className="badge-popular">FAVORİ</span>
+                    </div>
                     {/* Price */}
                     <div className="absolute bottom-3 left-3 bg-primary text-white font-display font-bold text-lg px-3 py-1 rounded-full shadow-md">
                       ₺{item.price}
@@ -98,17 +118,9 @@ export const Home = () => {
 
           {/* CTA to menu */}
           <RevealOnScroll className="text-center">
-            <Link
-              to="/menu"
-              className="btn-primary text-xl inline-flex"
-            >
+            <Link to="/menu" className="btn-primary text-xl inline-flex">
               Tüm Menüyü Gör
-              <motion.span
-                animate={{ x: [0, 5, 0] }}
-                transition={{ repeat: Infinity, duration: 1 }}
-              >
-                →
-              </motion.span>
+              <span className="ml-1">→</span>
             </Link>
           </RevealOnScroll>
         </div>
@@ -118,25 +130,46 @@ export const Home = () => {
       <SectionContainer variant="red">
         <div className="grid sm:grid-cols-3 gap-8 text-center">
           {[
-            { number: '10K+', label: 'Mutlu Müşteri', icon: '😋' },
-            { number: '4.9', label: 'Google Puanı', icon: '⭐' },
-            { number: '30dk', label: 'Ortalama Teslimat', icon: '🚀' },
+            {
+              number: '10K+',
+              label: 'Mutlu Müşteri',
+              icon: (
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              ),
+            },
+            {
+              number: '4.9',
+              label: 'Google Puanı',
+              icon: (
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              ),
+            },
+            {
+              number: '30dk',
+              label: 'Ortalama Teslimat',
+              icon: (
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+            },
           ].map((stat, index) => (
             <RevealOnScroll key={index} delay={index * 0.1}>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="p-6"
-              >
-                <div className="text-4xl mb-3">
+              <div className="p-6">
+                <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white">
                   {stat.icon}
                 </div>
                 <div className="font-heading font-bold text-5xl text-white mb-2">
                   {stat.number}
                 </div>
-                <div className="font-body text-xl text-white/80">
+                <div className="font-body text-lg text-white/80">
                   {stat.label}
                 </div>
-              </motion.div>
+              </div>
             </RevealOnScroll>
           ))}
         </div>
@@ -147,12 +180,10 @@ export const Home = () => {
         <SectionContainer variant="cream">
           <RevealOnScroll>
             <div className="relative bg-gradient-to-br from-accent to-accent-dark rounded-2xl p-8 md:p-12 overflow-hidden">
-              {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
 
               <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-                {/* Left side - Info */}
                 <div className="flex-1 text-center lg:text-left">
                   <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -172,9 +203,30 @@ export const Home = () => {
                   {/* Benefits */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     {[
-                      { icon: '💰', text: 'Her 10₺ = 1 Puan' },
-                      { icon: '🎁', text: '100 Puan = 10₺' },
-                      { icon: '🌟', text: 'Özel Kampanyalar' },
+                      {
+                        text: 'Her 10₺ = 1 Puan',
+                        icon: (
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        text: '100 Puan = 10₺',
+                        icon: (
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        text: 'Özel Kampanyalar',
+                        icon: (
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                          </svg>
+                        ),
+                      },
                     ].map((benefit, i) => (
                       <motion.div
                         key={i}
@@ -183,14 +235,13 @@ export const Home = () => {
                         transition={{ delay: i * 0.1 }}
                         className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center"
                       >
-                        <span className="text-2xl block mb-1">{benefit.icon}</span>
+                        <div className="text-white mb-1 flex justify-center">{benefit.icon}</div>
                         <span className="text-sm text-white font-display font-semibold">{benefit.text}</span>
                       </motion.div>
                     ))}
                   </div>
                 </div>
 
-                {/* Right side - CTA */}
                 <div className="flex-shrink-0 text-center">
                   <p className="text-white/80 font-body mb-4">
                     Sağ üstteki Üye Ol butonuna tıklayın
@@ -204,7 +255,6 @@ export const Home = () => {
           </RevealOnScroll>
         </SectionContainer>
       ) : (
-        // Üye olanlar için puan bilgisi göster
         <SectionContainer variant="cream">
           <RevealOnScroll>
             <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 md:p-12 overflow-hidden">
@@ -224,7 +274,6 @@ export const Home = () => {
                     Sadakat programında aktif üyesiniz
                   </p>
 
-                  {/* Puan Bilgisi */}
                   <div className="inline-flex items-center gap-4 bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
                     <div className="text-center">
                       <p className="text-5xl font-bold text-white">{member.totalPoints}</p>
@@ -268,7 +317,6 @@ export const Home = () => {
       <SectionContainer variant="paper">
         <RevealOnScroll>
           <div className="relative bg-foreground rounded-2xl p-8 md:p-12 text-center overflow-hidden">
-            {/* Content */}
             <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -296,7 +344,6 @@ export const Home = () => {
           </div>
         </RevealOnScroll>
       </SectionContainer>
-
     </main>
   )
 }
