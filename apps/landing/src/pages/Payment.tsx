@@ -104,7 +104,7 @@ const PaymentSteps = ({ currentStep }: { currentStep: number }) => {
           <motion.div
             className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all ${
               i <= currentStep
-                ? 'bg-diner-red text-white shadow-lg'
+                ? 'bg-primary text-white shadow-lg'
                 : 'bg-gray-200 text-gray-400'
             }`}
             animate={i === currentStep ? { scale: [1, 1.1, 1] } : {}}
@@ -115,7 +115,7 @@ const PaymentSteps = ({ currentStep }: { currentStep: number }) => {
           {i < steps.length - 1 && (
             <div
               className={`w-8 h-1 mx-1 rounded ${
-                i < currentStep ? 'bg-diner-red' : 'bg-gray-200'
+                i < currentStep ? 'bg-primary' : 'bg-gray-200'
               }`}
             />
           )}
@@ -208,22 +208,22 @@ const OrderSummary = ({ items, total }: { items: any[]; total: number }) => {
       animate={{ opacity: 1, y: 0 }}
       className="bg-white/80 backdrop-blur rounded-2xl p-4 mb-6 shadow-lg"
     >
-      <h3 className="font-display text-lg text-diner-chocolate mb-3 flex items-center gap-2">
+      <h3 className="font-display text-lg text-foreground mb-3 flex items-center gap-2">
         <span>🛒</span> Sipariş Özeti
       </h3>
       <div className="space-y-2 max-h-32 overflow-y-auto">
         {items.map((item, i) => (
           <div key={i} className="flex justify-between text-sm">
-            <span className="text-diner-chocolate-light">
+            <span className="text-foreground-muted">
               {item.quantity}x {item.item.name}
             </span>
             <span className="font-medium">₺{item.item.price * item.quantity}</span>
           </div>
         ))}
       </div>
-      <div className="border-t border-diner-kraft/30 mt-3 pt-3 flex justify-between">
-        <span className="font-display text-diner-chocolate">Toplam</span>
-        <span className="font-display text-xl text-diner-red">₺{total}</span>
+      <div className="border-t border-light mt-3 pt-3 flex justify-between">
+        <span className="font-display text-foreground">Toplam</span>
+        <span className="font-display text-xl text-primary">₺{total}</span>
       </div>
     </motion.div>
   );
@@ -234,27 +234,27 @@ export const Payment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
-  
+
   const { items, totalPrice, clearCart, tableSession, clearTableSession } = useCart();
   const { member, refreshMember } = useLoyalty();
-  
+
   const [step, setStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Form state
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  
+
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
-  
+
   const cardBrand = getCardBrand(cardNumber);
   const popupRef = useRef<Window | null>(null);
 
@@ -263,7 +263,7 @@ export const Payment = () => {
     const handleMessage = async (event: MessageEvent) => {
       if (event.data?.type === '3ds_result') {
         console.log('3DS Result:', event.data);
-        
+
         if (event.data.status === 'success' && event.data.paymentId) {
           // Complete the payment
           await completePayment(event.data.paymentId, event.data.conversationId);
@@ -286,9 +286,9 @@ export const Payment = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentId, conversationId, orderId }),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setStep(3);
         setPaymentSuccess(true);
@@ -326,7 +326,7 @@ export const Payment = () => {
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!cardNumber || !cardHolder || !expiry || !cvc) {
       setError('Lütfen tüm kart bilgilerini doldurun');
       return;
@@ -338,7 +338,7 @@ export const Payment = () => {
 
     try {
       const [expMonth, expYear] = expiry.split('/');
-      
+
       const response = await fetch('/api/payment/initialize-3ds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -368,7 +368,7 @@ export const Payment = () => {
           // If not base64, use as is
           decodedHtml = data.htmlContent;
         }
-        
+
         // Open 3DS popup
         const popup = window.open('', '3DS Doğrulama', 'width=500,height=600,left=200,top=100');
         if (popup) {
@@ -407,7 +407,7 @@ export const Payment = () => {
   // Success screen
   if (paymentSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-diner-cream to-diner-cream-dark flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-background to-surface flex items-center justify-center p-4">
         <FloatingFood />
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -428,19 +428,19 @@ export const Payment = () => {
               ✅
             </motion.span>
           </motion.div>
-          
+
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
-            <h1 className="font-display text-3xl text-diner-chocolate mb-2">
+            <h1 className="font-display text-3xl text-foreground mb-2">
               Ödeme Başarılı!
             </h1>
-            <p className="text-diner-chocolate-light mb-6">
+            <p className="text-foreground-muted mb-6">
               Siparişiniz alındı ve ödemeniz onaylandı.
             </p>
-            
+
             <motion.div
               className="flex justify-center gap-4 text-4xl mb-6"
               initial={{ opacity: 0 }}
@@ -465,7 +465,7 @@ export const Payment = () => {
               ))}
             </motion.div>
 
-            <p className="text-sm text-diner-chocolate-light mb-6">
+            <p className="text-sm text-foreground-muted mb-6">
               Siparişiniz en kısa sürede hazırlanacaktır.
               <br />
               Afiyet olsun! 🎉
@@ -486,9 +486,9 @@ export const Payment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-diner-cream to-diner-cream-dark py-8 px-4 relative">
+    <div className="min-h-screen bg-gradient-to-b from-background to-surface py-8 px-4 relative">
       <FloatingFood />
-      
+
       <div className="max-w-lg mx-auto relative z-10">
         {/* Header */}
         <motion.div
@@ -503,10 +503,10 @@ export const Payment = () => {
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ repeat: Infinity, duration: 4 }}
           />
-          <h1 className="font-display text-2xl text-diner-chocolate">
+          <h1 className="font-display text-2xl text-foreground">
             Güvenli Ödeme
           </h1>
-          <p className="text-sm text-diner-chocolate-light">
+          <p className="text-sm text-foreground-muted">
             🔒 256-bit SSL ile korunan güvenli ödeme
           </p>
         </motion.div>
@@ -549,13 +549,13 @@ export const Payment = () => {
               onSubmit={handleCustomerSubmit}
               className="bg-white rounded-2xl p-6 shadow-xl"
             >
-              <h2 className="font-display text-xl text-diner-chocolate mb-4 flex items-center gap-2">
+              <h2 className="font-display text-xl text-foreground mb-4 flex items-center gap-2">
                 <span>📝</span> Müşteri Bilgileri
               </h2>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     Ad Soyad *
                   </label>
                   <input
@@ -569,7 +569,7 @@ export const Payment = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     E-posta *
                   </label>
                   <input
@@ -583,7 +583,7 @@ export const Payment = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     Telefon *
                   </label>
                   <input
@@ -597,7 +597,7 @@ export const Payment = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     Adres (Opsiyonel)
                   </label>
                   <textarea
@@ -632,7 +632,7 @@ export const Payment = () => {
               onSubmit={handlePaymentSubmit}
               className="bg-white rounded-2xl p-6 shadow-xl"
             >
-              <h2 className="font-display text-xl text-diner-chocolate mb-4 flex items-center gap-2">
+              <h2 className="font-display text-xl text-foreground mb-4 flex items-center gap-2">
                 <span>💳</span> Kart Bilgileri
               </h2>
 
@@ -647,7 +647,7 @@ export const Payment = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     Kart Numarası
                   </label>
                   <input
@@ -662,7 +662,7 @@ export const Payment = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
                     Kart Üzerindeki İsim
                   </label>
                   <input
@@ -677,7 +677,7 @@ export const Payment = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                    <label className="block text-sm font-medium text-foreground-muted mb-1">
                       Son Kullanım
                     </label>
                     <input
@@ -691,7 +691,7 @@ export const Payment = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-diner-chocolate-light mb-1">
+                    <label className="block text-sm font-medium text-foreground-muted mb-1">
                       CVV
                     </label>
                     <input
@@ -746,7 +746,7 @@ export const Payment = () => {
               </div>
 
               {/* Security badges */}
-              <div className="flex items-center justify-center gap-4 mt-6 text-xs text-diner-chocolate-light">
+              <div className="flex items-center justify-center gap-4 mt-6 text-xs text-foreground-muted">
                 <span className="flex items-center gap-1">
                   <span>🔒</span> SSL
                 </span>
@@ -776,10 +776,10 @@ export const Payment = () => {
               >
                 🔐
               </motion.div>
-              <h2 className="font-display text-2xl text-diner-chocolate mb-2">
+              <h2 className="font-display text-2xl text-foreground mb-2">
                 3D Secure Doğrulama
               </h2>
-              <p className="text-diner-chocolate-light mb-4">
+              <p className="text-foreground-muted mb-4">
                 Bankanızın güvenlik doğrulaması için popup pencereyi kontrol edin.
               </p>
               <motion.div
@@ -790,7 +790,7 @@ export const Payment = () => {
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="w-3 h-3 bg-diner-red rounded-full"
+                    className="w-3 h-3 bg-primary rounded-full"
                     style={{ animationDelay: `${i * 0.2}s` }}
                   />
                 ))}
@@ -804,7 +804,7 @@ export const Payment = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={() => navigate('/order')}
-          className="w-full text-center text-diner-chocolate-light hover:text-diner-red mt-4 text-sm"
+          className="w-full text-center text-foreground-muted hover:text-primary mt-4 text-sm"
         >
           ← Siparişe Geri Dön
         </motion.button>
@@ -812,4 +812,3 @@ export const Payment = () => {
     </div>
   );
 };
-

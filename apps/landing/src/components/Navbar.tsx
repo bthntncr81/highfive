@@ -30,26 +30,23 @@ export const Navbar = () => {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="sticky top-0 z-50 bg-surface/95 backdrop-blur-sm border-b-4 border-diner-red"
+      className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border"
     >
-      {/* Checkered top stripe */}
-      <div className="h-2 checkered-red" />
-      
       <div className="container-diner">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-[72px]">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <motion.img
               src="/logo.svg"
               alt={content.site.logoText}
-              className="h-16 md:h-20 w-auto"
+              className="h-14 md:h-16 w-auto"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-1">
             {links.map((link) => (
               <Link
                 key={link.to}
@@ -60,7 +57,7 @@ export const Navbar = () => {
                 {isActive(link.to) && (
                   <motion.div
                     layoutId="nav-indicator"
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-diner-mustard rounded-full"
+                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary rounded-full"
                   />
                 )}
               </Link>
@@ -71,21 +68,22 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {/* Live Order Status */}
             <LiveOrderStatus />
-            
+
             {member ? (
-              // Üye giriş yapmış - bilgilerini göster
               <div className="relative">
                 <button
                   onClick={() => setShowMemberMenu(!showMemberMenu)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full font-display shadow-lg hover:shadow-xl transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all"
                 >
-                  <span className="text-lg">👑</span>
+                  <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm">
+                    {(member.name || 'Ü')[0].toUpperCase()}
+                  </div>
                   <div className="text-left">
                     <p className="text-sm font-bold leading-tight">{member.name || 'Üye'}</p>
                     <p className="text-xs opacity-90">{member.totalPoints} Puan</p>
                   </div>
                 </button>
-                
+
                 {/* Dropdown Menu */}
                 <AnimatePresence>
                   {showMemberMenu && (
@@ -93,25 +91,25 @@ export const Navbar = () => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-border-light overflow-hidden z-50"
                     >
-                      <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b">
-                        <p className="font-display text-diner-chocolate">{member.name || 'Üye'}</p>
-                        <p className="text-sm text-gray-500">{member.phone}</p>
+                      <div className="p-4 bg-surface border-b border-border-light">
+                        <p className="font-display font-semibold text-foreground">{member.name || 'Üye'}</p>
+                        <p className="text-sm text-foreground-muted">{member.phone}</p>
                         {member.loyaltyTier && (
-                          <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                          <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium">
                             {member.loyaltyTier.icon} {member.loyaltyTier.name}
                           </span>
                         )}
                       </div>
                       <div className="p-3">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm text-gray-600">Puanınız</span>
-                          <span className="font-bold text-orange-600">{member.totalPoints} ⭐</span>
+                          <span className="text-sm text-foreground-muted">Puanınız</span>
+                          <span className="font-bold text-accent">{member.totalPoints}</span>
                         </div>
-                        <div className="text-xs text-gray-500 mb-3">
+                        <div className="text-xs text-foreground-muted mb-3">
                           {member.totalPoints >= 100 ? (
-                            <span className="text-green-600">✓ {Math.floor(member.totalPoints / 100) * 10}₺ indirim kullanabilirsiniz!</span>
+                            <span className="text-emerald-600">{Math.floor(member.totalPoints / 100) * 10}₺ indirim kullanabilirsiniz!</span>
                           ) : (
                             <span>100 puana {100 - member.totalPoints} puan kaldı</span>
                           )}
@@ -131,23 +129,20 @@ export const Navbar = () => {
                 </AnimatePresence>
               </div>
             ) : (
-              // Üye değil - üye ol butonu göster
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full font-display shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all hover:scale-105"
               >
-                <span className="text-lg">🎁</span>
                 <span className="text-sm">Üye Ol</span>
               </button>
             )}
-            
+
             <a
               href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-primary text-base"
+              className="btn-primary text-sm"
             >
-              <span>🍕</span>
               Sipariş Ver
             </a>
           </div>
@@ -155,7 +150,7 @@ export const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-diner-red"
+            className="md:hidden p-2 text-primary"
             aria-label="Menüyü aç"
           >
             <motion.div
@@ -167,21 +162,21 @@ export const Navbar = () => {
                   closed: { rotate: 0, y: 0 },
                   open: { rotate: 45, y: 8 },
                 }}
-                className="w-7 h-1 bg-current rounded-full origin-center"
+                className="w-7 h-0.5 bg-current rounded-full origin-center"
               />
               <motion.span
                 variants={{
                   closed: { opacity: 1 },
                   open: { opacity: 0 },
                 }}
-                className="w-7 h-1 bg-current rounded-full"
+                className="w-7 h-0.5 bg-current rounded-full"
               />
               <motion.span
                 variants={{
                   closed: { rotate: 0, y: 0 },
                   open: { rotate: -45, y: -8 },
                 }}
-                className="w-7 h-1 bg-current rounded-full origin-center"
+                className="w-7 h-0.5 bg-current rounded-full origin-center"
               />
             </motion.div>
           </button>
@@ -196,7 +191,7 @@ export const Navbar = () => {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden overflow-hidden bg-surface border-t-2 border-diner-kraft"
+            className="md:hidden overflow-hidden bg-white border-t border-border-light"
           >
             <div className="container-diner py-4 flex flex-col gap-2">
               {/* Mobile Member Info */}
@@ -204,14 +199,16 @@ export const Navbar = () => {
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl mb-2"
+                  className="p-4 bg-accent/5 rounded-xl mb-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl">👑</span>
+                      <div className="w-10 h-10 bg-accent text-white rounded-full flex items-center justify-center font-bold">
+                        {(member.name || 'Ü')[0].toUpperCase()}
+                      </div>
                       <div>
-                        <p className="font-display text-diner-chocolate">{member.name || 'Üye'}</p>
-                        <p className="text-sm text-orange-600 font-bold">{member.totalPoints} Puan ⭐</p>
+                        <p className="font-display font-semibold text-foreground">{member.name || 'Üye'}</p>
+                        <p className="text-sm text-accent font-bold">{member.totalPoints} Puan</p>
                       </div>
                     </div>
                     <button
@@ -233,13 +230,12 @@ export const Navbar = () => {
                     setMobileOpen(false)
                     setShowLoginModal(true)
                   }}
-                  className="p-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl mb-2 flex items-center justify-center gap-2 font-display"
+                  className="p-4 bg-accent text-white rounded-xl mb-2 flex items-center justify-center gap-2 font-display font-semibold"
                 >
-                  <span className="text-2xl">🎁</span>
                   Üye Ol & Puan Kazan!
                 </motion.button>
               )}
-              
+
               {links.map((link, i) => (
                 <motion.div
                   key={link.to}
@@ -250,10 +246,10 @@ export const Navbar = () => {
                   <Link
                     to={link.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`block py-3 px-4 font-display text-xl rounded-diner transition-colors ${
+                    className={`block py-3 px-4 font-display font-semibold text-lg rounded-xl transition-colors ${
                       isActive(link.to)
-                        ? 'bg-diner-red text-white'
-                        : 'text-diner-chocolate hover:bg-diner-cream-dark'
+                        ? 'bg-primary text-white'
+                        : 'text-foreground hover:bg-surface'
                     }`}
                   >
                     {link.label}
@@ -273,7 +269,6 @@ export const Navbar = () => {
                   className="btn-whatsapp w-full justify-center"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <span>📱</span>
                   WhatsApp'tan Sipariş
                 </a>
               </motion.div>
@@ -283,12 +278,12 @@ export const Navbar = () => {
       </AnimatePresence>
 
     </motion.nav>
-  
-    {/* Login/Register Modal - Portal ile body'e render et (motion.nav transform sorunu) */}
+
+    {/* Login/Register Modal */}
     {createPortal(
       <AnimatePresence>
         {showLoginModal && (
-          <LoginModal 
+          <LoginModal
             onClose={() => {
               setShowLoginModal(false)
               setLoginPhone('')
@@ -308,12 +303,12 @@ export const Navbar = () => {
 }
 
 // Login Modal Component
-const LoginModal = ({ 
-  onClose, 
-  loginPhone, 
-  setLoginPhone, 
-  loginError, 
-  setLoginError 
+const LoginModal = ({
+  onClose,
+  loginPhone,
+  setLoginPhone,
+  loginError,
+  setLoginError
 }: {
   onClose: () => void
   loginPhone: string
@@ -379,44 +374,46 @@ const LoginModal = ({
             animate={{ scale: 1 }}
             className="text-center py-8"
           >
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
-              transition={{ repeat: 3, duration: 0.5 }}
-              className="text-6xl mb-4"
-            >
-              🎉
-            </motion.div>
-            <h3 className="font-display text-2xl text-diner-chocolate">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="font-display font-bold text-2xl text-foreground">
               {mode === 'login' ? 'Hoş Geldin!' : 'Tebrikler!'}
             </h3>
-            <p className="text-gray-600 mt-2">
-              {mode === 'register' && '50 puan hesabına eklendi! 🎁'}
+            <p className="text-foreground-muted mt-2">
+              {mode === 'register' && '50 puan hesabına eklendi!'}
             </p>
           </motion.div>
         ) : (
           <>
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
+              className="absolute top-4 right-4 text-foreground-subtle hover:text-foreground text-xl"
             >
               ✕
             </button>
 
             <div className="text-center mb-6">
-              <span className="text-5xl">{mode === 'login' ? '👋' : '🎁'}</span>
-              <h3 className="font-display text-2xl text-diner-chocolate mt-3">
+              <div className="w-14 h-14 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="font-display font-bold text-2xl text-foreground">
                 {mode === 'login' ? 'Üye Girişi' : 'Üye Ol'}
               </h3>
-              <p className="text-gray-500 text-sm mt-1">
-                {mode === 'login' 
-                  ? 'Telefon numaranızla giriş yapın' 
+              <p className="text-foreground-muted text-sm mt-1">
+                {mode === 'login'
+                  ? 'Telefon numaranızla giriş yapın'
                   : 'Ücretsiz üye ol, 50 puan kazan!'}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Telefon Numarası
                 </label>
                 <input
@@ -424,7 +421,7 @@ const LoginModal = ({
                   value={loginPhone}
                   onChange={(e) => setLoginPhone(e.target.value)}
                   placeholder="05XX XXX XX XX"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:outline-none transition-colors text-lg"
+                  className="input-field text-lg"
                 />
               </div>
 
@@ -433,7 +430,7 @@ const LoginModal = ({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                 >
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Adınız
                   </label>
                   <input
@@ -441,7 +438,7 @@ const LoginModal = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="İsminiz"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:outline-none transition-colors"
+                    className="input-field"
                   />
                 </motion.div>
               )}
@@ -455,9 +452,9 @@ const LoginModal = ({
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-display text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                className="btn-primary w-full"
               >
-                {isLoading ? '⏳ Bekleyin...' : mode === 'login' ? 'Giriş Yap' : '🎁 Üye Ol'}
+                {isLoading ? 'Bekleyin...' : mode === 'login' ? 'Giriş Yap' : 'Üye Ol'}
               </button>
 
               <button
@@ -465,10 +462,10 @@ const LoginModal = ({
                   setMode(mode === 'login' ? 'register' : 'login')
                   setLoginError('')
                 }}
-                className="w-full py-2 text-sm text-gray-600 hover:text-orange-600"
+                className="w-full py-2 text-sm text-foreground-muted hover:text-primary"
               >
-                {mode === 'login' 
-                  ? 'Hesabın yok mu? Üye ol' 
+                {mode === 'login'
+                  ? 'Hesabın yok mu? Üye ol'
                   : 'Zaten üye misin? Giriş yap'}
               </button>
             </div>

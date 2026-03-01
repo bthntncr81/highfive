@@ -3,20 +3,20 @@ import { motion } from 'framer-motion'
 
 export const NotFound = () => {
   return (
-    <main className="min-h-[70vh] flex items-center justify-center bg-diner-cream">
+    <main className="min-h-[70vh] flex items-center justify-center bg-background">
       <div className="text-center px-4">
         {/* Logo */}
         <motion.div
-          animate={{ 
+          animate={{
             scale: [1, 1.05, 1],
             y: [0, -10, 0]
           }}
           transition={{ repeat: Infinity, duration: 3 }}
           className="mb-8"
         >
-          <img 
+          <img
             src="/logo.svg"
-            alt="High Five" 
+            alt="High Five"
             className="h-40 w-auto mx-auto"
           />
         </motion.div>
@@ -26,16 +26,16 @@ export const NotFound = () => {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200 }}
-          className="font-heading text-8xl text-diner-red mb-4"
+          className="font-heading font-bold text-8xl text-primary mb-4"
         >
           404
         </motion.h1>
 
-        <h2 className="font-display text-3xl text-diner-chocolate mb-4">
+        <h2 className="font-display text-3xl text-foreground mb-4">
           Bu pizza kaybolmuş! 😅
         </h2>
 
-        <p className="font-body text-lg text-diner-chocolate-light mb-8 max-w-md mx-auto">
+        <p className="font-body text-lg text-foreground-muted mb-8 max-w-md mx-auto">
           Aradığınız sayfa bulunamadı. Belki menüden güzel bir şeyler seçersiniz?
         </p>
 

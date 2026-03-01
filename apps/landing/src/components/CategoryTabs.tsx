@@ -30,12 +30,12 @@ export const CategoryTabs = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`
-                relative flex items-center gap-1.5 px-3 py-2 
-                font-display text-sm whitespace-nowrap
+                relative flex items-center gap-1.5 px-3 py-2
+                font-display font-semibold text-sm whitespace-nowrap
                 rounded-lg transition-all duration-200
                 ${isActive
-                  ? 'bg-diner-red text-white shadow-diner'
-                  : 'bg-white text-diner-chocolate border-2 border-diner-kraft hover:border-diner-mustard'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'bg-white text-foreground border border-border hover:border-primary/30'
                 }
               `}
             >

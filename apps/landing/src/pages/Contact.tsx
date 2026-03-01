@@ -23,10 +23,10 @@ export const Contact = () => {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ repeat: Infinity, duration: 3 }}
           />
-          <h1 className="font-heading text-5xl md:text-6xl text-white mb-4">
+          <h1 className="font-heading font-bold text-5xl md:text-6xl text-white mb-4">
             İletişim
           </h1>
-          <p className="font-body text-xl text-diner-cream/80 max-w-xl mx-auto">
+          <p className="font-body text-xl text-background/80 max-w-xl mx-auto">
             Bize ulaşın, siparişinizi verin!
           </p>
         </motion.div>
@@ -39,20 +39,20 @@ export const Contact = () => {
           <StaggerItem>
             <motion.div
               whileHover={{ y: -8, rotate: -2 }}
-              className="card kraft-paper h-full"
+              className="card h-full"
             >
               <div className="text-4xl mb-4">📍</div>
-              <h3 className="font-display text-lg text-diner-chocolate mb-2">
+              <h3 className="font-display text-lg text-foreground mb-2">
                 Adres
               </h3>
-              <p className="font-body text-diner-chocolate-light text-sm">
+              <p className="font-body text-foreground-muted text-sm">
                 {content.contact.address}
               </p>
               <a
                 href={content.links.googleMaps}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-display text-sm text-diner-red mt-3 hover:underline"
+                className="inline-flex items-center gap-1 font-display text-sm text-primary mt-3 hover:underline"
               >
                 Haritada Gör →
               </a>
@@ -63,15 +63,15 @@ export const Contact = () => {
           <StaggerItem>
             <motion.div
               whileHover={{ y: -8, rotate: 2 }}
-              className="card kraft-paper h-full"
+              className="card h-full"
             >
               <div className="text-4xl mb-4">📞</div>
-              <h3 className="font-display text-lg text-diner-chocolate mb-2">
+              <h3 className="font-display text-lg text-foreground mb-2">
                 Telefon
               </h3>
               <a
                 href={`tel:${content.links.phoneTel}`}
-                className="font-body text-diner-chocolate-light hover:text-diner-red transition-colors"
+                className="font-body text-foreground-muted hover:text-primary transition-colors"
               >
                 {content.links.phoneTel}
               </a>
@@ -82,10 +82,10 @@ export const Contact = () => {
           <StaggerItem>
             <motion.div
               whileHover={{ y: -8, rotate: -2 }}
-              className="card kraft-paper h-full"
+              className="card h-full"
             >
               <div className="text-4xl mb-4">💬</div>
-              <h3 className="font-display text-lg text-diner-chocolate mb-2">
+              <h3 className="font-display text-lg text-foreground mb-2">
                 WhatsApp Sipariş
               </h3>
               <a
@@ -103,10 +103,10 @@ export const Contact = () => {
           <StaggerItem>
             <motion.div
               whileHover={{ y: -8, rotate: 2 }}
-              className="card kraft-paper h-full"
+              className="card h-full"
             >
               <div className="text-4xl mb-4">📱</div>
-              <h3 className="font-display text-lg text-diner-chocolate mb-2">
+              <h3 className="font-display text-lg text-foreground mb-2">
                 Sosyal Medya
               </h3>
               <div className="flex gap-3 mt-3">
@@ -115,7 +115,7 @@ export const Contact = () => {
                     href={content.links.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-diner-chocolate rounded-diner text-xl text-white hover:bg-diner-red transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-foreground rounded-xl text-xl text-white hover:bg-primary transition-colors"
                   >
                     📸
                   </a>
@@ -125,7 +125,7 @@ export const Contact = () => {
                     href={content.links.tiktok}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-diner-chocolate rounded-diner text-xl text-white hover:bg-diner-red transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-foreground rounded-xl text-xl text-white hover:bg-primary transition-colors"
                   >
                     🎵
                   </a>
@@ -139,8 +139,8 @@ export const Contact = () => {
         <RevealOnScroll>
           <div className="max-w-2xl mx-auto">
             <SectionHeading title="Çalışma Saatleri 🕐" />
-            
-            <div className="menu-board">
+
+            <div className="bg-foreground text-white rounded-xl p-6">
               {content.contact.hours.map((hour, index) => (
                 <motion.div
                   key={index}
@@ -148,10 +148,10 @@ export const Contact = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.05 }}
-                  className="menu-board-item"
+                  className="flex justify-between items-baseline py-2 border-b border-white/10"
                 >
-                  <span className="font-hand text-lg">{hour.day}</span>
-                  <span className="menu-board-price">
+                  <span className="font-body text-lg">{hour.day}</span>
+                  <span className="font-display font-bold text-accent-light">
                     {hour.open} - {hour.close}
                   </span>
                 </motion.div>
@@ -167,9 +167,9 @@ export const Contact = () => {
           title="Bizi Bulun 🗺️"
           subtitle="Haritada konumumuz"
         />
-        
+
         <RevealOnScroll>
-          <div className="relative rounded-diner-lg overflow-hidden shadow-diner-xl">
+          <div className="relative rounded-2xl overflow-hidden shadow-xl">
             {/* Map container */}
             <div className="aspect-video md:aspect-[21/9]">
               <iframe
@@ -183,7 +183,7 @@ export const Contact = () => {
                 title="High Five Konum"
               />
             </div>
-            
+
             {/* Overlay card */}
             <motion.div
               initial={{ x: -100, opacity: 0 }}
@@ -195,10 +195,10 @@ export const Contact = () => {
                 <div className="flex items-start gap-3">
                   <span className="text-3xl">📍</span>
                   <div>
-                    <h4 className="font-display text-lg text-diner-chocolate">
+                    <h4 className="font-display text-lg text-foreground">
                       High Five
                     </h4>
-                    <p className="font-body text-sm text-diner-chocolate-light">
+                    <p className="font-body text-sm text-foreground-muted">
                       {content.contact.address}
                     </p>
                     <a
@@ -228,10 +228,10 @@ export const Contact = () => {
             >
               🍕
             </motion.div>
-            <h2 className="font-heading text-4xl text-white mb-4">
+            <h2 className="font-heading font-bold text-4xl text-white mb-4">
               Acıktıysan bekleme!
             </h2>
-            <p className="font-body text-xl text-diner-cream/80 mb-8 max-w-xl mx-auto">
+            <p className="font-body text-xl text-background/80 mb-8 max-w-xl mx-auto">
               WhatsApp'tan hızlıca sipariş ver, 30 dakikada kapında olsun!
             </p>
             <a

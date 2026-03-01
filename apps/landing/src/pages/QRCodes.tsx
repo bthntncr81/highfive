@@ -58,7 +58,7 @@ export const QRCodes = () => {
               box-sizing: border-box;
             }
             .card {
-              border: 3px solid #CF1D00;
+              border: 3px solid #bb1e10;
               border-radius: 16px;
               padding: 30px;
               text-align: center;
@@ -71,7 +71,7 @@ export const QRCodes = () => {
             .title {
               font-size: 24px;
               font-weight: bold;
-              color: #CF1D00;
+              color: #bb1e10;
               margin-bottom: 5px;
             }
             .table-name {
@@ -162,14 +162,14 @@ export const QRCodes = () => {
               gap: 20px;
             }
             .card {
-              border: 2px solid #CF1D00;
+              border: 2px solid #bb1e10;
               border-radius: 12px;
               padding: 20px;
               text-align: center;
               page-break-inside: avoid;
             }
             .logo { font-size: 32px; }
-            .title { font-size: 16px; font-weight: bold; color: #CF1D00; }
+            .title { font-size: 16px; font-weight: bold; color: #bb1e10; }
             .table-name { font-size: 24px; font-weight: bold; color: #3D2314; margin: 10px 0; }
             .qr-placeholder { margin: 10px auto; }
             .qr-placeholder img { width: 150px; height: 150px; }
@@ -192,7 +192,7 @@ export const QRCodes = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-diner-cream flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity }}
@@ -205,28 +205,28 @@ export const QRCodes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-diner-cream py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="font-display text-3xl text-diner-chocolate">
+            <h1 className="font-display text-3xl text-foreground">
               🔗 Masa QR Kodları
             </h1>
-            <p className="text-diner-chocolate-light">
+            <p className="text-foreground-muted">
               Her masa için QR kod oluşturun ve yazdırın
             </p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={fetchTables}
-              className="px-4 py-2 bg-white border-2 border-diner-kraft rounded-diner hover:bg-diner-cream transition-colors"
+              className="px-4 py-2 bg-white border-2 border-border rounded-xl hover:bg-background transition-colors"
             >
               🔄 Yenile
             </button>
             <button
               onClick={handlePrintAll}
-              className="px-4 py-2 bg-diner-red text-white rounded-diner hover:bg-diner-red/90 transition-colors font-display"
+              className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-display"
             >
               🖨️ Tümünü Yazdır
             </button>
@@ -234,21 +234,21 @@ export const QRCodes = () => {
         </div>
 
         {/* Base URL Setting */}
-        <div className="bg-white rounded-diner p-4 shadow-retro mb-6">
-          <label className="block text-sm font-medium text-diner-chocolate-light mb-2">
+        <div className="bg-white rounded-xl p-4 shadow-md mb-6">
+          <label className="block text-sm font-medium text-foreground-muted mb-2">
             Site URL'i (QR kodlarda kullanılacak)
           </label>
           <input
             type="text"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            className="w-full px-4 py-2 border-2 border-diner-kraft rounded-diner focus:border-diner-red focus:outline-none"
+            className="w-full px-4 py-2 border-2 border-border rounded-xl focus:border-primary focus:outline-none"
             placeholder="https://highfive.com"
           />
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-diner mb-6">
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6">
             {error}
           </div>
         )}
@@ -260,9 +260,9 @@ export const QRCodes = () => {
               key={table.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-diner p-6 shadow-retro text-center"
+              className="bg-white rounded-xl p-6 shadow-md text-center"
             >
-              <h3 className="font-display text-xl text-diner-chocolate mb-4">
+              <h3 className="font-display text-xl text-foreground mb-4">
                 {table.name}
               </h3>
               
@@ -271,18 +271,18 @@ export const QRCodes = () => {
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQRUrl(table.id))}`}
                   alt={`QR Code for ${table.name}`}
-                  className="rounded-lg border-2 border-diner-cream-dark"
+                  className="rounded-lg border-2 border-surface"
                 />
               </div>
 
-              <p className="text-xs text-diner-chocolate-light mb-4 break-all">
+              <p className="text-xs text-foreground-muted mb-4 break-all">
                 {getQRUrl(table.id)}
               </p>
 
               <div className="flex gap-2">
                 <button
                   onClick={() => handlePrint(table)}
-                  className="flex-1 px-3 py-2 bg-diner-mustard text-diner-chocolate rounded-diner hover:bg-diner-mustard/80 transition-colors text-sm font-display"
+                  className="flex-1 px-3 py-2 bg-accent text-foreground rounded-xl hover:bg-accent-dark transition-colors text-sm font-display"
                 >
                   🖨️ Yazdır
                 </button>
@@ -291,7 +291,7 @@ export const QRCodes = () => {
                     navigator.clipboard.writeText(getQRUrl(table.id));
                     alert('URL kopyalandı!');
                   }}
-                  className="px-3 py-2 bg-diner-cream border border-diner-kraft rounded-diner hover:bg-diner-cream-dark transition-colors text-sm"
+                  className="px-3 py-2 bg-background border border-border rounded-xl hover:bg-surface transition-colors text-sm"
                 >
                   📋
                 </button>
@@ -303,18 +303,18 @@ export const QRCodes = () => {
         {tables.length === 0 && !error && (
           <div className="text-center py-12">
             <div className="text-5xl mb-4">🪑</div>
-            <p className="text-diner-chocolate-light">
+            <p className="text-foreground-muted">
               Henüz masa eklenmemiş. POS'tan masa ekleyin.
             </p>
           </div>
         )}
 
         {/* Instructions */}
-        <div className="mt-8 bg-white rounded-diner p-6 shadow-retro">
-          <h2 className="font-display text-xl text-diner-chocolate mb-4">
+        <div className="mt-8 bg-white rounded-xl p-6 shadow-md">
+          <h2 className="font-display text-xl text-foreground mb-4">
             📖 Kullanım Kılavuzu
           </h2>
-          <div className="space-y-3 text-diner-chocolate-light">
+          <div className="space-y-3 text-foreground-muted">
             <p>
               <strong>1.</strong> Her masa için QR kodu yazdırın
             </p>

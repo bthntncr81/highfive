@@ -24,22 +24,14 @@ export const WhatsAppFloatingButton = () => {
         transition={{ type: "spring", stiffness: 200, damping: 20, delay: 1 }}
         className="fixed bottom-6 right-6 z-50"
       >
-        {/* Pulse ring */}
-        <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute inset-0 bg-green-500 rounded-full "
-          style={{ display: "none" }}
-        />
-
         {/* Button */}
         <motion.a
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
+          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          className="relative flex items-center gap-3 bg-gradient-to-br from-green-500 to-green-600 text-white px-5 py-4 rounded-diner-lg shadow-diner-xl hover:shadow-2xl transition-shadow"
+          className="relative flex items-center gap-3 bg-gradient-to-br from-green-500 to-green-600 text-white px-5 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow"
           aria-label="WhatsApp ile sipariş ver"
         >
           {/* WhatsApp icon */}
@@ -48,7 +40,7 @@ export const WhatsAppFloatingButton = () => {
           </svg>
 
           {/* Text - hidden on mobile */}
-          <span className="hidden sm:block font-display text-lg">
+          <span className="hidden sm:block font-display font-semibold text-lg">
             Sipariş Ver
           </span>
 
@@ -56,7 +48,7 @@ export const WhatsAppFloatingButton = () => {
           <motion.span
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
-            className="absolute -top-1 -right-1 w-4 h-4 bg-diner-red rounded-full border-2 border-white"
+            className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-white"
           />
         </motion.a>
 
@@ -64,10 +56,10 @@ export const WhatsAppFloatingButton = () => {
         <motion.div
           initial={{ opacity: 0, x: 10 }}
           whileHover={{ opacity: 1, x: 0 }}
-          className="hidden lg:block absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-diner-chocolate text-white font-hand text-sm px-3 py-2 rounded-diner whitespace-nowrap pointer-events-none"
+          className="hidden lg:block absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-foreground text-white font-body text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none"
         >
-          Hızlı sipariş için tıkla! 🍕
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full border-8 border-transparent border-l-diner-chocolate" />
+          Hızlı sipariş için tıkla!
+          <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full border-8 border-transparent border-l-foreground" />
         </motion.div>
       </motion.div>
     </AnimatePresence>

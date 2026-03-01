@@ -101,7 +101,7 @@ export const Admin = () => {
   // Login screen
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-diner-cream flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -114,10 +114,10 @@ export const Admin = () => {
           >
             🔐
           </motion.div>
-          <h1 className="font-heading text-3xl text-diner-chocolate mb-2">
+          <h1 className="font-heading font-bold text-3xl text-foreground mb-2">
             Admin Paneli
           </h1>
-          <p className="font-body text-diner-chocolate-light mb-6">
+          <p className="font-body text-foreground-muted mb-6">
             Devam etmek için şifrenizi girin
           </p>
 
@@ -127,14 +127,14 @@ export const Admin = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Şifre"
-              className="input-diner text-center"
+              className="input-field text-center"
               autoFocus
             />
             {error && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-diner-red font-display text-sm"
+                className="text-primary font-display text-sm"
               >
                 {error}
               </motion.p>
@@ -149,7 +149,7 @@ export const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-diner-cream">
+    <div className="min-h-screen bg-background">
       {/* Toast */}
       <AnimatePresence>
         {toast && (
@@ -157,7 +157,7 @@ export const Admin = () => {
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-diner-chocolate text-white px-6 py-3 rounded-diner shadow-diner-xl font-display"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-foreground text-white px-6 py-3 rounded-xl shadow-xl font-display"
           >
             {toast}
           </motion.div>
@@ -165,18 +165,18 @@ export const Admin = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="bg-diner-chocolate text-white p-4 sticky top-0 z-40">
+      <header className="bg-foreground text-white p-4 sticky top-0 z-40">
         <div className="container-diner flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-white/10 rounded-diner"
+              className="lg:hidden p-2 hover:bg-white/10 rounded-xl"
             >
               ☰
             </button>
           <div className="flex items-center gap-3">
             <img src="/logo.svg" alt="High Five" className="h-12 w-auto" />
-            <span className="font-heading text-xl md:text-2xl">Admin</span>
+            <span className="font-heading font-bold text-xl md:text-2xl">Admin</span>
           </div>
           </div>
           <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ export const Admin = () => {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              className="fixed lg:static top-[72px] left-0 bottom-0 w-64 bg-surface border-r-4 border-diner-kraft/30 p-4 z-30 overflow-y-auto"
+              className="fixed lg:static top-[72px] left-0 bottom-0 w-64 bg-surface border-r border-border-light p-4 z-30 overflow-y-auto"
             >
               <nav className="space-y-2">
                 {sections.map((section) => (
@@ -221,10 +221,10 @@ export const Admin = () => {
                       setActiveSection(section.id)
                       setSidebarOpen(false)
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-diner font-display text-left transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-display text-left transition-all ${
                       activeSection === section.id
-                        ? 'bg-diner-red text-white shadow-diner'
-                        : 'text-diner-chocolate hover:bg-diner-cream-dark'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'text-foreground hover:bg-surface'
                     }`}
                   >
                     <span className="text-xl">{section.icon}</span>
@@ -299,9 +299,9 @@ const FormField = ({
   required?: boolean
 }) => (
   <div className="space-y-2">
-    <label className="font-display text-diner-chocolate flex items-center gap-2">
+    <label className="font-display text-foreground flex items-center gap-2">
       {label}
-      {required && <span className="text-diner-red">*</span>}
+      {required && <span className="text-primary">*</span>}
     </label>
     {children}
   </div>
@@ -316,13 +316,13 @@ const SiteSection = ({
   updateField: <K extends keyof Content>(section: K, field: keyof Content[K], value: unknown) => void
 }) => (
   <div className="space-y-6">
-    <h2 className="font-heading text-2xl text-diner-chocolate mb-6">⚙️ Site Ayarları</h2>
+    <h2 className="font-heading font-bold text-2xl text-foreground mb-6">⚙️ Site Ayarları</h2>
     <FormField label="Site Adı" required>
       <input
         type="text"
         value={content.site.name}
         onChange={(e) => updateField('site', 'name', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Logo Metni" required>
@@ -330,7 +330,7 @@ const SiteSection = ({
         type="text"
         value={content.site.logoText}
         onChange={(e) => updateField('site', 'logoText', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Slogan">
@@ -338,7 +338,7 @@ const SiteSection = ({
         type="text"
         value={content.site.tagline}
         onChange={(e) => updateField('site', 'tagline', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Açıklama">
@@ -346,7 +346,7 @@ const SiteSection = ({
         value={content.site.description}
         onChange={(e) => updateField('site', 'description', e.target.value)}
         rows={3}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
   </div>
@@ -360,13 +360,13 @@ const HeroSection = ({
   updateField: <K extends keyof Content>(section: K, field: keyof Content[K], value: unknown) => void
 }) => (
   <div className="space-y-6">
-    <h2 className="font-heading text-2xl text-diner-chocolate mb-6">🎯 Hero Alanı</h2>
+    <h2 className="font-heading font-bold text-2xl text-foreground mb-6">🎯 Hero Alanı</h2>
     <FormField label="Ana Başlık" required>
       <input
         type="text"
         value={content.hero.headline}
         onChange={(e) => updateField('hero', 'headline', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Alt Başlık">
@@ -374,7 +374,7 @@ const HeroSection = ({
         value={content.hero.subheadline}
         onChange={(e) => updateField('hero', 'subheadline', e.target.value)}
         rows={2}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
   </div>
@@ -410,18 +410,18 @@ const HighlightsSection = ({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-heading text-2xl text-diner-chocolate">✨ Öne Çıkanlar</h2>
+        <h2 className="font-heading font-bold text-2xl text-foreground">✨ Öne Çıkanlar</h2>
         <button onClick={addHighlight} className="btn-secondary text-sm">
           + Ekle
         </button>
       </div>
       {content.highlights.map((h, i) => (
-        <div key={i} className="p-4 bg-diner-cream-dark rounded-diner space-y-4">
+        <div key={i} className="p-4 bg-surface rounded-xl space-y-4">
           <div className="flex items-center justify-between">
-            <span className="font-display text-diner-chocolate">#{i + 1}</span>
+            <span className="font-display text-foreground">#{i + 1}</span>
             <button
               onClick={() => removeHighlight(i)}
-              className="text-diner-red hover:underline text-sm font-display"
+              className="text-primary hover:underline text-sm font-display"
             >
               Sil
             </button>
@@ -432,7 +432,7 @@ const HighlightsSection = ({
                 type="text"
                 value={h.icon}
                 onChange={(e) => updateHighlight(i, 'icon', e.target.value)}
-                className="input-diner"
+                className="input-field"
               />
             </FormField>
             <FormField label="Başlık">
@@ -440,7 +440,7 @@ const HighlightsSection = ({
                 type="text"
                 value={h.title}
                 onChange={(e) => updateHighlight(i, 'title', e.target.value)}
-                className="input-diner"
+                className="input-field"
               />
             </FormField>
             <FormField label="Açıklama">
@@ -448,7 +448,7 @@ const HighlightsSection = ({
                 type="text"
                 value={h.desc}
                 onChange={(e) => updateHighlight(i, 'desc', e.target.value)}
-                className="input-diner"
+                className="input-field"
               />
             </FormField>
           </div>
@@ -548,12 +548,12 @@ const MenuSection = ({
 
   return (
     <div className="space-y-8">
-      <h2 className="font-heading text-2xl text-diner-chocolate">🍕 Menü Yönetimi</h2>
+      <h2 className="font-heading font-bold text-2xl text-foreground">🍕 Menü Yönetimi</h2>
 
       {/* Categories */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-xl text-diner-chocolate">Kategoriler</h3>
+          <h3 className="font-display text-xl text-foreground">Kategoriler</h3>
           <button onClick={addCategory} className="btn-secondary text-sm">
             + Kategori Ekle
           </button>
@@ -562,7 +562,7 @@ const MenuSection = ({
           {content.menu.categories.map((cat) => (
             <div
               key={cat.id}
-              className="p-4 bg-diner-cream-dark rounded-diner flex items-center justify-between"
+              className="p-4 bg-surface rounded-xl flex items-center justify-between"
             >
               {editingCategory?.id === cat.id ? (
                 <div className="flex-1 space-y-2">
@@ -572,7 +572,7 @@ const MenuSection = ({
                     onChange={(e) =>
                       setEditingCategory({ ...editingCategory, icon: e.target.value })
                     }
-                    className="input-diner w-16"
+                    className="input-field w-16"
                     placeholder="İkon"
                   />
                   <input
@@ -581,7 +581,7 @@ const MenuSection = ({
                     onChange={(e) =>
                       setEditingCategory({ ...editingCategory, name: e.target.value })
                     }
-                    className="input-diner"
+                    className="input-field"
                     placeholder="İsim"
                   />
                   <div className="flex gap-2">
@@ -601,19 +601,19 @@ const MenuSection = ({
                 </div>
               ) : (
                 <>
-                  <span className="font-display text-diner-chocolate">
+                  <span className="font-display text-foreground">
                     {cat.icon} {cat.name}
                   </span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingCategory(cat)}
-                      className="text-diner-chocolate-light hover:text-diner-red"
+                      className="text-foreground-muted hover:text-primary"
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => deleteCategory(cat.id)}
-                      className="text-diner-chocolate-light hover:text-diner-red"
+                      className="text-foreground-muted hover:text-primary"
                     >
                       🗑️
                     </button>
@@ -628,7 +628,7 @@ const MenuSection = ({
       {/* Items */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-xl text-diner-chocolate">Ürünler</h3>
+          <h3 className="font-display text-xl text-foreground">Ürünler</h3>
           <button onClick={addItem} className="btn-secondary text-sm">
             + Ürün Ekle
           </button>
@@ -651,7 +651,7 @@ const MenuSection = ({
                 className="card max-w-lg w-full max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="font-heading text-xl text-diner-chocolate mb-6">
+                <h3 className="font-heading font-bold text-xl text-foreground mb-6">
                   {content.menu.items.find((i) => i.id === editingItem.id)
                     ? 'Ürün Düzenle'
                     : 'Yeni Ürün'}
@@ -664,7 +664,7 @@ const MenuSection = ({
                       onChange={(e) =>
                         setEditingItem({ ...editingItem, name: e.target.value })
                       }
-                      className="input-diner"
+                      className="input-field"
                     />
                   </FormField>
                   <FormField label="Kategori" required>
@@ -673,7 +673,7 @@ const MenuSection = ({
                       onChange={(e) =>
                         setEditingItem({ ...editingItem, category: e.target.value })
                       }
-                      className="input-diner"
+                      className="input-field"
                     >
                       {content.menu.categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
@@ -689,7 +689,7 @@ const MenuSection = ({
                         setEditingItem({ ...editingItem, desc: e.target.value })
                       }
                       rows={2}
-                      className="input-diner"
+                      className="input-field"
                     />
                   </FormField>
                   <FormField label="Fiyat (₺)" required>
@@ -702,7 +702,7 @@ const MenuSection = ({
                           price: parseFloat(e.target.value) || 0,
                         })
                       }
-                      className="input-diner"
+                      className="input-field"
                       min="0"
                       step="0.01"
                     />
@@ -714,7 +714,7 @@ const MenuSection = ({
                       onChange={(e) =>
                         setEditingItem({ ...editingItem, image: e.target.value })
                       }
-                      className="input-diner"
+                      className="input-field"
                       placeholder="/placeholders/pizza-1.svg"
                     />
                   </FormField>
@@ -731,7 +731,7 @@ const MenuSection = ({
                             .filter(Boolean),
                         })
                       }
-                      className="input-diner"
+                      className="input-field"
                       placeholder="Yeni, Popüler, Acılı"
                     />
                   </FormField>
@@ -760,18 +760,18 @@ const MenuSection = ({
           {content.menu.items.map((item) => (
             <div
               key={item.id}
-              className="p-4 bg-diner-cream-dark rounded-diner flex items-center gap-4"
+              className="p-4 bg-surface rounded-xl flex items-center gap-4"
             >
               <img
                 src={item.image}
                 alt={item.name}
-                className="w-16 h-16 object-cover rounded-diner"
+                className="w-16 h-16 object-cover rounded-xl"
               />
               <div className="flex-1 min-w-0">
-                <div className="font-display text-diner-chocolate truncate">
+                <div className="font-display text-foreground truncate">
                   {item.name}
                 </div>
-                <div className="text-sm text-diner-chocolate-light">
+                <div className="text-sm text-foreground-muted">
                   {content.menu.categories.find((c) => c.id === item.category)?.name} •{' '}
                   ₺{item.price}
                 </div>
@@ -779,13 +779,13 @@ const MenuSection = ({
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditingItem(item)}
-                  className="text-diner-chocolate-light hover:text-diner-red text-xl"
+                  className="text-foreground-muted hover:text-primary text-xl"
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="text-diner-chocolate-light hover:text-diner-red text-xl"
+                  className="text-foreground-muted hover:text-primary text-xl"
                 >
                   🗑️
                 </button>
@@ -846,19 +846,19 @@ const AboutSection = ({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-heading text-2xl text-diner-chocolate mb-6">📖 Hakkımızda</h2>
+      <h2 className="font-heading font-bold text-2xl text-foreground mb-6">📖 Hakkımızda</h2>
       <FormField label="Hikaye Başlığı">
         <input
           type="text"
           value={content.about.storyTitle}
           onChange={(e) => updateField('about', 'storyTitle', e.target.value)}
-          className="input-diner"
+          className="input-field"
         />
       </FormField>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="font-display text-diner-chocolate">Hikaye Paragrafları</label>
+          <label className="font-display text-foreground">Hikaye Paragrafları</label>
           <button onClick={addParagraph} className="btn-secondary text-sm py-1">
             + Paragraf
           </button>
@@ -869,11 +869,11 @@ const AboutSection = ({
               value={p}
               onChange={(e) => updateParagraph(i, e.target.value)}
               rows={2}
-              className="input-diner flex-1"
+              className="input-field flex-1"
             />
             <button
               onClick={() => removeParagraph(i)}
-              className="text-diner-red hover:underline"
+              className="text-primary hover:underline"
             >
               🗑️
             </button>
@@ -883,7 +883,7 @@ const AboutSection = ({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="font-display text-diner-chocolate">Galeri Görselleri</label>
+          <label className="font-display text-foreground">Galeri Görselleri</label>
           <button onClick={addGalleryImage} className="btn-secondary text-sm py-1">
             + Görsel
           </button>
@@ -894,9 +894,9 @@ const AboutSection = ({
               <img
                 src={img}
                 alt={`Gallery ${i + 1}`}
-                className="w-full aspect-square object-cover rounded-diner"
+                className="w-full aspect-square object-cover rounded-xl"
               />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-diner">
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-xl">
                 <button
                   onClick={() => {
                     const url = prompt('Görsel URL:', img)
@@ -936,13 +936,13 @@ const ContactSection = ({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-heading text-2xl text-diner-chocolate mb-6">📍 İletişim</h2>
+      <h2 className="font-heading font-bold text-2xl text-foreground mb-6">📍 İletişim</h2>
       <FormField label="Adres">
         <textarea
           value={content.contact.address}
           onChange={(e) => updateField('contact', 'address', e.target.value)}
           rows={2}
-          className="input-diner"
+          className="input-field"
         />
       </FormField>
       <FormField label="Google Maps Embed URL">
@@ -950,12 +950,12 @@ const ContactSection = ({
           type="text"
           value={content.contact.mapEmbedUrl}
           onChange={(e) => updateField('contact', 'mapEmbedUrl', e.target.value)}
-          className="input-diner"
+          className="input-field"
         />
       </FormField>
 
       <div>
-        <label className="font-display text-diner-chocolate mb-2 block">
+        <label className="font-display text-foreground mb-2 block">
           Çalışma Saatleri
         </label>
         <div className="space-y-2">
@@ -965,21 +965,21 @@ const ContactSection = ({
                 type="text"
                 value={h.day}
                 onChange={(e) => updateHour(i, 'day', e.target.value)}
-                className="input-diner"
+                className="input-field"
                 placeholder="Gün"
               />
               <input
                 type="text"
                 value={h.open}
                 onChange={(e) => updateHour(i, 'open', e.target.value)}
-                className="input-diner"
+                className="input-field"
                 placeholder="Açılış"
               />
               <input
                 type="text"
                 value={h.close}
                 onChange={(e) => updateHour(i, 'close', e.target.value)}
-                className="input-diner"
+                className="input-field"
                 placeholder="Kapanış"
               />
             </div>
@@ -998,13 +998,13 @@ const SeoSection = ({
   updateField: <K extends keyof Content>(section: K, field: keyof Content[K], value: unknown) => void
 }) => (
   <div className="space-y-6">
-    <h2 className="font-heading text-2xl text-diner-chocolate mb-6">🔍 SEO Ayarları</h2>
+    <h2 className="font-heading font-bold text-2xl text-foreground mb-6">🔍 SEO Ayarları</h2>
     <FormField label="Sayfa Başlığı">
       <input
         type="text"
         value={content.seo.title}
         onChange={(e) => updateField('seo', 'title', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Meta Açıklaması">
@@ -1012,7 +1012,7 @@ const SeoSection = ({
         value={content.seo.description}
         onChange={(e) => updateField('seo', 'description', e.target.value)}
         rows={3}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="OG Image URL">
@@ -1020,7 +1020,7 @@ const SeoSection = ({
         type="text"
         value={content.seo.ogImage}
         onChange={(e) => updateField('seo', 'ogImage', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
   </div>
@@ -1034,13 +1034,13 @@ const WhatsAppSection = ({
   updateField: <K extends keyof Content>(section: K, field: keyof Content[K], value: unknown) => void
 }) => (
   <div className="space-y-6">
-    <h2 className="font-heading text-2xl text-diner-chocolate mb-6">💬 WhatsApp & Linkler</h2>
+    <h2 className="font-heading font-bold text-2xl text-foreground mb-6">💬 WhatsApp & Linkler</h2>
     <FormField label="WhatsApp Telefon (uluslararası format)" required>
       <input
         type="text"
         value={content.whatsapp.phone}
         onChange={(e) => updateField('whatsapp', 'phone', e.target.value)}
-        className="input-diner"
+        className="input-field"
         placeholder="905551234567"
       />
     </FormField>
@@ -1049,7 +1049,7 @@ const WhatsAppSection = ({
         value={content.whatsapp.defaultMessage}
         onChange={(e) => updateField('whatsapp', 'defaultMessage', e.target.value)}
         rows={2}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Telefon (görüntülenen)">
@@ -1057,7 +1057,7 @@ const WhatsAppSection = ({
         type="text"
         value={content.links.phoneTel}
         onChange={(e) => updateField('links', 'phoneTel', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Instagram URL">
@@ -1065,7 +1065,7 @@ const WhatsAppSection = ({
         type="text"
         value={content.links.instagram}
         onChange={(e) => updateField('links', 'instagram', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="TikTok URL">
@@ -1073,7 +1073,7 @@ const WhatsAppSection = ({
         type="text"
         value={content.links.tiktok}
         onChange={(e) => updateField('links', 'tiktok', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
     <FormField label="Google Maps URL">
@@ -1081,7 +1081,7 @@ const WhatsAppSection = ({
         type="text"
         value={content.links.googleMaps}
         onChange={(e) => updateField('links', 'googleMaps', e.target.value)}
-        className="input-diner"
+        className="input-field"
       />
     </FormField>
   </div>

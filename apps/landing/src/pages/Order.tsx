@@ -40,7 +40,7 @@ export const Order = () => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Customer info for takeaway/delivery
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -64,19 +64,19 @@ export const Order = () => {
   // Loyalty Program - Puan kullanma
   const [usePoints, setUsePoints] = useState(false);
   const [pointsToUse, setPointsToUse] = useState(0);
-  
+
   // Calculate max redeemable points (100 puan = 10₺)
   const maxRedeemablePoints = member ? Math.min(
     Math.floor(member.totalPoints / 100) * 100, // 100'ün katları
     Math.floor(totalPrice / 10) * 100 // Toplam fiyatı geçmemeli
   ) : 0;
-  
+
   // Calculate points discount
   const pointsDiscount = usePoints ? redeemPoints(pointsToUse) : 0;
 
   // Calculate tip amount
-  const tipAmount = showCustomTip 
-    ? parseFloat(customTip) || 0 
+  const tipAmount = showCustomTip
+    ? parseFloat(customTip) || 0
     : Math.round(totalPrice * (selectedTipPercent / 100) * 100) / 100;
 
   // Calculate delivery fee
@@ -133,13 +133,13 @@ export const Order = () => {
 
   const handleSubmitOrder = async () => {
     if (items.length === 0) return;
-    
+
     // Validation for delivery
     if (orderMode === 'delivery' && !customerAddress.trim()) {
       setError('Lütfen adres bilgisi girin');
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
 
@@ -187,16 +187,16 @@ export const Order = () => {
       if (response.success && response.data?.order) {
         const orderId = response.data.order.id;
         const orderNum = response.data.order.orderNumber;
-        
+
         // Start tracking the order (for live status in navbar)
         trackOrder(orderId, orderNum, orderType);
-        
+
         // If card payment, redirect to payment page
         if (paymentMethod === 'card') {
           navigate(`/payment?orderId=${orderId}&tip=${tipAmount}`);
           return;
         }
-        
+
         // Cash payment - show success
         setOrderNumber(orderNum);
         setOrderSuccess(true);
@@ -220,11 +220,11 @@ export const Order = () => {
   // Order success state
   if (orderSuccess) {
     return (
-      <div className="min-h-screen bg-diner-cream flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-diner p-8 text-center max-w-md w-full shadow-retro"
+          className="bg-white rounded-xl p-8 text-center max-w-md w-full shadow-retro"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -234,25 +234,25 @@ export const Order = () => {
           >
             ✅
           </motion.div>
-          <h1 className="font-display text-3xl text-diner-chocolate mb-2">
+          <h1 className="font-display text-3xl text-foreground mb-2">
             Siparişiniz Alındı!
           </h1>
           {orderNumber && (
-            <p className="text-diner-red font-display text-2xl mb-4">
+            <p className="text-primary font-display text-2xl mb-4">
               Sipariş No: #{orderNumber.toString().padStart(4, '0')}
             </p>
           )}
           {tableSession && (
-            <p className="text-diner-chocolate-light mb-4">
+            <p className="text-foreground-muted mb-4">
               📍 {tableSession.name}
             </p>
           )}
           {orderMode === 'delivery' && (
-            <p className="text-diner-chocolate-light mb-4">
+            <p className="text-foreground-muted mb-4">
               🚚 Kuryemiz en kısa sürede yola çıkacak
             </p>
           )}
-          <p className="text-diner-chocolate-light mb-6">
+          <p className="text-foreground-muted mb-6">
             Siparişiniz en kısa sürede hazırlanacaktır.
           </p>
           <motion.button
@@ -274,7 +274,7 @@ export const Order = () => {
   }
 
   return (
-    <div className="min-h-screen bg-diner-cream py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <motion.div
@@ -287,14 +287,14 @@ export const Order = () => {
             alt="High Five"
             className="w-24 h-24 mx-auto mb-4 object-contain"
           />
-          <h1 className="font-display text-3xl text-diner-chocolate">
+          <h1 className="font-display text-3xl text-foreground">
             Sipariş Ver
           </h1>
           {tableSession && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="inline-flex items-center gap-2 bg-diner-mustard text-diner-chocolate px-4 py-2 rounded-full mt-2 font-display"
+              className="inline-flex items-center gap-2 bg-accent text-foreground px-4 py-2 rounded-full mt-2 font-display"
             >
               📍 {tableSession.name}
             </motion.div>
@@ -306,7 +306,7 @@ export const Order = () => {
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-gradient-to-r from-purple-600 to-pink-500 rounded-diner p-4 mb-6 text-white"
+            className="bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl p-4 mb-6 text-white"
           >
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎉</span>
@@ -328,9 +328,9 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4 text-center">
+            <h2 className="font-display text-xl text-foreground mb-4 text-center">
               Nasıl sipariş vermek istersiniz?
             </h2>
             <div className={`grid grid-cols-1 ${tableSession ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
@@ -339,11 +339,11 @@ export const Order = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setOrderMode('table')}
-                  className="p-6 border-2 border-diner-mustard bg-diner-mustard/10 rounded-diner hover:border-diner-red hover:bg-diner-cream/50 transition-all"
+                  className="p-6 border-2 border-accent bg-accent/10 rounded-xl hover:border-primary hover:bg-background/50 transition-all"
                 >
                   <span className="text-4xl block mb-2">🍽️</span>
-                  <span className="font-display text-diner-chocolate">Masaya Sipariş</span>
-                  <p className="text-sm text-diner-chocolate-light mt-1">📍 {tableSession.name}</p>
+                  <span className="font-display text-foreground">Masaya Sipariş</span>
+                  <p className="text-sm text-foreground-muted mt-1">📍 {tableSession.name}</p>
                 </motion.button>
               )}
 
@@ -351,22 +351,22 @@ export const Order = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setOrderMode('takeaway')}
-                className="p-6 border-2 border-diner-kraft rounded-diner hover:border-diner-red hover:bg-diner-cream/50 transition-all"
+                className="p-6 border-2 border-border rounded-xl hover:border-primary hover:bg-background/50 transition-all"
               >
                 <span className="text-4xl block mb-2">🥡</span>
-                <span className="font-display text-diner-chocolate">Gel Al</span>
-                <p className="text-sm text-diner-chocolate-light mt-1">Siparişinizi mağazadan alın</p>
+                <span className="font-display text-foreground">Gel Al</span>
+                <p className="text-sm text-foreground-muted mt-1">Siparişinizi mağazadan alın</p>
               </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setOrderMode('delivery')}
-                className="p-6 border-2 border-diner-kraft rounded-diner hover:border-blue-500 hover:bg-blue-50/50 transition-all"
+                className="p-6 border-2 border-border rounded-xl hover:border-blue-500 hover:bg-blue-50/50 transition-all"
               >
                 <span className="text-4xl block mb-2">🚚</span>
-                <span className="font-display text-diner-chocolate">Eve Servis</span>
-                <p className="text-sm text-diner-chocolate-light mt-1">Kapınıza getirelim (+{DELIVERY_FEE}₺)</p>
+                <span className="font-display text-foreground">Eve Servis</span>
+                <p className="text-sm text-foreground-muted mt-1">Kapınıza getirelim (+{DELIVERY_FEE}₺)</p>
               </motion.button>
             </div>
           </motion.div>
@@ -377,15 +377,15 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-xl text-diner-chocolate">
+              <h2 className="font-display text-xl text-foreground">
                 Sepetim ({totalItems} ürün)
               </h2>
               <button
                 onClick={() => setOrderMode(null)}
-                className="text-sm text-diner-chocolate-light hover:text-diner-red"
+                className="text-sm text-foreground-muted hover:text-primary"
               >
                 ← Geri
               </button>
@@ -394,7 +394,7 @@ export const Order = () => {
             {items.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-5xl mb-3">🛒</div>
-                <p className="text-diner-chocolate-light">Sepetiniz boş</p>
+                <p className="text-foreground-muted">Sepetiniz boş</p>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -414,7 +414,7 @@ export const Order = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20, height: 0 }}
-                      className="flex items-center gap-3 p-3 bg-diner-cream/50 rounded-lg"
+                      className="flex items-center gap-3 p-3 bg-background/50 rounded-lg"
                     >
                       <img
                         src={cartItem.item.image}
@@ -422,31 +422,31 @@ export const Order = () => {
                         className="w-16 h-16 object-cover rounded-lg"
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-display text-diner-chocolate truncate">
+                        <h4 className="font-display text-foreground truncate">
                           {cartItem.item.name}
                         </h4>
-                        <p className="text-sm text-diner-red font-display">
+                        <p className="text-sm text-primary font-display">
                           ₺{cartItem.item.price}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(cartItem.item.id, cartItem.quantity - 1)}
-                          className="w-8 h-8 rounded-full bg-white border border-diner-kraft flex items-center justify-center hover:bg-diner-cream"
+                          className="w-8 h-8 rounded-full bg-white border border-border flex items-center justify-center hover:bg-background"
                         >
                           −
                         </button>
                         <span className="w-8 text-center font-display">{cartItem.quantity}</span>
                         <button
                           onClick={() => updateQuantity(cartItem.item.id, cartItem.quantity + 1)}
-                          className="w-8 h-8 rounded-full bg-white border border-diner-kraft flex items-center justify-center hover:bg-diner-cream"
+                          className="w-8 h-8 rounded-full bg-white border border-border flex items-center justify-center hover:bg-background"
                         >
                           +
                         </button>
                       </div>
                       <button
                         onClick={() => removeItem(cartItem.item.id)}
-                        className="text-diner-chocolate-light hover:text-diner-red p-1"
+                        className="text-foreground-muted hover:text-primary p-1"
                       >
                         🗑️
                       </button>
@@ -463,44 +463,44 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4">
+            <h2 className="font-display text-xl text-foreground mb-4">
               {orderMode === 'delivery' ? '🚚 Teslimat Bilgileri' : '📞 İletişim Bilgileri'}
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-diner-chocolate-light mb-1">Adınız *</label>
+                <label className="block text-sm font-medium text-foreground-muted mb-1">Adınız *</label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-diner border-2 border-diner-kraft focus:border-diner-red focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none"
                   placeholder="Adınız Soyadınız"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-diner-chocolate-light mb-1">Telefon *</label>
+                <label className="block text-sm font-medium text-foreground-muted mb-1">Telefon *</label>
                 <input
                   type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-4 py-3 rounded-diner border-2 border-diner-kraft focus:border-diner-red focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none"
                   placeholder="05XX XXX XX XX"
                 />
               </div>
-              
+
               {/* Address field for delivery */}
               {orderMode === 'delivery' && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                 >
-                  <label className="block text-sm font-medium text-diner-chocolate-light mb-1">Teslimat Adresi *</label>
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">Teslimat Adresi *</label>
                   <textarea
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
-                    className="w-full px-4 py-3 rounded-diner border-2 border-diner-kraft focus:border-diner-red focus:outline-none resize-none"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none"
                     rows={3}
                     placeholder="Mahalle, sokak, bina no, daire no..."
                   />
@@ -519,12 +519,12 @@ export const Order = () => {
 
             {/* Loyalty Member Info (if logged in via header) */}
             {member && (
-              <div className="mt-4 p-4 rounded-diner border-2 border-orange-300 bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className="mt-4 p-4 rounded-xl border-2 border-orange-300 bg-gradient-to-r from-amber-50 to-orange-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">👑</span>
                     <div>
-                      <p className="font-display text-diner-chocolate">
+                      <p className="font-display text-foreground">
                         Hoş geldin, {member.name || 'Üye'}!
                       </p>
                       <p className="text-sm text-orange-600">
@@ -546,13 +546,13 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4">Sipariş Notu</h2>
+            <h2 className="font-display text-xl text-foreground mb-4">Sipariş Notu</h2>
             <textarea
               value={orderNotes}
               onChange={(e) => setOrderNotes(e.target.value)}
-              className="w-full px-4 py-3 rounded-diner border-2 border-diner-kraft focus:border-diner-red focus:outline-none resize-none"
+              className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none"
               rows={3}
               placeholder="Özel isteklerinizi yazın..."
             />
@@ -564,15 +564,15 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4 flex items-center gap-2">
+            <h2 className="font-display text-xl text-foreground mb-4 flex items-center gap-2">
               <span>💝</span> Bahşiş Ekle
             </h2>
-            <p className="text-sm text-diner-chocolate-light mb-4">
+            <p className="text-sm text-foreground-muted mb-4">
               Ekibimizi mutlu etmek ister misiniz?
             </p>
-            
+
             <div className="grid grid-cols-4 gap-2 mb-4">
               {TIP_OPTIONS.map((option) => (
                 <motion.button
@@ -586,8 +586,8 @@ export const Order = () => {
                   }}
                   className={`py-3 rounded-lg font-display transition-all ${
                     !showCustomTip && selectedTipPercent === option.percent
-                      ? 'bg-diner-red text-white'
-                      : 'bg-diner-cream text-diner-chocolate hover:bg-diner-mustard/30'
+                      ? 'bg-primary text-white'
+                      : 'bg-background text-foreground hover:bg-accent/30'
                   }`}
                 >
                   {option.label}
@@ -603,13 +603,13 @@ export const Order = () => {
                 }}
                 className={`text-sm px-3 py-2 rounded-lg transition-all ${
                   showCustomTip
-                    ? 'bg-diner-red text-white'
-                    : 'text-diner-chocolate-light hover:text-diner-chocolate'
+                    ? 'bg-primary text-white'
+                    : 'text-foreground-muted hover:text-foreground'
                 }`}
               >
                 ✏️ Özel Tutar
               </button>
-              
+
               <AnimatePresence>
                 {showCustomTip && (
                   <motion.div
@@ -618,12 +618,12 @@ export const Order = () => {
                     exit={{ width: 0, opacity: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <span className="text-diner-chocolate font-display">₺</span>
+                    <span className="text-foreground font-display">₺</span>
                     <input
                       type="number"
                       value={customTip}
                       onChange={(e) => setCustomTip(e.target.value)}
-                      className="w-24 px-3 py-2 rounded-lg border-2 border-diner-kraft focus:border-diner-red focus:outline-none font-display"
+                      className="w-24 px-3 py-2 rounded-lg border-2 border-border focus:border-primary focus:outline-none font-display"
                       placeholder="0"
                       min="0"
                     />
@@ -649,33 +649,33 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4">Ödeme Yöntemi</h2>
+            <h2 className="font-display text-xl text-foreground mb-4">Ödeme Yöntemi</h2>
             <div className="grid grid-cols-1 gap-3">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setPaymentMethod('cash')}
-                className={`p-4 rounded-diner border-2 transition-all flex items-center gap-4 ${
+                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
                   paymentMethod === 'cash'
-                    ? 'border-diner-red bg-diner-red/5'
-                    : 'border-diner-kraft hover:border-diner-chocolate-light'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-foreground-muted'
                 }`}
               >
                 <span className="text-3xl">💵</span>
                 <div className="text-left">
-                  <span className="font-display text-diner-chocolate block">
+                  <span className="font-display text-foreground block">
                     {orderMode === 'delivery' ? 'Nakit / Kredi Kartı Kapıda' : 'Nakit / Kredi Kartı Kasada'}
                   </span>
-                  <span className="text-xs text-diner-chocolate-light">
+                  <span className="text-xs text-foreground-muted">
                     {orderMode === 'delivery'
                       ? 'Ödemenizi kapıda nakit veya kart ile yapın'
                       : 'Ödemenizi kasada nakit veya kart ile yapın'}
                   </span>
                 </div>
                 {paymentMethod === 'cash' && (
-                  <span className="ml-auto text-diner-red text-xl">✓</span>
+                  <span className="ml-auto text-primary text-xl">✓</span>
                 )}
               </motion.button>
 
@@ -683,16 +683,16 @@ export const Order = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setPaymentMethod('card')}
-                className={`p-4 rounded-diner border-2 transition-all flex items-center gap-4 ${
+                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
                   paymentMethod === 'card'
                     ? 'border-blue-500 bg-blue-50'
-                    : 'border-diner-kraft hover:border-diner-chocolate-light'
+                    : 'border-border hover:border-foreground-muted'
                 }`}
               >
                 <span className="text-3xl">💳</span>
                 <div className="text-left">
-                  <span className="font-display text-diner-chocolate block">Kredi Kartı Online</span>
-                  <span className="text-xs text-diner-chocolate-light">3D Secure ile güvenli online ödeme</span>
+                  <span className="font-display text-foreground block">Kredi Kartı Online</span>
+                  <span className="text-xs text-foreground-muted">3D Secure ile güvenli online ödeme</span>
                 </div>
                 {paymentMethod === 'card' && (
                   <span className="ml-auto text-blue-500 text-xl">✓</span>
@@ -707,18 +707,18 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro mb-6"
+            className="bg-white rounded-xl p-6 shadow-retro mb-6"
           >
-            <h2 className="font-display text-xl text-diner-chocolate mb-4">E-posta Adresi</h2>
+            <h2 className="font-display text-xl text-foreground mb-4">E-posta Adresi</h2>
             <input
               type="email"
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-diner border-2 border-diner-kraft focus:border-diner-red focus:outline-none"
+              className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none"
               placeholder="ornek@email.com"
               required
             />
-            <p className="text-xs text-diner-chocolate-light mt-2">
+            <p className="text-xs text-foreground-muted mt-2">
               Ödeme makbuzu bu adrese gönderilecektir.
             </p>
           </motion.div>
@@ -729,13 +729,13 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-diner p-5 shadow-retro border-2 border-orange-200"
+            className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 shadow-retro border-2 border-orange-200"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">👑</span>
                 <div>
-                  <h3 className="font-display text-lg text-diner-chocolate">Puanlarını Kullan</h3>
+                  <h3 className="font-display text-lg text-foreground">Puanlarını Kullan</h3>
                   <p className="text-sm text-gray-600">
                     Mevcut: <span className="font-bold text-orange-600">{member.totalPoints} puan</span>
                     {member.loyaltyTier && ` (${member.loyaltyTier.name})`}
@@ -759,7 +759,7 @@ export const Order = () => {
                 <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
               </label>
             </div>
-            
+
             {usePoints && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
@@ -790,7 +790,7 @@ export const Order = () => {
                 </div>
               </motion.div>
             )}
-            
+
             {!usePoints && (
               <p className="text-xs text-gray-500 mt-2">
                 💡 100 puan = 10₺ indirim olarak kullanabilirsiniz
@@ -804,36 +804,36 @@ export const Order = () => {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-diner p-6 shadow-retro"
+            className="bg-white rounded-xl p-6 shadow-retro"
           >
             {/* Price Breakdown */}
-            <div className="space-y-2 mb-4 pb-4 border-b border-diner-kraft/30">
-              <div className="flex justify-between text-diner-chocolate-light">
+            <div className="space-y-2 mb-4 pb-4 border-b border-border-light">
+              <div className="flex justify-between text-foreground-muted">
                 <span>Ara Toplam</span>
                 <span>₺{totalPrice.toFixed(2)}</span>
               </div>
-              
+
               {serviceCharge > 0 && (
-                <div className="flex justify-between text-diner-chocolate-light">
+                <div className="flex justify-between text-foreground-muted">
                   <span>Servis Ücreti (%{serviceChargeRate})</span>
                   <span>₺{serviceCharge.toFixed(2)}</span>
                 </div>
               )}
-              
+
               {deliveryFee > 0 && (
                 <div className="flex justify-between text-blue-600">
                   <span>Kurye Ücreti 🚚</span>
                   <span>₺{deliveryFee.toFixed(2)}</span>
                 </div>
               )}
-              
+
               {tipAmount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Bahşiş 💝</span>
                   <span>₺{tipAmount.toFixed(2)}</span>
                 </div>
               )}
-              
+
               {pointsDiscount > 0 && (
                 <div className="flex justify-between text-orange-600 font-medium">
                   <span>Puan İndirimi 🎁</span>
@@ -851,14 +851,14 @@ export const Order = () => {
             )}
 
             <div className="flex items-center justify-between mb-4">
-              <span className="font-display text-lg text-diner-chocolate">Toplam</span>
+              <span className="font-display text-lg text-foreground">Toplam</span>
               <div className="text-right">
                 {pointsDiscount > 0 && (
                   <span className="text-sm text-gray-400 line-through block">
                     ₺{(totalPrice + serviceCharge + tipAmount + deliveryFee).toFixed(2)}
                   </span>
                 )}
-                <span className="font-display text-2xl text-diner-red">
+                <span className="font-display text-2xl text-primary">
                   ₺{grandTotal.toFixed(2)}
                 </span>
               </div>
@@ -885,12 +885,12 @@ export const Order = () => {
                 !paymentMethod ||
                 (paymentMethod === 'card' && !customerEmail)
               }
-              className={`w-full py-4 rounded-diner font-display text-lg transition-all ${
+              className={`w-full py-4 rounded-xl font-display text-lg transition-all ${
                 paymentMethod === 'card'
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
                   : orderMode === 'delivery'
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white'
-                  : 'bg-diner-red hover:bg-diner-red/90 text-white'
+                  : 'bg-primary hover:bg-primary/90 text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isSubmitting ? (
@@ -910,19 +910,19 @@ export const Order = () => {
             </motion.button>
 
             {orderMode === 'takeaway' && (!customerName || !customerPhone) && (
-              <p className="text-xs text-center text-diner-chocolate-light mt-2">
+              <p className="text-xs text-center text-foreground-muted mt-2">
                 Lütfen iletişim bilgilerinizi doldurun
               </p>
             )}
 
             {orderMode && !paymentMethod && (
-              <p className="text-xs text-center text-diner-chocolate-light mt-2">
+              <p className="text-xs text-center text-foreground-muted mt-2">
                 Lütfen ödeme yöntemi seçin
               </p>
             )}
 
             {paymentMethod === 'card' && (
-              <p className="text-xs text-center text-diner-chocolate-light mt-3 flex items-center justify-center gap-2">
+              <p className="text-xs text-center text-foreground-muted mt-3 flex items-center justify-center gap-2">
                 <span>🔒</span> 3D Secure ile güvenli ödeme
               </p>
             )}
@@ -936,7 +936,7 @@ export const Order = () => {
             animate={{ opacity: 1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => navigate('/menu')}
-            className="w-full mt-4 py-3 border-2 border-diner-kraft rounded-diner text-diner-chocolate font-display hover:bg-diner-cream transition-colors"
+            className="w-full mt-4 py-3 border-2 border-border rounded-xl text-foreground font-display hover:bg-background transition-colors"
           >
             + Daha Fazla Ürün Ekle
           </motion.button>

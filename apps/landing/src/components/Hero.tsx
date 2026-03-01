@@ -11,48 +11,19 @@ export const Hero = () => {
   const { content } = useContent();
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-background">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Checkered corner */}
-        <div className="absolute top-0 right-0 w-96 h-96 checkered opacity-30 transform rotate-12 translate-x-32 -translate-y-32" />
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
-        {/* Floating decorative elements */}
-        <motion.div
-          animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-          className="absolute top-20 left-10 text-6xl opacity-20"
-        >
-          🍕
-        </motion.div>
-        <motion.div
-          animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-          transition={{
-            repeat: Infinity,
-            duration: 5,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-          className="absolute top-40 right-20 text-5xl opacity-20"
-        >
-          🍝
-        </motion.div>
-        <motion.div
-          animate={{ y: [0, -15, 0], rotate: [0, 10, 0] }}
-          transition={{
-            repeat: Infinity,
-            duration: 7,
-            ease: "easeInOut",
-            delay: 2,
-          }}
-          className="absolute bottom-32 left-20 text-5xl opacity-20"
-        >
-          🥪
-        </motion.div>
+        {/* Geometric shapes */}
+        <div className="absolute top-20 right-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
 
-        {/* Red swoosh decoration */}
+        {/* Bottom wave */}
         <svg
-          className="absolute bottom-0 left-0 w-full h-48 text-diner-red/10"
+          className="absolute bottom-0 left-0 w-full h-32 text-surface"
           viewBox="0 0 1440 200"
           preserveAspectRatio="none"
         >
@@ -96,29 +67,20 @@ export const Hero = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="font-heading text-5xl md:text-6xl lg:text-7xl text-diner-chocolate leading-tight mb-4"
+              className="font-heading font-bold text-5xl md:text-6xl lg:text-7xl text-foreground leading-tight mb-4"
             >
-              <span className="text-diner-red">
+              <span className="text-primary">
                 {content.hero.headline.split(" ")[0]}
               </span>
               <br />
               <span className="relative inline-block">
                 {content.hero.headline.split(" ").slice(1).join(" ")}
-                <motion.svg
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
                   transition={{ delay: 1, duration: 0.8 }}
-                  className="absolute -bottom-2 left-0 w-full h-4 text-diner-mustard"
-                  viewBox="0 0 200 20"
-                >
-                  <motion.path
-                    d="M0,10 Q50,0 100,10 T200,10"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                </motion.svg>
+                  className="absolute -bottom-1 left-0 w-full h-1 bg-accent rounded-full origin-left"
+                />
               </span>
             </motion.h1>
 
@@ -127,7 +89,7 @@ export const Hero = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="font-body text-xl md:text-2xl text-diner-chocolate-light mb-8 max-w-xl mx-auto lg:mx-0"
+              className="font-body text-xl md:text-2xl text-foreground-muted mb-8 max-w-xl mx-auto lg:mx-0"
             >
               {content.hero.subheadline}
             </motion.p>
@@ -139,13 +101,7 @@ export const Hero = () => {
               transition={{ delay: 0.6 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
             >
-              <Link to="/menu" className="btn-primary text-xl group">
-                <motion.span
-                  animate={{ rotate: [0, 20, 0] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >
-                  🍕
-                </motion.span>
+              <Link to="/menu" className="btn-primary text-lg group">
                 Menüyü İncele
                 <motion.span
                   className="inline-block"
@@ -161,9 +117,8 @@ export const Hero = () => {
                 }?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-whatsapp text-xl"
+                className="btn-whatsapp text-lg"
               >
-                <span>📱</span>
                 WhatsApp Sipariş
               </a>
             </motion.div>
@@ -173,27 +128,31 @@ export const Hero = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="mt-10 flex flex-wrap items-center gap-6 justify-center lg:justify-start"
+              className="mt-10 flex flex-wrap items-center gap-4 justify-center lg:justify-start"
             >
               {/* Google Rating */}
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-diner shadow-diner">
-                <div className="flex text-diner-mustard text-lg">
+              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl shadow-card">
+                <div className="flex text-amber-400 text-base">
                   {"★".repeat(5)}
                 </div>
-                <span className="font-display text-diner-chocolate">4.9</span>
-                <span className="text-sm text-diner-chocolate-light">
+                <span className="font-display font-bold text-foreground">4.9</span>
+                <span className="text-sm text-foreground-muted">
                   Google
                 </span>
               </div>
 
               {/* Happy Customers */}
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-diner shadow-diner">
-                <span className="text-2xl">😋</span>
+              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl shadow-card">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
                 <div>
-                  <span className="font-display text-diner-red text-lg">
+                  <span className="font-display font-bold text-primary text-lg">
                     10K+
                   </span>
-                  <span className="text-sm text-diner-chocolate-light ml-1">
+                  <span className="text-sm text-foreground-muted ml-1">
                     Mutlu Müşteri
                   </span>
                 </div>
@@ -236,11 +195,11 @@ export const Hero = () => {
               <SandwichAnimation />
             </motion.div>
 
-            {/* Decorative price tags */}
+            {/* Price tag */}
             <motion.div
-              animate={{ rotate: [-5, 5, -5] }}
+              animate={{ rotate: [-3, 3, -3] }}
               transition={{ repeat: Infinity, duration: 3 }}
-              className="absolute top-20 right-5 bg-diner-mustard text-diner-chocolate font-display text-lg px-3 py-1 rounded-stamp shadow-stamp transform -rotate-12"
+              className="absolute top-20 right-5 bg-primary text-white font-display font-bold text-sm px-4 py-2 rounded-full shadow-lg"
             >
               ₺49'dan başlayan
             </motion.div>

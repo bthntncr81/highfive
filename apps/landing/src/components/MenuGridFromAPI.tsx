@@ -39,7 +39,7 @@ export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
       case 'vegan':
         return 'badge-vegan'
       default:
-        return 'badge bg-diner-kraft text-diner-chocolate'
+        return 'badge bg-surface text-foreground'
     }
   }
 
@@ -51,10 +51,10 @@ export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
         className="text-center py-20"
       >
         <div className="text-6xl mb-4">🔍</div>
-        <p className="font-display text-2xl text-diner-chocolate-light">
+        <p className="font-display text-2xl text-foreground-muted">
           Aradığınız ürün bulunamadı
         </p>
-        <p className="font-body text-diner-chocolate-light/70 mt-2">
+        <p className="font-body text-foreground-subtle mt-2">
           Farklı bir kategori veya arama terimi deneyin
         </p>
       </motion.div>
@@ -171,11 +171,11 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
     <>
       <motion.article
         variants={itemVariants}
-        whileHover={{ y: -8, rotate: 1 }}
+        whileHover={{ y: -4 }}
         className={`card-menu group relative ${isOutOfStock ? 'opacity-60' : ''}`}
       >
         {/* Image */}
-        <div className="relative aspect-[4/3] rounded-diner overflow-hidden mb-4 bg-diner-cream-dark">
+        <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-surface">
           <img
             src={itemImage}
             alt={item.name}
@@ -214,7 +214,7 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
                 <motion.span
                   key={i}
                   initial={{ scale: 0, rotate: -20 }}
-                  animate={{ scale: 1, rotate: -3 }}
+                  animate={{ scale: 1, rotate: 0 }}
                   transition={{ delay: 0.3 + i * 0.1, type: 'spring' }}
                   className={getBadgeStyle(badge)}
                 >
@@ -250,12 +250,12 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
                 <span className="text-sm line-through text-white/80 bg-black/30 px-2 rounded">
                   ₺{originalPrice}
                 </span>
-                <span className="bg-green-500 text-white font-display text-xl px-3 py-1 rounded-stamp shadow-stamp transform rotate-3">
+                <span className="bg-green-500 text-white font-display text-xl px-3 py-1 rounded-full shadow-md">
                   ₺{discountPrice}
                 </span>
               </div>
             ) : (
-              <span className="bg-diner-mustard text-diner-chocolate font-display text-xl px-3 py-1 rounded-stamp shadow-stamp transform rotate-3">
+              <span className="bg-primary text-white font-display text-xl px-3 py-1 rounded-full shadow-md">
                 ₺{originalPrice}
               </span>
             )}
@@ -288,22 +288,22 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
         {/* Content */}
         <div className="flex flex-col flex-1">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="font-display text-xl text-diner-chocolate group-hover:text-diner-red transition-colors">
+            <h3 className="font-display text-xl text-foreground group-hover:text-primary transition-colors">
               {item.name}
             </h3>
             {item.prepTime && (
-              <span className="text-xs text-diner-chocolate-light/70 flex items-center gap-1">
+              <span className="text-xs text-foreground-subtle flex items-center gap-1">
                 ⏱️ {item.prepTime} dk
               </span>
             )}
           </div>
-          <p className="font-body text-diner-chocolate-light text-sm flex-1 mb-2 line-clamp-2">
+          <p className="font-body text-foreground-muted text-sm flex-1 mb-2 line-clamp-2">
             {item.description}
           </p>
 
           {/* Calories */}
           {calories && (
-            <p className="text-xs text-diner-chocolate-light/70 mb-2">
+            <p className="text-xs text-foreground-subtle mb-2">
               🔥 {calories} kcal
             </p>
           )}
@@ -378,7 +378,7 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
             >
               <div className="text-center mb-4">
                 <span className="text-4xl">🍟</span>
-                <h3 className="font-display text-xl text-diner-chocolate mt-2">
+                <h3 className="font-display text-xl text-foreground mt-2">
                   {upsellSuggestions[0].message || 'Yanında da ekleyin!'}
                 </h3>
               </div>
@@ -390,7 +390,7 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleUpsellAccept(suggestion)}
-                    className="w-full flex items-center gap-3 p-3 bg-diner-cream rounded-xl hover:bg-diner-mustard/20 transition-colors"
+                    className="w-full flex items-center gap-3 p-3 bg-surface rounded-xl hover:bg-primary/10 transition-colors"
                   >
                     <img
                       src={suggestion.item.image || '/placeholders/pizza-1.svg'}
@@ -398,10 +398,10 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
                       className="w-16 h-16 object-cover rounded-lg"
                     />
                     <div className="flex-1 text-left">
-                      <p className="font-display text-diner-chocolate">
+                      <p className="font-display text-foreground">
                         {suggestion.item.name}
                       </p>
-                      <p className="text-sm text-diner-chocolate-light">
+                      <p className="text-sm text-foreground-muted">
                         {suggestion.discountAmount ? (
                           <>
                             <span className="line-through mr-2">₺{suggestion.item.price}</span>
@@ -421,7 +421,7 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
 
               <button
                 onClick={handleUpsellDecline}
-                className="w-full py-3 text-diner-chocolate-light hover:text-diner-chocolate transition-colors text-sm"
+                className="w-full py-3 text-foreground-muted hover:text-foreground transition-colors text-sm"
               >
                 Hayır, teşekkürler
               </button>

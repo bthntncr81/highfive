@@ -22,10 +22,10 @@ export const About = () => {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ repeat: Infinity, duration: 3 }}
           />
-          <h1 className="font-heading text-5xl md:text-6xl text-white mb-4">
+          <h1 className="font-heading font-bold text-5xl md:text-6xl text-white mb-4">
             Hakkımızda
           </h1>
-          <p className="font-body text-xl text-diner-cream/80 max-w-xl mx-auto">
+          <p className="font-body text-xl text-background/80 max-w-xl mx-auto">
             High Five hikayesi
           </p>
         </motion.div>
@@ -37,20 +37,20 @@ export const About = () => {
           {/* Text */}
           <RevealOnScroll direction="left">
             <div>
-              <h2 className="font-heading text-4xl text-diner-chocolate mb-6">
+              <h2 className="font-heading font-bold text-4xl text-foreground mb-6">
                 {content.about.storyTitle}
               </h2>
               <div className="space-y-4">
                 {content.about.storyParagraphs.map((paragraph, index) => (
                   <p
                     key={index}
-                    className="font-body text-lg text-diner-chocolate-light leading-relaxed"
+                    className="font-body text-lg text-foreground-muted leading-relaxed"
                   >
                     {paragraph}
                   </p>
                 ))}
               </div>
-              
+
               {/* Values */}
               <div className="mt-8 flex flex-wrap gap-3">
                 {['Taze Malzeme', 'El Yapımı', 'Hızlı Teslimat', 'Müşteri Memnuniyeti'].map((value, i) => (
@@ -75,7 +75,7 @@ export const About = () => {
               whileHover={{ rotate: 2 }}
               className="relative"
             >
-              <div className="kraft-paper rounded-diner-lg p-8 text-center">
+              <div className="card rounded-2xl p-8 text-center">
                 <motion.div
                   animate={{ y: [0, -10, 0] }}
                   transition={{ repeat: Infinity, duration: 3 }}
@@ -83,26 +83,13 @@ export const About = () => {
                 >
                   🍕
                 </motion.div>
-                <div className="font-heading text-3xl text-diner-chocolate mb-2">
+                <div className="font-heading font-bold text-3xl text-foreground mb-2">
                   2018'den beri
                 </div>
-                <div className="font-hand text-xl text-diner-chocolate-light">
+                <div className="font-body text-xl text-foreground-muted">
                   Lezzet yolculuğu
                 </div>
               </div>
-              
-              {/* Decorative stamp */}
-              <motion.div
-                initial={{ scale: 0, rotate: -30 }}
-                whileInView={{ scale: 1, rotate: -12 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.5, type: 'spring' }}
-                className="absolute -top-4 -right-4 stamp-mustard"
-              >
-                <span className="text-[8px]">
-                  GURME<br/>LEZZETİ
-                </span>
-              </motion.div>
             </motion.div>
           </RevealOnScroll>
         </div>
@@ -113,7 +100,7 @@ export const About = () => {
         <SectionHeading
           title="High Five Farkı ✋"
           subtitle="Beş parmağımızla verdiğimiz söz"
-          className="[&_h2]:text-white [&_p]:text-diner-cream/80"
+          className="[&_h2]:text-white [&_p]:text-background/80"
         />
 
         <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -127,7 +114,7 @@ export const About = () => {
             <StaggerItem key={index}>
               <motion.div
                 whileHover={{ y: -8, scale: 1.05 }}
-                className="bg-white/10 backdrop-blur rounded-diner p-6 text-center"
+                className="bg-white/10 backdrop-blur rounded-xl p-6 text-center"
               >
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
@@ -139,7 +126,7 @@ export const About = () => {
                 <h3 className="font-display text-xl text-white mb-1">
                   {item.title}
                 </h3>
-                <p className="font-body text-sm text-diner-cream/70">
+                <p className="font-body text-sm text-background/70">
                   {item.desc}
                 </p>
               </motion.div>
@@ -160,7 +147,7 @@ export const About = () => {
             <StaggerItem key={index}>
               <motion.div
                 whileHover={{ scale: 1.05, rotate: index % 2 === 0 ? 2 : -2 }}
-                className="relative aspect-square rounded-diner overflow-hidden group cursor-pointer"
+                className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
               >
                 <img
                   src={image}
@@ -168,7 +155,7 @@ export const About = () => {
                   loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-diner-red/0 group-hover:bg-diner-red/20 transition-colors" />
+                <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/20 transition-colors" />
               </motion.div>
             </StaggerItem>
           ))}
@@ -178,14 +165,14 @@ export const About = () => {
       {/* Team / Quality Promise */}
       <SectionContainer variant="kraft">
         <RevealOnScroll>
-          <div className="chalkboard max-w-3xl mx-auto text-center">
+          <div className="dark-section max-w-3xl mx-auto text-center">
             <h3 className="text-3xl mb-6">Kalite Sözümüz 🤝</h3>
-            <p className="text-lg text-diner-cream/90 leading-relaxed mb-6">
+            <p className="text-lg text-background/90 leading-relaxed mb-6">
               "Her gün taze malzemelerle, sevgiyle hazırlanan lezzetler...
               Müşterilerimize her zaman en iyisini sunmak için çalışıyoruz.
               High Five ailesi olarak, sizlere verdiğimiz bu sözü her lokmada tutuyoruz."
             </p>
-            <div className="font-hand text-diner-mustard text-2xl">
+            <div className="font-body text-accent text-2xl">
               - High Five Ekibi ✋
             </div>
           </div>

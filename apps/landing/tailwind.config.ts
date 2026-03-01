@@ -5,95 +5,115 @@ export default {
   theme: {
     extend: {
       colors: {
-        // HighFive brand palette
-        diner: {
-          red: '#CF1D00',        // HighFive brand red
-          'red-dark': '#A01600', // Deep red
-          'red-light': '#E84530',
-          cream: '#FFF8F0',      // Warm cream background
-          'cream-dark': '#F5E6D3',
-          paper: '#FFFBF5',      // Paper white
-          kraft: '#D4A574',      // Kraft paper brown
-          mustard: '#F4A300',    // Mustard yellow accent
-          'mustard-light': '#FFD166',
-          ketchup: '#CF1D00',    // Brand red (same as primary)
-          chocolate: '#3D2314',  // Dark chocolate brown
-          'chocolate-light': '#5D4037',
-          charcoal: '#2C2C2C',   // Near black
-          checkers: '#E8D5C4',   // Checkered pattern color
+        // HighFive Modern Palette
+        primary: {
+          DEFAULT: '#bb1e10',
+          dark: '#8a1610',
+          light: '#d4382a',
+          50: '#fef2f1',
+          100: '#fde3e1',
+          200: '#fcccc8',
+          300: '#f9a8a2',
+          400: '#f3726a',
+          500: '#bb1e10',
+          600: '#a01a0e',
+          700: '#8a1610',
+          800: '#6e120d',
+          900: '#5a0f0b',
         },
-        // Semantic aliases
-        primary: '#CF1D00',
-        secondary: '#F4A300',
-        background: '#FFF8F0',
-        surface: '#FFFBF5',
-        'surface-elevated': '#FFFFFF',
-        foreground: '#2C2C2C',
-        'foreground-muted': '#5D4037',
+        accent: {
+          DEFAULT: '#005387',
+          dark: '#003d63',
+          light: '#0070b8',
+          50: '#eef7ff',
+          100: '#d9edff',
+          200: '#bce0ff',
+          300: '#8eccff',
+          400: '#59b0ff',
+          500: '#005387',
+          600: '#004570',
+          700: '#003d63',
+          800: '#003352',
+          900: '#002844',
+        },
+        background: '#ecece7',
+        surface: {
+          DEFAULT: '#f5f5f2',
+          elevated: '#ffffff',
+        },
+        foreground: {
+          DEFAULT: '#1a1a1a',
+          muted: '#6b6b6b',
+          subtle: '#9a9a9a',
+        },
+        border: {
+          DEFAULT: '#d4d4cf',
+          light: '#e5e5e0',
+        },
       },
       fontFamily: {
-        // Retro diner fonts
-        display: ['"Fredoka One"', 'cursive'],
-        heading: ['"Titan One"', 'cursive'],
-        body: ['"Nunito"', 'sans-serif'],
-        chalk: ['"Permanent Marker"', 'cursive'],
-        hand: ['"Patrick Hand"', 'cursive'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        'diner': '4px 4px 0 0 rgba(61, 35, 20, 0.2)',
-        'diner-lg': '6px 6px 0 0 rgba(61, 35, 20, 0.25)',
-        'diner-xl': '8px 8px 0 0 rgba(61, 35, 20, 0.3)',
-        'stamp': '2px 2px 0 0 rgba(207, 29, 0, 0.3)',
-        'paper': '0 2px 8px rgba(61, 35, 20, 0.1)',
-        'paper-hover': '0 4px 16px rgba(61, 35, 20, 0.15)',
+        'sm': '0 1px 2px rgba(0,0,0,0.05)',
+        'md': '0 4px 6px rgba(0,0,0,0.07)',
+        'lg': '0 10px 15px rgba(0,0,0,0.1)',
+        'xl': '0 20px 25px rgba(0,0,0,0.1)',
+        '2xl': '0 25px 50px rgba(0,0,0,0.15)',
+        'inner': 'inset 0 2px 4px rgba(0,0,0,0.06)',
+        'card': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+        'card-hover': '0 10px 20px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.06)',
       },
       borderRadius: {
-        'diner': '1rem',
-        'diner-lg': '1.5rem',
-        'stamp': '0.25rem',
+        'sm': '0.375rem',
+        'md': '0.5rem',
+        'lg': '0.75rem',
+        'xl': '1rem',
+        '2xl': '1.25rem',
+        '3xl': '1.5rem',
       },
       animation: {
-        'bounce-slow': 'bounce 2s infinite',
-        'wiggle': 'wiggle 1s ease-in-out infinite',
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'slide-up': 'slideUp 0.5s ease-out',
+        'slide-down': 'slideDown 0.3s ease-out',
+        'scale-in': 'scaleIn 0.3s ease-out',
         'float': 'float 3s ease-in-out infinite',
-        'spin-slow': 'spin 8s linear infinite',
-        'pulse-warm': 'pulseWarm 2s ease-in-out infinite',
-        'stamp': 'stampIn 0.3s ease-out',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'shake': 'shake 0.5s ease-in-out',
-        'sizzle': 'sizzle 0.3s ease-in-out infinite',
+        'spin-slow': 'spin 8s linear infinite',
       },
       keyframes: {
-        wiggle: {
-          '0%, 100%': { transform: 'rotate(-3deg)' },
-          '50%': { transform: 'rotate(3deg)' },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
         },
-        pulseWarm: {
+        pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.7' },
-        },
-        stampIn: {
-          '0%': { transform: 'scale(1.5) rotate(-10deg)', opacity: '0' },
-          '100%': { transform: 'scale(1) rotate(-3deg)', opacity: '1' },
         },
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },
           '25%': { transform: 'translateX(-5px)' },
           '75%': { transform: 'translateX(5px)' },
         },
-        sizzle: {
-          '0%, 100%': { transform: 'scale(1)' },
-          '50%': { transform: 'scale(1.02)' },
-        },
-      },
-      backgroundImage: {
-        'checkered': `repeating-conic-gradient(#E8D5C4 0% 25%, transparent 0% 50%) 50% / 20px 20px`,
-        'checkered-sm': `repeating-conic-gradient(#E8D5C4 0% 25%, transparent 0% 50%) 50% / 12px 12px`,
-        'paper-texture': `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        'grain': `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
       },
     },
   },

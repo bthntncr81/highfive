@@ -14,14 +14,13 @@ export const SectionContainer = ({
   className = '',
   id,
   variant = 'cream',
-  withPattern = false,
 }: SectionContainerProps) => {
   const variantStyles = {
-    cream: 'bg-diner-cream',
+    cream: 'bg-background',
     paper: 'bg-surface',
-    kraft: 'bg-gradient-to-b from-diner-cream-dark to-diner-kraft/30',
-    red: 'bg-diner-red text-white',
-    chocolate: 'bg-diner-chocolate text-diner-cream',
+    kraft: 'bg-white',
+    red: 'bg-primary text-white',
+    chocolate: 'bg-foreground text-white',
   }
 
   return (
@@ -29,11 +28,6 @@ export const SectionContainer = ({
       id={id}
       className={`relative py-16 md:py-24 overflow-hidden ${variantStyles[variant]} ${className}`}
     >
-      {/* Optional checkered pattern overlay */}
-      {withPattern && (
-        <div className="absolute inset-0 checkered-red pointer-events-none" />
-      )}
-      
       <div className="container-diner relative z-10">
         {children}
       </div>
@@ -62,11 +56,11 @@ export const SectionHeading = ({
       viewport={{ once: true }}
       className={`mb-12 ${align === 'center' ? 'text-center' : ''} ${className}`}
     >
-      <h2 className="font-heading text-4xl md:text-5xl text-diner-chocolate mb-4">
+      <h2 className="font-heading font-bold text-4xl md:text-5xl text-foreground mb-4">
         {title}
       </h2>
       {subtitle && (
-        <p className="font-body text-xl text-diner-chocolate-light max-w-2xl mx-auto">
+        <p className="font-body text-xl text-foreground-muted max-w-2xl mx-auto">
           {subtitle}
         </p>
       )}
@@ -76,7 +70,7 @@ export const SectionHeading = ({
         whileInView={{ scaleX: 1 }}
         viewport={{ once: true }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className={`mt-4 h-2 w-24 bg-diner-mustard rounded-full ${
+        className={`mt-4 h-1 w-16 bg-primary rounded-full ${
           align === 'center' ? 'mx-auto' : ''
         }`}
       />

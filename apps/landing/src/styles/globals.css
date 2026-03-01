@@ -1,46 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Titan+One&family=Nunito:wght@400;500;600;700;800&family=Permanent+Marker&family=Patrick+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================
-   HIGH FIVE - Retro Diner Design System
-   Five Guys inspired warm, playful aesthetic
+   HIGH FIVE - Modern Design System
+   Clean, minimal, professional aesthetic
    ============================================ */
 
 @layer base {
   :root {
     /* Core palette */
-    --color-red: #CF1D00;
-    --color-red-dark: #A01600;
-    --color-red-light: #E84530;
-    --color-cream: #FFF8F0;
-    --color-cream-dark: #F5E6D3;
-    --color-paper: #FFFBF5;
-    --color-kraft: #D4A574;
-    --color-mustard: #F4A300;
-    --color-mustard-light: #FFD166;
-    --color-chocolate: #3D2314;
-    --color-chocolate-light: #5D4037;
-    --color-charcoal: #2C2C2C;
-    
-    /* Semantic tokens */
-    --color-primary: var(--color-red);
-    --color-secondary: var(--color-mustard);
-    --color-background: var(--color-cream);
-    --color-surface: var(--color-paper);
-    --color-foreground: var(--color-charcoal);
-    --color-foreground-muted: var(--color-chocolate-light);
-    
+    --color-primary: #bb1e10;
+    --color-primary-dark: #8a1610;
+    --color-primary-light: #d4382a;
+    --color-accent: #005387;
+    --color-accent-dark: #003d63;
+    --color-accent-light: #0070b8;
+    --color-background: #ecece7;
+    --color-surface: #f5f5f2;
+    --color-surface-elevated: #ffffff;
+    --color-foreground: #1a1a1a;
+    --color-foreground-muted: #6b6b6b;
+    --color-foreground-subtle: #9a9a9a;
+    --color-border: #d4d4cf;
+    --color-border-light: #e5e5e0;
+
     /* Shadows */
-    --shadow-diner: 4px 4px 0 0 rgba(61, 35, 20, 0.2);
-    --shadow-diner-lg: 6px 6px 0 0 rgba(61, 35, 20, 0.25);
-    --shadow-stamp: 2px 2px 0 0 rgba(207, 29, 0, 0.3);
-    
-    /* Radii */
-    --radius-diner: 1rem;
-    --radius-diner-lg: 1.5rem;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 25px rgba(0,0,0,0.1);
   }
 
   * {
@@ -68,22 +59,10 @@
     @apply font-body text-foreground antialiased;
     background-color: var(--color-background);
     min-height: 100vh;
-    position: relative;
-  }
-
-  /* Paper grain overlay for whole page */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    z-index: 9999;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
+    @apply font-display font-bold;
     text-wrap: balance;
   }
 
@@ -107,128 +86,125 @@
 
   /* Focus states */
   :focus-visible {
-    @apply outline-none ring-2 ring-diner-mustard ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
   }
 }
 
 @layer components {
   /* ============================================
-     BUTTONS - Chunky diner style
+     BUTTONS - Modern clean style
      ============================================ */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           font-display text-lg
+           font-display font-semibold text-base
            px-6 py-3
-           rounded-diner
+           rounded-xl
            transition-all duration-200
            cursor-pointer
            select-none
-           active:translate-y-1
            disabled:opacity-50 disabled:cursor-not-allowed;
-    box-shadow: var(--shadow-diner);
-  }
-
-  .btn:active {
-    box-shadow: 2px 2px 0 0 rgba(61, 35, 20, 0.2);
   }
 
   .btn-primary {
-    @apply btn bg-diner-red text-white;
+    @apply btn bg-primary text-white;
+    box-shadow: 0 2px 8px rgba(187, 30, 16, 0.3);
   }
 
   .btn-primary:hover:not(:disabled) {
-    @apply bg-diner-red-dark;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-diner-lg);
+    @apply bg-primary-dark;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(187, 30, 16, 0.4);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(187, 30, 16, 0.3);
   }
 
   .btn-secondary {
-    @apply btn bg-diner-mustard text-diner-chocolate;
+    @apply btn bg-accent text-white;
+    box-shadow: 0 2px 8px rgba(0, 83, 135, 0.3);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    @apply bg-diner-mustard-light;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-diner-lg);
+    @apply bg-accent-dark;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 83, 135, 0.4);
+  }
+
+  .btn-secondary:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   .btn-outline {
-    @apply btn bg-transparent border-3 border-diner-red text-diner-red;
-    box-shadow: none;
+    @apply btn bg-transparent border-2 border-primary text-primary;
   }
 
   .btn-outline:hover:not(:disabled) {
-    @apply bg-diner-red text-white;
-    box-shadow: var(--shadow-diner);
+    @apply bg-primary text-white;
+    box-shadow: 0 2px 8px rgba(187, 30, 16, 0.3);
   }
 
-  .btn-kraft {
-    @apply btn bg-diner-kraft text-diner-chocolate;
+  .btn-ghost {
+    @apply btn bg-transparent text-foreground;
   }
 
-  .btn-kraft:hover:not(:disabled) {
-    @apply brightness-110;
-    transform: translateY(-2px);
+  .btn-ghost:hover:not(:disabled) {
+    @apply bg-black/5;
   }
 
   .btn-whatsapp {
     @apply btn text-white;
     background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
   }
 
   .btn-whatsapp:hover:not(:disabled) {
     @apply brightness-110;
-    transform: translateY(-2px) scale(1.02);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
   }
 
   /* ============================================
-     CARDS - Paper/kraft style
+     CARDS - Clean elevated style
      ============================================ */
   .card {
-    @apply bg-surface rounded-diner-lg p-5 relative overflow-hidden;
-    box-shadow: var(--shadow-paper);
+    @apply bg-surface-elevated rounded-2xl p-5 relative overflow-hidden;
+    box-shadow: var(--shadow-sm);
     transition: all 0.3s ease;
   }
 
   .card:hover {
-    box-shadow: var(--shadow-paper-hover);
-    transform: translateY(-4px);
-  }
-
-  .card-kraft {
-    @apply card;
-    background: linear-gradient(135deg, #E8D5C4 0%, #D4A574 100%);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
   }
 
   .card-menu {
-    @apply card border-2 border-diner-cream-dark;
-    background: linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%);
+    @apply card border border-border-light;
   }
 
   .card-menu:hover {
-    @apply border-diner-mustard;
-    transform: translateY(-6px) rotate(-1deg);
+    @apply border-primary/20;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
   }
 
   /* ============================================
-     BADGES - Stamp/sticker style
+     BADGES - Modern pill style
      ============================================ */
   .badge {
     @apply inline-flex items-center justify-center
-           font-chalk text-sm uppercase tracking-wide
+           font-display text-xs font-bold uppercase tracking-wider
            px-3 py-1
-           rounded-stamp
-           transform -rotate-3;
-    box-shadow: var(--shadow-stamp);
+           rounded-full;
   }
 
   .badge-new {
-    @apply badge bg-diner-mustard text-diner-chocolate;
-    animation: stampIn 0.3s ease-out;
+    @apply badge bg-accent text-white;
   }
 
   .badge-popular {
-    @apply badge bg-diner-red text-white;
+    @apply badge bg-primary text-white;
   }
 
   .badge-spicy {
@@ -236,158 +212,32 @@
   }
 
   .badge-vegan {
-    @apply badge bg-green-600 text-white;
+    @apply badge bg-emerald-600 text-white;
   }
 
   /* ============================================
-     FORM INPUTS - Payment & Order forms
+     FORM INPUTS - Modern clean style
      ============================================ */
   .input-field {
-    @apply w-full px-4 py-3 rounded-diner
-           border-2 border-diner-kraft
-           bg-white text-diner-chocolate
-           placeholder:text-diner-chocolate-light/50
-           focus:border-diner-red focus:outline-none
-           focus:ring-2 focus:ring-diner-red/20
+    @apply w-full px-4 py-3 rounded-xl
+           border border-border
+           bg-white text-foreground
+           placeholder:text-foreground-subtle
+           focus:border-primary focus:outline-none
+           focus:ring-2 focus:ring-primary/20
            transition-all duration-200;
   }
 
   .input-field:hover:not(:focus) {
-    @apply border-diner-chocolate-light/50;
-  }
-
-  /* Circular stamp badge */
-  .stamp {
-    @apply flex items-center justify-center
-           font-chalk text-xs uppercase
-           w-16 h-16
-           rounded-full
-           border-4 border-dashed
-           transform rotate-12;
-  }
-
-  .stamp-red {
-    @apply stamp border-diner-red text-diner-red;
-  }
-
-  .stamp-mustard {
-    @apply stamp border-diner-mustard text-diner-mustard;
-  }
-
-  /* ============================================
-     CHECKERED PATTERNS
-     ============================================ */
-  .checkered {
-    background: repeating-conic-gradient(
-      #E8D5C4 0% 25%,
-      transparent 0% 50%
-    ) 50% / 20px 20px;
-  }
-
-  .checkered-sm {
-    background: repeating-conic-gradient(
-      #E8D5C4 0% 25%,
-      transparent 0% 50%
-    ) 50% / 12px 12px;
-  }
-
-  .checkered-red {
-    background: repeating-conic-gradient(
-      rgba(207, 29, 0, 0.1) 0% 25%,
-      transparent 0% 50%
-    ) 50% / 24px 24px;
-  }
-
-  /* ============================================
-     DINER DECORATIONS
-     ============================================ */
-  .diner-border {
-    @apply border-4 border-diner-red;
-    border-style: dashed;
-  }
-
-  .diner-divider {
-    @apply w-full h-4 my-8;
-    background: repeating-linear-gradient(
-      90deg,
-      var(--color-red) 0px,
-      var(--color-red) 20px,
-      transparent 20px,
-      transparent 30px,
-      var(--color-mustard) 30px,
-      var(--color-mustard) 50px,
-      transparent 50px,
-      transparent 60px
-    );
-  }
-
-  .wavy-underline {
-    text-decoration: underline wavy var(--color-mustard);
-    text-underline-offset: 4px;
-  }
-
-  /* Kraft paper texture card */
-  .kraft-paper {
-    background: linear-gradient(135deg, #E8D5C4 0%, #D4A574 100%);
-    position: relative;
-  }
-
-  .kraft-paper::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0.1;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    pointer-events: none;
-  }
-
-  /* ============================================
-     CHALKBOARD STYLE
-     ============================================ */
-  .chalkboard {
-    @apply bg-diner-chocolate text-white font-chalk p-6 rounded-diner;
-    position: relative;
-  }
-
-  .chalkboard::before {
-    content: '';
-    position: absolute;
-    inset: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: inherit;
-    pointer-events: none;
-  }
-
-  /* ============================================
-     MENU BOARD STYLE
-     ============================================ */
-  .menu-board {
-    @apply bg-diner-charcoal text-diner-cream p-8 rounded-diner-lg;
-    background: linear-gradient(180deg, #2C2C2C 0%, #1a1a1a 100%);
-    box-shadow: 
-      inset 0 2px 4px rgba(0,0,0,0.3),
-      0 8px 32px rgba(0,0,0,0.4);
-  }
-
-  .menu-board-item {
-    @apply flex justify-between items-baseline
-           py-2 border-b border-dashed border-diner-kraft/30;
-  }
-
-  .menu-board-item:last-child {
-    @apply border-b-0;
-  }
-
-  .menu-board-price {
-    @apply font-display text-diner-mustard;
+    @apply border-foreground-muted/40;
   }
 
   /* ============================================
      NAVIGATION
      ============================================ */
   .nav-link {
-    @apply font-display text-lg px-4 py-2
-           text-diner-chocolate
+    @apply font-display font-semibold text-base px-4 py-2
+           text-foreground
            relative
            transition-all duration-200;
   }
@@ -395,7 +245,7 @@
   .nav-link::after {
     content: '';
     @apply absolute bottom-0 left-1/2 -translate-x-1/2
-           w-0 h-1 bg-diner-mustard rounded-full
+           w-0 h-0.5 bg-primary rounded-full
            transition-all duration-300;
   }
 
@@ -405,113 +255,31 @@
   }
 
   .nav-link:hover {
-    @apply text-diner-red;
-    transform: translateY(-2px);
+    @apply text-primary;
   }
 
   .nav-link.active {
-    @apply text-diner-red;
+    @apply text-primary;
   }
 
   /* ============================================
-     FOOD-SPECIFIC DECORATIONS
-     ============================================ */
-  .pizza-slice-bg {
-    background: conic-gradient(
-      from 0deg,
-      #F4A300 0deg 60deg,
-      #CF1D00 60deg 120deg,
-      #F4A300 120deg 180deg,
-      #CF1D00 180deg 240deg,
-      #F4A300 240deg 300deg,
-      #CF1D00 300deg 360deg
-    );
-  }
-
-  .steam {
-    @apply opacity-60;
-    animation: steam 2s ease-in-out infinite;
-  }
-
-  @keyframes steam {
-    0%, 100% {
-      transform: translateY(0) scale(1);
-      opacity: 0.6;
-    }
-    50% {
-      transform: translateY(-10px) scale(1.1);
-      opacity: 0.3;
-    }
-  }
-
-  /* ============================================
-     FORM INPUTS - Diner style
-     ============================================ */
-  .input-diner {
-    @apply w-full px-4 py-3
-           font-body text-foreground
-           bg-white
-           border-3 border-diner-kraft
-           rounded-diner
-           transition-all duration-200;
-  }
-
-  .input-diner:focus {
-    @apply border-diner-mustard outline-none;
-    box-shadow: 0 0 0 3px rgba(244, 163, 0, 0.2);
-  }
-
-  .input-diner::placeholder {
-    @apply text-diner-chocolate-light/50;
-  }
-
-  /* ============================================
-     PRICE TAGS
+     PRICE DISPLAY
      ============================================ */
   .price-tag {
     @apply inline-flex items-center
-           font-display text-xl
-           text-diner-red;
+           font-display text-xl font-bold
+           text-primary;
   }
 
   .price-tag-big {
-    @apply font-display text-3xl text-diner-red;
+    @apply font-display text-3xl font-bold text-primary;
   }
 
   /* ============================================
-     ANIMATIONS
-     ============================================ */
-  .hover-wiggle:hover {
-    animation: wiggle 0.3s ease-in-out;
-  }
-
-  .hover-bounce:hover {
-    animation: bounce 0.5s ease-in-out;
-  }
-
-  @keyframes wiggle {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg); }
-    75% { transform: rotate(5deg); }
-  }
-
-  /* Neon glow effect for special items */
-  .neon-glow {
-    text-shadow: 
-      0 0 5px var(--color-red),
-      0 0 10px var(--color-red),
-      0 0 20px var(--color-red);
-  }
-
-  /* ============================================
-     SOCIAL PROOF
+     RATINGS
      ============================================ */
   .rating-stars {
-    @apply flex gap-1 text-diner-mustard;
-  }
-
-  .customer-count {
-    @apply font-display text-diner-red;
+    @apply flex gap-1 text-amber-400;
   }
 
   /* ============================================
@@ -525,19 +293,22 @@
      SECTION BACKGROUNDS
      ============================================ */
   .section-cream {
-    @apply bg-diner-cream;
+    @apply bg-background;
   }
 
   .section-paper {
     @apply bg-surface;
   }
 
-  .section-kraft {
-    background: linear-gradient(180deg, #E8D5C4 0%, #D4A574 100%);
+  .section-red {
+    @apply bg-primary text-white;
   }
 
-  .section-red {
-    @apply bg-diner-red text-white;
+  /* ============================================
+     DARK SECTION (replaces chalkboard/menu-board)
+     ============================================ */
+  .dark-section {
+    @apply bg-foreground text-white p-8 rounded-2xl;
   }
 
   /* ============================================
@@ -546,24 +317,11 @@
   .border-3 {
     border-width: 3px;
   }
-
-  .border-dashed-wide {
-    border-style: dashed;
-    border-width: 3px;
-  }
 }
 
 @layer utilities {
-  .text-shadow-diner {
-    text-shadow: 2px 2px 0 rgba(61, 35, 20, 0.2);
-  }
-
-  .rotate-stamp {
-    transform: rotate(-3deg);
-  }
-
-  .rotate-stamp-alt {
-    transform: rotate(3deg);
+  .text-balance {
+    text-wrap: balance;
   }
 
   /* Prevent text selection on decorative elements */

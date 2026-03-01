@@ -43,14 +43,14 @@ export const TableScan = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-diner-cream flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-diner p-8 text-center max-w-md w-full shadow-retro"
+          className="bg-white rounded-xl p-8 text-center max-w-md w-full shadow-md"
         >
           <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="font-display text-2xl text-diner-chocolate mb-4">
+          <h1 className="font-display text-2xl text-foreground mb-4">
             {error}
           </h1>
           <motion.button
@@ -67,7 +67,7 @@ export const TableScan = () => {
   }
 
   return (
-    <div className="min-h-screen bg-diner-cream flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -80,7 +80,7 @@ export const TableScan = () => {
         >
           🍕
         </motion.div>
-        <p className="font-display text-xl text-diner-chocolate">
+        <p className="font-display text-xl text-foreground">
           Masa yükleniyor...
         </p>
       </motion.div>

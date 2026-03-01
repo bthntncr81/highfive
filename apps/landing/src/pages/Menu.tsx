@@ -14,11 +14,11 @@ export const Menu = () => {
   const { content } = useContent()
   const { tableSession, clearTableSession } = useCart()
   const [searchParams, setSearchParams] = useSearchParams()
-  
+
   const initialCategory = searchParams.get('category')
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory)
   const [searchQuery, setSearchQuery] = useState('')
-  
+
   // API Data
   const [apiCategories, setApiCategories] = useState<Category[]>([])
   const [apiMenuItems, setApiMenuItems] = useState<APIMenuItem[]>([])
@@ -106,23 +106,23 @@ export const Menu = () => {
         <motion.div
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="sticky top-0 z-50 bg-diner-mustard border-b-4 border-diner-chocolate/30"
+          className="sticky top-0 z-50 bg-accent text-white border-b border-accent-dark/30"
         >
           <div className="container-diner py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🪑</span>
               <div>
-                <p className="font-display text-diner-chocolate text-lg">
+                <p className="font-display text-foreground text-lg">
                   {tableSession.name}
                 </p>
-                <p className="text-sm text-diner-chocolate/70">
+                <p className="text-sm text-foreground/70">
                   Sipariş bu masaya eklenecek
                 </p>
               </div>
             </div>
             <button
               onClick={clearTableSession}
-              className="px-4 py-2 bg-white/80 rounded-diner text-sm font-display text-diner-chocolate hover:bg-white transition-colors"
+              className="px-4 py-2 bg-white/80 rounded-xl text-sm font-display text-foreground hover:bg-white transition-colors"
             >
               Masadan Çık ✕
             </button>
@@ -183,17 +183,17 @@ export const Menu = () => {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ repeat: Infinity, duration: 3 }}
           />
-          <h1 className="font-heading text-5xl md:text-6xl text-white mb-4">
+          <h1 className="font-heading font-bold text-5xl md:text-6xl text-white mb-4">
             Menümüz
           </h1>
-          <p className="font-body text-xl text-diner-cream/80 max-w-xl mx-auto">
+          <p className="font-body text-xl text-background/80 max-w-xl mx-auto">
             Taze malzemeler, el yapımı hamur, bol lezzet!
           </p>
         </motion.div>
       </SectionContainer>
 
       {/* Sticky Filters */}
-      <div className={`sticky ${tableSession ? 'top-[130px]' : activeHappyHours.length > 0 ? 'top-[120px]' : 'top-[72px]'} z-40 bg-surface border-b-4 border-diner-kraft/30 shadow-sm`}>
+      <div className={`sticky ${tableSession ? 'top-[130px]' : activeHappyHours.length > 0 ? 'top-[120px]' : 'top-[72px]'} z-40 bg-white border-b border-border shadow-sm`}>
         <div className="container-diner py-4 max-h-[80px] flex items-center gap-4">
           {/* Search - compact */}
           <div className="flex-shrink-0 w-64">
@@ -203,7 +203,7 @@ export const Menu = () => {
               placeholder="Ara..."
             />
           </div>
-          
+
           {/* Category tabs - horizontal scroll */}
           <div className="flex-1 overflow-hidden">
             <CategoryTabs
@@ -220,8 +220,8 @@ export const Menu = () => {
         {/* Results count */}
         <RevealOnScroll>
           <div className="flex items-center justify-between mb-8">
-            <p className="font-body text-diner-chocolate-light">
-              <span className="font-display text-diner-red">{filteredItems.length}</span> ürün bulundu
+            <p className="font-body text-foreground-muted">
+              <span className="font-display text-primary">{filteredItems.length}</span> ürün bulundu
               {activeHappyHours.length > 0 && (
                 <span className="ml-2 text-purple-600">
                   🎉 Happy Hour aktif!
@@ -233,7 +233,7 @@ export const Menu = () => {
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={() => handleCategoryChange(null)}
-                className="font-display text-sm text-diner-red hover:underline"
+                className="font-display text-sm text-primary hover:underline"
               >
                 Tümünü Göster ✕
               </motion.button>
@@ -246,14 +246,14 @@ export const Menu = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-orange-50 border border-orange-200 rounded-diner p-4 mb-6"
+            className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6"
           >
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
                 <h3 className="font-display text-orange-800 mb-1">Alerjen Bilgilendirmesi</h3>
                 <p className="text-sm text-orange-700">
-                  Ürünlerimizdeki alerjen bilgilerini görmek için ürün kartındaki turuncu 
+                  Ürünlerimizdeki alerjen bilgilerini görmek için ürün kartındaki turuncu
                   <span className="inline-flex items-center justify-center w-5 h-5 bg-orange-500 text-white rounded-full text-xs mx-1">⚠️</span>
                   ikonuna tıklayın. Özel diyet ihtiyaçlarınız için lütfen personelimize danışın.
                 </p>
@@ -295,9 +295,9 @@ export const Menu = () => {
       <SectionContainer variant="kraft">
         <RevealOnScroll>
           <div className="text-center">
-            <div className="chalkboard inline-block max-w-2xl mx-auto">
+            <div className="dark-section inline-block max-w-2xl mx-auto">
               <h3 className="text-3xl mb-4">Özel İstek mi Var? 🤔</h3>
-              <p className="text-diner-cream/80 mb-6">
+              <p className="text-background/80 mb-6">
                 Ekstra malzeme, özel diyet tercihleri veya alerjen bilgisi için
                 bize WhatsApp'tan yazın!
               </p>
