@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Hero } from '../components/Hero'
 import { useContent } from '../lib/contentStore'
 import { useLoyalty } from '../lib/loyaltyStore'
+import { orderApi, type MenuItem as APIMenuItem } from '../lib/api'
 import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
 
@@ -33,6 +35,36 @@ const highlightIcons: Record<string, JSX.Element> = {
 export const Home = () => {
   const { content } = useContent()
   const { member } = useLoyalty()
+  const [featuredItems, setFeaturedItems] = useState<APIMenuItem[]>([])
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const response = await orderApi.getMenu()
+        if (response.success && response.data?.items) {
+          // Get items that have real images (not placeholders or empty)
+          const withImages = response.data.items.filter(
+            (item) => item.image && item.image.startsWith('/uploads/')
+          )
+          setFeaturedItems(withImages.slice(0, 3))
+        }
+      } catch {
+        // Fallback: keep empty, will use content.menu.items
+      }
+    }
+    fetchFeatured()
+  }, [])
+
+  // Use API items if available, otherwise fall back to content
+  const displayItems = featuredItems.length > 0
+    ? featuredItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        desc: item.description || '',
+        price: Number(item.price),
+        image: item.image || '',
+      }))
+    : content.menu.items.slice(0, 3)
 
   return (
     <main>
@@ -82,7 +114,7 @@ export const Home = () => {
 
           {/* Featured items */}
           <StaggerContainer className="grid md:grid-cols-3 gap-8 mb-12">
-            {content.menu.items.slice(0, 3).map((item) => (
+            {displayItems.map((item) => (
               <StaggerItem key={item.id}>
                 <motion.div
                   whileHover={{ y: -4 }}
