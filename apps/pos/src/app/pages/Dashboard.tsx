@@ -124,7 +124,7 @@ export default function Dashboard() {
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-[#CF1D00] border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-[#bb1e10] border-t-transparent animate-spin"></div>
             <span className="absolute inset-0 flex items-center justify-center text-3xl animate-float">
               🍕
             </span>
@@ -139,13 +139,6 @@ export default function Dashboard() {
     <div className="space-y-6 animate-slide-up">
       {/* Welcome Header */}
       <div className="card card-red relative overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `repeating-conic-gradient(#FFF 0% 25%, transparent 0% 50%)`,
-            backgroundSize: '30px 30px'
-          }}
-        />
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -167,7 +160,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <Link 
               to="/tables"
-              className="btn bg-white text-[#CF1D00] hover:bg-white/90 flex items-center gap-2"
+              className="btn bg-white text-[#bb1e10] hover:bg-white/90 flex items-center gap-2"
             >
               <span>🍽️</span>
               Yeni Sipariş
@@ -260,7 +253,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <Link
               to="/tables"
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#CF1D00]/5 hover:to-[#CF1D00]/10 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#bb1e10]/5 hover:to-[#bb1e10]/10 transition-all group"
             >
               <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 🍽️
@@ -269,12 +262,12 @@ export default function Dashboard() {
                 <p className="font-semibold text-gray-900">Yeni Masa Siparişi</p>
                 <p className="text-sm text-gray-500">Masadan sipariş al</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#CF1D00] group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#bb1e10] group-hover:translate-x-1 transition-all" />
             </Link>
             
             <Link
               to="/menu"
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#F4A300]/5 hover:to-[#F4A300]/10 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#005387]/5 hover:to-[#005387]/10 transition-all group"
             >
               <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 📦
@@ -283,7 +276,7 @@ export default function Dashboard() {
                 <p className="font-semibold text-gray-900">Paket Sipariş</p>
                 <p className="text-sm text-gray-500">Paket veya gel-al sipariş</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#F4A300] group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#005387] group-hover:translate-x-1 transition-all" />
             </Link>
             
             <Link
@@ -311,7 +304,7 @@ export default function Dashboard() {
             </div>
             <Link 
               to="/orders" 
-              className="text-[#CF1D00] hover:text-[#A01600] text-sm font-semibold flex items-center gap-1"
+              className="text-[#bb1e10] hover:text-[#8a1610] text-sm font-semibold flex items-center gap-1"
             >
               Tümünü Gör
               <ArrowRight className="w-4 h-4" />

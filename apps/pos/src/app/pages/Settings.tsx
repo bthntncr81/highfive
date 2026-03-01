@@ -558,7 +558,7 @@ export default function Settings() {
                 onChange={(e) => setLoyalty({ ...loyalty, enabled: e.target.checked })}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-500"></div>
             </label>
           </div>
 
@@ -650,7 +650,7 @@ export default function Settings() {
                         onChange={(e) => setLoyalty({ ...loyalty, enabledForDineIn: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-500"></div>
                     </label>
                   </div>
 
@@ -669,7 +669,7 @@ export default function Settings() {
                         onChange={(e) => setLoyalty({ ...loyalty, enabledForTakeaway: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-500"></div>
                     </label>
                   </div>
 
@@ -688,16 +688,16 @@ export default function Settings() {
                         onChange={(e) => setLoyalty({ ...loyalty, enabledForDelivery: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-500"></div>
                     </label>
                   </div>
                 </div>
               </div>
 
               {/* Summary Box */}
-              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-orange-200">
-                <h4 className="font-medium text-orange-800 mb-2">📊 Özet</h4>
-                <ul className="text-sm text-orange-700 space-y-1">
+              <div className="p-4 bg-gradient-to-r from-accent-50 to-blue-50 rounded-lg border border-accent-200">
+                <h4 className="font-medium text-accent-800 mb-2">📊 Özet</h4>
+                <ul className="text-sm text-accent-700 space-y-1">
                   <li>• Her {loyalty.pointsPerTL}₺ harcamada 1 puan kazanılır</li>
                   <li>• {loyalty.redemptionRate} puan = 1₺ indirim olarak kullanılır</li>
                   <li>• Yeni üyeler {loyalty.welcomePoints} puan ile başlar</li>

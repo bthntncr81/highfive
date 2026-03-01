@@ -221,7 +221,7 @@ export default function CampaignsLoyalty() {
           <p className="text-purple-100 text-sm">Dağıtılan Puan</p>
         </motion.div>
 
-        <motion.div whileHover={{ y: -4 }} className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 rounded-xl">
+        <motion.div whileHover={{ y: -4 }} className="bg-gradient-to-br from-accent-500 to-accent-700 text-white p-4 rounded-xl">
           <div className="flex items-center justify-between">
             <Gift className="w-8 h-8 opacity-80" />
             <span className="text-3xl">🎁</span>

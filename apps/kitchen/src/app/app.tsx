@@ -206,7 +206,7 @@ export default function App() {
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-gray-700"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-accent-500 border-t-transparent animate-spin"></div>
             <span className="absolute inset-0 flex items-center justify-center text-4xl">👨‍🍳</span>
           </div>
           <p className="text-gray-400 font-medium text-lg">Mutfak yükleniyor...</p>
@@ -221,13 +221,13 @@ export default function App() {
       <header className="bg-black/40 backdrop-blur-sm border-b border-white/10 px-6 py-4 sticky top-0 z-50">
         <div className="flex items-center justify-between max-w-[2000px] mx-auto">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <div className="w-14 h-14 bg-gradient-to-br from-accent-500 to-accent-700 rounded-2xl flex items-center justify-center shadow-lg shadow-accent-500/30">
               <ChefHat className="w-8 h-8 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">MUTFAK EKRANI</h1>
               <p className="text-sm text-gray-400 flex items-center gap-2">
-                <span className="text-orange-400">HIGH FIVE</span>
+                <span className="text-accent-300">HIGH FIVE</span>
                 <span>•</span>
                 <span className="font-mono">
                   {currentTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -243,9 +243,9 @@ export default function App() {
                 <span className="text-amber-400 font-bold">{pendingOrders.length}</span>
                 <span className="text-amber-400/70 text-sm ml-2">Bekliyor</span>
               </div>
-              <div className="px-4 py-2 bg-orange-500/20 rounded-xl border border-orange-500/30">
-                <span className="text-orange-400 font-bold">{preparingOrders.length}</span>
-                <span className="text-orange-400/70 text-sm ml-2">Hazırlanıyor</span>
+              <div className="px-4 py-2 bg-blue-500/20 rounded-xl border border-blue-500/30">
+                <span className="text-blue-400 font-bold">{preparingOrders.length}</span>
+                <span className="text-blue-400/70 text-sm ml-2">Hazırlanıyor</span>
               </div>
               <div className="px-4 py-2 bg-green-500/20 rounded-xl border border-green-500/30">
                 <span className="text-green-400 font-bold">{readyOrders.length}</span>
@@ -273,8 +273,8 @@ export default function App() {
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className={`p-3 rounded-xl transition-all ${
-                soundEnabled 
-                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                soundEnabled
+                  ? 'bg-accent-500/20 text-accent-300 border border-accent-500/30'
                   : 'bg-gray-700/50 text-gray-500 border border-gray-600'
               }`}
             >
@@ -331,8 +331,8 @@ export default function App() {
           {/* Preparing column */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                <Flame className="w-5 h-5 text-orange-400" />
+              <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <Flame className="w-5 h-5 text-blue-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Hazırlanıyor</h2>
@@ -423,8 +423,8 @@ function OrderCard({
   };
 
   const actionConfig: Record<string, { text: string; emoji: string; bg: string }> = {
-    PENDING: { text: 'HAZIRLA', emoji: '🔥', bg: 'from-orange-500 to-red-600' },
-    CONFIRMED: { text: 'HAZIRLA', emoji: '🔥', bg: 'from-orange-500 to-red-600' },
+    PENDING: { text: 'HAZIRLA', emoji: '🔥', bg: 'from-primary-500 to-primary-700' },
+    CONFIRMED: { text: 'HAZIRLA', emoji: '🔥', bg: 'from-primary-500 to-primary-700' },
     PREPARING: { text: 'HAZIR', emoji: '✅', bg: 'from-green-500 to-emerald-600' },
     READY: { text: 'SERVİS', emoji: '🍽️', bg: 'from-blue-500 to-indigo-600' },
   };
@@ -432,13 +432,13 @@ function OrderCard({
   const urgency = getUrgencyClass(order.createdAt);
   const borderColor = {
     pending: urgency === 'urgent' ? 'border-red-500' : urgency === 'warning' ? 'border-amber-500' : 'border-amber-500/50',
-    preparing: 'border-orange-500',
+    preparing: 'border-blue-500',
     ready: 'border-green-500',
   }[type];
 
   const glowColor = {
     pending: urgency === 'urgent' ? 'shadow-red-500/30' : urgency === 'warning' ? 'shadow-amber-500/20' : '',
-    preparing: 'shadow-orange-500/20',
+    preparing: 'shadow-blue-500/20',
     ready: 'shadow-green-500/30 animate-pulse',
   }[type];
 
@@ -450,7 +450,7 @@ function OrderCard({
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
               type === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-              type === 'preparing' ? 'bg-orange-500/20 text-orange-400' :
+              type === 'preparing' ? 'bg-blue-500/20 text-blue-400' :
               'bg-green-500/20 text-green-400'
             }`}>
               {order.orderNumber.toString().padStart(2, '0')}
@@ -506,7 +506,7 @@ function OrderCard({
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold shrink-0 ${
                     item.status === 'READY'
                       ? 'bg-green-500 text-white'
-                      : 'bg-orange-500/20 text-orange-400'
+                      : 'bg-blue-500/20 text-blue-400'
                   }`}>
                     {item.quantity}x
                   </div>

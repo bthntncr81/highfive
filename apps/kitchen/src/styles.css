@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 :root {
-  --color-red: #CF1D00;
-  --color-orange: #F4A300;
+  --color-primary: #bb1e10;
+  --color-accent: #005387;
 }
 
 @layer base {
@@ -28,14 +28,14 @@
   }
   
   .btn-primary {
-    background: linear-gradient(135deg, var(--color-orange) 0%, #CC8800 100%);
+    background: linear-gradient(135deg, var(--color-accent) 0%, #003d63 100%);
     @apply text-white shadow-lg;
-    box-shadow: 0 4px 15px rgba(244, 163, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 83, 135, 0.3);
   }
-  
+
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(244, 163, 0, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 83, 135, 0.4);
   }
   
   .btn-success {

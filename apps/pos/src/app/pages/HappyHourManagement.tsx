@@ -241,7 +241,7 @@ export default function HappyHourManagement() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 text-white rounded-xl p-4 flex items-center justify-between"
+          className="bg-gradient-to-r from-primary-500 via-primary-400 to-accent-500 text-white rounded-xl p-4 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <motion.span
@@ -525,7 +525,7 @@ export default function HappyHourManagement() {
                       onClick={() => setFormData({ ...formData, discountType: 'CAMPAIGN' })}
                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                         formData.discountType === 'CAMPAIGN'
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          ? 'border-accent-500 bg-accent-50 text-accent-700'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >

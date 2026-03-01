@@ -55,7 +55,7 @@ export default function Layout() {
   const formatCurrency = (amount: number) => `${amount.toLocaleString('tr-TR')} ₺`;
 
   return (
-    <div className="min-h-screen flex bg-[#FDF6E3]">
+    <div className="min-h-screen flex bg-[#ecece7]">
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -66,7 +66,7 @@ export default function Layout() {
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -81,15 +81,8 @@ export default function Layout() {
         shadow-2xl lg:shadow-xl
       `}>
         {/* Logo Section */}
-        <div className="p-6 border-b-4 border-[#E5E0D5] bg-gradient-to-r from-[#CF1D00] to-[#A01600] relative overflow-hidden">
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `repeating-conic-gradient(#FFF 0% 25%, transparent 0% 50%)`,
-              backgroundSize: '20px 20px'
-            }}
-          />
-          <div className="relative flex items-center gap-4">
+        <div className="p-6 border-b border-[#e5e5e0] bg-[#005387]">
+          <div className="flex items-center gap-4">
             <img
               src="/logo.svg"
               alt="High Five"
@@ -114,7 +107,7 @@ export default function Layout() {
               <span className="text-xl">{item.emoji}</span>
               <span className="flex-1">{item.label}</span>
               {item.to === '/orders' && itemCount > 0 && (
-                <span className="px-2.5 py-1 bg-[#F4A300] text-white text-xs font-bold rounded-full shadow-sm">
+                <span className="px-2.5 py-1 bg-[#005387] text-white text-xs font-bold rounded-full shadow-sm">
                   {itemCount}
                 </span>
               )}
@@ -151,7 +144,7 @@ export default function Layout() {
 
         {/* Cart summary (if items) */}
         {itemCount > 0 && (
-          <div className="mx-4 mb-4 p-4 bg-gradient-to-r from-[#F4A300] to-[#CC8800] rounded-2xl text-white">
+          <div className="mx-4 mb-4 p-4 bg-[#005387] rounded-2xl text-white">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Sepet</span>
               <span className="text-2xl">🛒</span>
@@ -164,10 +157,10 @@ export default function Layout() {
         )}
 
         {/* User section */}
-        <div className="p-4 border-t-4 border-[#E5E0D5] bg-gray-50">
+        <div className="p-4 border-t border-[#e5e5e0] bg-gray-50">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#CF1D00] to-[#A01600] rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-[#005387] rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
@@ -179,7 +172,7 @@ export default function Layout() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
               <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-0.5 bg-[#CF1D00]/10 text-[#CF1D00] rounded-full font-medium">
+                <span className="text-xs px-2 py-0.5 bg-[#bb1e10]/10 text-[#bb1e10] rounded-full font-medium">
                   {user?.role}
                 </span>
                 <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -198,7 +191,7 @@ export default function Layout() {
               </div>
             </div>
           </div>
-          
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 rounded-xl transition-all font-medium"
@@ -212,13 +205,13 @@ export default function Layout() {
       {/* Main content */}
       <main className="flex-1 overflow-auto lg:ml-0">
         {/* Top bar with current page indicator */}
-        <div className="sticky top-0 z-20 bg-[#FDF6E3]/80 backdrop-blur-sm border-b-2 border-[#E5E0D5] p-4 lg:p-6">
+        <div className="sticky top-0 z-20 bg-[#ecece7]/80 backdrop-blur-sm border-b border-[#e5e5e0] p-4 lg:p-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-3 lg:hidden">
               {/* Space for mobile menu button */}
               <div className="w-12" />
             </div>
-            
+
             {/* Current time */}
             <div className="hidden lg:flex items-center gap-2 text-gray-500">
               <span className="text-2xl">⏰</span>
@@ -230,19 +223,19 @@ export default function Layout() {
             {/* Quick stats */}
             <div className="flex items-center gap-4">
               {itemCount > 0 && (
-                <button 
+                <button
                   onClick={() => navigate('/menu')}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#F4A300] text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#005387] text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
                 >
                   <span>🛒</span>
                   <span>{itemCount}</span>
                   <span className="hidden sm:inline">• {formatCurrency(total)}</span>
                 </button>
               )}
-              
+
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
-                isConnected 
-                  ? 'bg-green-100 text-green-700' 
+                isConnected
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-red-100 text-red-700'
               }`}>
                 {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}

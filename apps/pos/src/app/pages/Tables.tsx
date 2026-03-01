@@ -222,7 +222,7 @@ export default function Tables() {
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-[#CF1D00] border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-[#bb1e10] border-t-transparent animate-spin"></div>
             <span className="absolute inset-0 flex items-center justify-center text-3xl animate-float">
               🍽️
             </span>
@@ -317,7 +317,7 @@ export default function Tables() {
                 onClick={() => setFilterStatus(filter.key)}
                 className={`px-4 py-2 rounded-xl font-medium text-sm transition-all flex items-center gap-2 ${
                   filterStatus === filter.key
-                    ? 'bg-[#CF1D00] text-white shadow-lg'
+                    ? 'bg-[#bb1e10] text-white shadow-lg'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -436,7 +436,7 @@ export default function Tables() {
                     <span className="text-gray-500">
                       #{table.orders[0].orderNumber?.toString().padStart(4, '0')}
                     </span>
-                    <span className="font-bold text-[#CF1D00]">
+                    <span className="font-bold text-[#bb1e10]">
                       {formatCurrency(table.orders[0].total || 0)}
                     </span>
                   </div>
@@ -544,7 +544,7 @@ export default function Tables() {
                       onClick={() => setNewTable({ ...newTable, capacity: cap })}
                       className={`flex-1 py-3 rounded-xl font-bold transition-all ${
                         newTable.capacity === cap
-                          ? 'bg-[#CF1D00] text-white shadow-lg'
+                          ? 'bg-[#bb1e10] text-white shadow-lg'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >

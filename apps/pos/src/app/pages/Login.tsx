@@ -31,15 +31,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#CF1D00] via-[#A01600] to-[#5D4037]">
-        {/* Checkered pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `repeating-conic-gradient(#FFF 0% 25%, transparent 0% 50%)`,
-            backgroundSize: '40px 40px'
-          }}
-        />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#005387] via-[#003d63] to-[#1a1a1a]">
         
         {/* Floating food icons */}
         <div className="absolute top-20 left-20 text-white/10 animate-float">
@@ -59,14 +51,7 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10 animate-bounce-in">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header with pattern */}
-          <div className="bg-gradient-to-r from-[#F4A300] to-[#CC8800] p-6 relative">
-            <div 
-              className="absolute inset-0 opacity-20"
-              style={{
-                backgroundImage: `repeating-conic-gradient(#FFF 0% 25%, transparent 0% 50%)`,
-                backgroundSize: '20px 20px'
-              }}
-            />
+          <div className="bg-gradient-to-r from-[#bb1e10] to-[#8a1610] p-6 relative">
             <div className="relative text-center">
               {/* Logo */}
               <div className="inline-flex items-center justify-center mb-4">
