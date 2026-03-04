@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { Save, Store, Phone, MapPin, Percent, MessageCircle, Printer, Wifi, TestTube } from 'lucide-react';
+import { Save, Store, Phone, MapPin, Percent, MessageCircle, Printer, Wifi, TestTube, Link2, Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface RestaurantSettings {
   name: string;
@@ -47,6 +47,21 @@ interface LoyaltySettings {
   minRedeemPoints: number; // Minimum kullanılabilir puan
 }
 
+interface IntegrationPartner {
+  id: string;
+  name: string;
+  apiKey?: string;
+  apiKeyMasked: string;
+  isActive: boolean;
+  webhookUrl: string | null;
+  webhookSecret?: string | null;
+  permissions: string[];
+  locationId: string | null;
+  webhookLogCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function Settings() {
   const { token } = useAuth();
   const [restaurant, setRestaurant] = useState<RestaurantSettings>({
@@ -88,8 +103,22 @@ export default function Settings() {
   const [message, setMessage] = useState('');
   const [testPrintStatus, setTestPrintStatus] = useState('');
 
+  // Integration partners state
+  const [partners, setPartners] = useState<IntegrationPartner[]>([]);
+  const [isPartnersLoading, setIsPartnersLoading] = useState(false);
+  const [showNewPartnerForm, setShowNewPartnerForm] = useState(false);
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerWebhookUrl, setNewPartnerWebhookUrl] = useState('');
+  const [isCreatingPartner, setIsCreatingPartner] = useState(false);
+  const [newPartnerResult, setNewPartnerResult] = useState<{ apiKey: string; webhookSecret: string } | null>(null);
+  const [revealedKeys, setRevealedKeys] = useState<Record<string, { apiKey: string; webhookSecret: string | null }>>({});
+  const [copiedField, setCopiedField] = useState('');
+  const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
+  const [partnerMessage, setPartnerMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   useEffect(() => {
     fetchSettings();
+    fetchPartners();
   }, []);
 
   const fetchSettings = async () => {
@@ -105,6 +134,103 @@ export default function Settings() {
       console.error('Settings fetch error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPartners = async () => {
+    setIsPartnersLoading(true);
+    try {
+      const response = await api.get('/api/integration-partners', token!);
+      setPartners(response.partners || []);
+    } catch (error) {
+      console.error('Partners fetch error:', error);
+    } finally {
+      setIsPartnersLoading(false);
+    }
+  };
+
+  const createPartner = async () => {
+    if (!newPartnerName.trim()) return;
+    setIsCreatingPartner(true);
+    setPartnerMessage(null);
+    try {
+      const response = await api.post('/api/integration-partners', {
+        name: newPartnerName.trim(),
+        webhookUrl: newPartnerWebhookUrl.trim() || undefined,
+      }, token!);
+      setNewPartnerResult({ apiKey: response.apiKey, webhookSecret: response.webhookSecret });
+      setPartnerMessage({ type: 'success', text: 'Entegrasyon oluşturuldu! API Key\'i kopyalayın.' });
+      await fetchPartners();
+    } catch (error: any) {
+      setPartnerMessage({ type: 'error', text: error.message || 'Oluşturma hatası' });
+    } finally {
+      setIsCreatingPartner(false);
+    }
+  };
+
+  const togglePartnerActive = async (id: string, isActive: boolean) => {
+    try {
+      await api.patch(`/api/integration-partners/${id}`, { isActive }, token!);
+      setPartners(partners.map(p => p.id === id ? { ...p, isActive } : p));
+    } catch (error: any) {
+      setPartnerMessage({ type: 'error', text: error.message || 'Güncelleme hatası' });
+    }
+  };
+
+  const deletePartner = async (id: string, name: string) => {
+    if (!window.confirm(`"${name}" entegrasyonunu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    try {
+      await api.delete(`/api/integration-partners/${id}`, token!);
+      setPartners(partners.filter(p => p.id !== id));
+      setPartnerMessage({ type: 'success', text: `${name} silindi` });
+      setTimeout(() => setPartnerMessage(null), 3000);
+    } catch (error: any) {
+      setPartnerMessage({ type: 'error', text: error.message || 'Silme hatası' });
+    }
+  };
+
+  const revealKey = async (id: string) => {
+    if (revealedKeys[id]) {
+      // Toggle off
+      const newRevealed = { ...revealedKeys };
+      delete newRevealed[id];
+      setRevealedKeys(newRevealed);
+      return;
+    }
+    try {
+      const response = await api.get(`/api/integration-partners/${id}/reveal-key`, token!);
+      setRevealedKeys({ ...revealedKeys, [id]: { apiKey: response.apiKey, webhookSecret: response.webhookSecret } });
+    } catch (error: any) {
+      setPartnerMessage({ type: 'error', text: 'Key gösterilemedi' });
+    }
+  };
+
+  const regenerateKey = async (id: string, name: string) => {
+    if (!window.confirm(`"${name}" için yeni API Key oluşturulacak. Eski key geçersiz olacak. Devam?`)) return;
+    try {
+      const response = await api.post(`/api/integration-partners/${id}/regenerate-key`, {}, token!);
+      setRevealedKeys({ ...revealedKeys, [id]: { apiKey: response.apiKey, webhookSecret: response.webhookSecret } });
+      setPartnerMessage({ type: 'success', text: 'Yeni API Key oluşturuldu. Kopyalayın!' });
+    } catch (error: any) {
+      setPartnerMessage({ type: 'error', text: 'Key yenileme hatası' });
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(''), 2000);
+    } catch {
+      // Fallback for HTTP
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(''), 2000);
     }
   };
 
@@ -707,6 +833,315 @@ export default function Settings() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Integration Partners */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-blue-500" />
+            Entegrasyon Yönetimi
+          </h2>
+          <button
+            onClick={() => {
+              setShowNewPartnerForm(!showNewPartnerForm);
+              setNewPartnerResult(null);
+              setNewPartnerName('');
+              setNewPartnerWebhookUrl('');
+            }}
+            className="btn btn-primary text-sm flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Yeni Bağlantı
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-4">
+          Dış sistemlerle (WhatsApp sipariş, online sipariş vb.) bağlantı kurmak için API Key oluşturun.
+        </p>
+
+        {/* Partner message */}
+        {partnerMessage && (
+          <div className={`p-3 rounded-lg mb-4 text-sm ${
+            partnerMessage.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+          }`}>
+            {partnerMessage.text}
+          </div>
+        )}
+
+        {/* New Partner Form */}
+        {showNewPartnerForm && !newPartnerResult && (
+          <div className="p-4 bg-blue-50 rounded-lg mb-4 border border-blue-200">
+            <h3 className="font-medium text-blue-800 mb-3">Yeni Entegrasyon Oluştur</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bağlantı Adı *
+                </label>
+                <input
+                  type="text"
+                  value={newPartnerName}
+                  onChange={(e) => setNewPartnerName(e.target.value)}
+                  className="input"
+                  placeholder="Örn: WhatsApp Sipariş, Online Sipariş"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Webhook URL (Opsiyonel)
+                </label>
+                <input
+                  type="url"
+                  value={newPartnerWebhookUrl}
+                  onChange={(e) => setNewPartnerWebhookUrl(e.target.value)}
+                  className="input"
+                  placeholder="https://example.com/api/webhooks/pos/tenant-id"
+                />
+                <p className="text-xs text-gray-500 mt-1">Sipariş durumu değişikliklerini bildirecek URL</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={createPartner}
+                  disabled={isCreatingPartner || !newPartnerName.trim()}
+                  className="btn btn-primary text-sm flex items-center gap-1"
+                >
+                  {isCreatingPartner ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Oluşturuluyor...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Oluştur
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowNewPartnerForm(false)}
+                  className="btn btn-secondary text-sm flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  İptal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Partner Created - Show credentials */}
+        {newPartnerResult && (
+          <div className="p-4 bg-green-50 rounded-lg mb-4 border border-green-200">
+            <h3 className="font-medium text-green-800 mb-3 flex items-center gap-2">
+              <Check className="w-5 h-5" />
+              Entegrasyon Oluşturuldu!
+            </h3>
+            <p className="text-sm text-green-700 mb-3">
+              Bu bilgileri güvenli bir yerde saklayın. API Key sadece bir kez gösterilir!
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">API Key</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPartnerResult.apiKey}
+                    readOnly
+                    className="input text-xs font-mono flex-1 bg-white"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(newPartnerResult.apiKey, 'new-api-key')}
+                    className="btn btn-secondary text-xs flex items-center gap-1"
+                  >
+                    {copiedField === 'new-api-key' ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                    {copiedField === 'new-api-key' ? 'Kopyalandı!' : 'Kopyala'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Webhook Secret</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPartnerResult.webhookSecret}
+                    readOnly
+                    className="input text-xs font-mono flex-1 bg-white"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(newPartnerResult.webhookSecret, 'new-webhook-secret')}
+                    className="btn btn-secondary text-xs flex items-center gap-1"
+                  >
+                    {copiedField === 'new-webhook-secret' ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                    {copiedField === 'new-webhook-secret' ? 'Kopyalandı!' : 'Kopyala'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setNewPartnerResult(null);
+                setShowNewPartnerForm(false);
+                setNewPartnerName('');
+                setNewPartnerWebhookUrl('');
+              }}
+              className="btn btn-secondary text-sm mt-3"
+            >
+              Tamam
+            </button>
+          </div>
+        )}
+
+        {/* Partners List */}
+        {isPartnersLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+          </div>
+        ) : partners.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Link2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>Henüz entegrasyon oluşturulmamış</p>
+            <p className="text-sm">Yeni bağlantı oluşturarak başlayın</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {partners.map((partner) => (
+              <div
+                key={partner.id}
+                className={`p-4 rounded-lg border ${
+                  partner.isActive
+                    ? 'bg-white border-gray-200'
+                    : 'bg-gray-50 border-gray-200 opacity-60'
+                }`}
+              >
+                {/* Partner header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full ${partner.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    <div>
+                      <p className="font-medium text-gray-900">{partner.name}</p>
+                      <p className="text-xs text-gray-500">
+                        Key: {revealedKeys[partner.id] ? revealedKeys[partner.id].apiKey.slice(0, 16) + '...' : partner.apiKeyMasked}
+                        {' · '}
+                        {new Date(partner.createdAt).toLocaleDateString('tr-TR')}
+                        {partner.webhookLogCount > 0 && ` · ${partner.webhookLogCount} webhook log`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setExpandedPartner(expandedPartner === partner.id ? null : partner.id)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+                      title="Detay"
+                    >
+                      {expandedPartner === partner.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={partner.isActive}
+                        onChange={(e) => togglePartnerActive(partner.id, e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Expanded details */}
+                {expandedPartner === partner.id && (
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    {/* API Key actions */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => revealKey(partner.id)}
+                        className="btn btn-secondary text-xs flex items-center gap-1"
+                      >
+                        {revealedKeys[partner.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        {revealedKeys[partner.id] ? 'Gizle' : 'Key Göster'}
+                      </button>
+                      {revealedKeys[partner.id] && (
+                        <button
+                          onClick={() => copyToClipboard(revealedKeys[partner.id].apiKey, `key-${partner.id}`)}
+                          className="btn btn-secondary text-xs flex items-center gap-1"
+                        >
+                          {copiedField === `key-${partner.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                          {copiedField === `key-${partner.id}` ? 'Kopyalandı!' : 'API Key Kopyala'}
+                        </button>
+                      )}
+                      {revealedKeys[partner.id]?.webhookSecret && (
+                        <button
+                          onClick={() => copyToClipboard(revealedKeys[partner.id].webhookSecret!, `secret-${partner.id}`)}
+                          className="btn btn-secondary text-xs flex items-center gap-1"
+                        >
+                          {copiedField === `secret-${partner.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                          {copiedField === `secret-${partner.id}` ? 'Kopyalandı!' : 'Secret Kopyala'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => regenerateKey(partner.id, partner.name)}
+                        className="btn btn-secondary text-xs flex items-center gap-1 text-orange-600 hover:text-orange-700"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Key Yenile
+                      </button>
+                      <button
+                        onClick={() => deletePartner(partner.id, partner.name)}
+                        className="btn btn-secondary text-xs flex items-center gap-1 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Sil
+                      </button>
+                    </div>
+
+                    {/* Revealed key */}
+                    {revealedKeys[partner.id] && (
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500">API Key</label>
+                          <code className="block p-2 bg-gray-100 rounded text-xs font-mono break-all">
+                            {revealedKeys[partner.id].apiKey}
+                          </code>
+                        </div>
+                        {revealedKeys[partner.id].webhookSecret && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500">Webhook Secret</label>
+                            <code className="block p-2 bg-gray-100 rounded text-xs font-mono break-all">
+                              {revealedKeys[partner.id].webhookSecret}
+                            </code>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Webhook URL */}
+                    {partner.webhookUrl && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500">Webhook URL</label>
+                        <code className="block p-2 bg-gray-100 rounded text-xs font-mono break-all">
+                          {partner.webhookUrl}
+                        </code>
+                      </div>
+                    )}
+
+                    {/* Permissions */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">İzinler</label>
+                      <div className="flex flex-wrap gap-1">
+                        {partner.permissions.map((perm) => (
+                          <span key={perm} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                            {perm}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Danger zone */}

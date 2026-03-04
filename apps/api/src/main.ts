@@ -29,6 +29,7 @@ import campaignsRoutes from './routes/campaigns';
 import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
+import integrationPartnerRoutes from './routes/integration-partners';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -93,6 +94,7 @@ server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bu
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
+server.register(integrationPartnerRoutes, { prefix: '/api/integration-partners' }); // Partner management UI
 
 // WebSocket
 setupWebSocket(server);
