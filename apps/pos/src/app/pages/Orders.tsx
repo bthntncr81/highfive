@@ -14,6 +14,9 @@ interface Order {
   createdAt: string;
   table?: { name: string; number: number };
   user?: { name: string };
+  customerName?: string;
+  customerPhone?: string;
+  source?: string;
   items: any[];
 }
 
@@ -241,7 +244,7 @@ export default function Orders() {
                     </div>
                     
                     <p className="text-sm text-gray-500">
-                      {order.items.length} ürün • {order.user?.name || 'Sistem'}
+                      {order.items.length} ürün • {order.customerName || order.user?.name || 'Sistem'}
                     </p>
                     
                     <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
