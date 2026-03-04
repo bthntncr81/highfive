@@ -25,10 +25,29 @@ const STATUS_FILTERS = [
   { value: 'COMPLETED', label: 'Tamamlanan' },
 ];
 
+// Play notification sound using Web Audio API
+const playNotificationSound = () => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.value = 0.3;
+    oscillator.start();
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    oscillator.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.warn('Notification sound failed:', e);
+  }
+};
+
 export default function Orders() {
   const { token } = useAuth();
   const { onMessage } = useWebSocket();
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -38,6 +57,7 @@ export default function Orders() {
     fetchOrders();
 
     const unsubscribe = onMessage('orders', () => {
+      playNotificationSound();
       fetchOrders();
     });
 

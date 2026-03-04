@@ -221,6 +221,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         items,
         deliveryFee,
         locationId,
+        discount,
       } = request.body as {
         externalOrderId: string;
         type?: string;
@@ -238,6 +239,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         }[];
         deliveryFee?: number;
         locationId?: string;
+        discount?: number;
       };
 
       // Validations
@@ -299,7 +301,8 @@ export default async function externalRoutes(server: FastifyInstance) {
       const taxRate = (settings?.value as any)?.taxRate || 10;
       const tax = subtotal * (taxRate / 100);
       const deliveryAmount = deliveryFee || 0;
-      const total = subtotal + tax + deliveryAmount;
+      const discountAmount = discount || 0;
+      const total = subtotal + tax + deliveryAmount - discountAmount;
 
       // Determine order type
       let orderType: OrderType;
@@ -320,6 +323,57 @@ export default async function externalRoutes(server: FastifyInstance) {
       // Use partner's locationId or provided locationId
       const orderLocationId = locationId || partner.locationId || null;
 
+      // Auto-create or update Customer record for WhatsApp orders
+      if (customerPhone) {
+        try {
+          let customer = await prisma.customer.findUnique({
+            where: { phone: customerPhone },
+          });
+
+          if (!customer) {
+            // Get lowest loyalty tier for new customers
+            const bronzeTier = await prisma.loyaltyTier.findFirst({
+              where: { isActive: true },
+              orderBy: { minPoints: 'asc' },
+            });
+
+            customer = await prisma.customer.create({
+              data: {
+                phone: customerPhone,
+                name: customerName || null,
+                email: customerEmail || null,
+                loyaltyTierId: bronzeTier?.id,
+                smsConsent: true,
+              },
+            });
+
+            // Welcome bonus points
+            await prisma.pointsTransaction.create({
+              data: {
+                customerId: customer.id,
+                points: 50,
+                type: 'BONUS',
+                description: 'WhatsApp hos geldin bonusu',
+              },
+            });
+            await prisma.customer.update({
+              where: { id: customer.id },
+              data: { totalPoints: 50, lifetimePoints: 50 },
+            });
+
+            console.log(`👤 [External] Yeni müşteri oluşturuldu: ${customerPhone} (${customerName || 'İsimsiz'})`);
+          } else if (customerName && !customer.name) {
+            // Update name if missing
+            await prisma.customer.update({
+              where: { id: customer.id },
+              data: { name: customerName },
+            });
+          }
+        } catch (custError) {
+          console.error('⚠️ [External] Müşteri kaydı hatası (sipariş devam ediyor):', custError);
+        }
+      }
+
       // Create order
       const order = await prisma.order.create({
         data: {
@@ -333,6 +387,7 @@ export default async function externalRoutes(server: FastifyInstance) {
           subtotal,
           tax,
           total,
+          discount: discountAmount,
           deliveryFee: deliveryAmount,
           notes: notes || null,
           source: source || 'WHATSAPP',
