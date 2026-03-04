@@ -28,6 +28,7 @@ import loyaltyRoutes from './routes/loyalty';
 import campaignsRoutes from './routes/campaigns';
 import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
+import externalRoutes from './routes/external';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -91,6 +92,7 @@ server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
+server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
 
 // WebSocket
 setupWebSocket(server);

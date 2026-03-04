@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate } from '../websocket';
+import { webhookService } from '../services/webhook.service';
 
 // Award loyalty points after payment
 async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: string, totalAmount: number) {
@@ -659,6 +660,13 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     broadcastOrderUpdate(updatedOrder);
 
+    // Dispatch webhook for external orders
+    if (updatedOrder.externalOrderId) {
+      webhookService.dispatchOrderStatusChanged(updatedOrder).catch((err) => {
+        console.error('❌ Webhook dispatch error:', err);
+      });
+    }
+
     return { order: updatedOrder };
   });
 
@@ -687,12 +695,19 @@ export default async function orderRoutes(server: FastifyInstance) {
     if (order) {
       const allSameStatus = order.items.every((item) => item.status === status);
       if (allSameStatus && order.status !== status) {
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id },
           data: { status },
         });
+
+        // Dispatch webhook when all items reach same status (order-level status change)
+        if (updatedOrder.externalOrderId) {
+          webhookService.dispatchOrderStatusChanged({ ...order, status: updatedOrder.status }).catch((err) => {
+            console.error('❌ Webhook dispatch error:', err);
+          });
+        }
       }
-      
+
       broadcastOrderUpdate(order);
     }
 
@@ -1026,6 +1041,13 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     broadcastOrderUpdate(updatedOrder);
+
+    // Dispatch webhook for external orders
+    if (updatedOrder.externalOrderId) {
+      webhookService.dispatchOrderStatusChanged(updatedOrder).catch((err) => {
+        console.error('❌ Webhook dispatch error:', err);
+      });
+    }
 
     return { order: updatedOrder };
   });
