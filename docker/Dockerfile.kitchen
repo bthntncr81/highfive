@@ -8,7 +8,7 @@ COPY apps/kitchen/package*.json ./
 
 # Install dependencies including vite and react (using Tailwind v3)
 RUN npm install && \
-    npm install vite@^5 @vitejs/plugin-react typescript @types/react @types/react-dom react react-dom \
+    npm install vite@^5 @vitejs/plugin-react@^4 typescript @types/react @types/react-dom react react-dom \
     tailwindcss@^3 postcss autoprefixer lucide-react framer-motion
 
 # Copy source code
