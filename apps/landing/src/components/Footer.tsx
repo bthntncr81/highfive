@@ -71,8 +71,7 @@ export const Footer = () => {
               {[
                 { to: '/', label: 'Ana Sayfa' },
                 { to: '/menu', label: 'Menü' },
-                { to: '/about', label: 'Hakkımızda' },
-                { to: '/contact', label: 'İletişim' },
+{ to: '/contact', label: 'İletişim' },
               ].map((link) => (
                 <li key={link.to}>
                   <Link

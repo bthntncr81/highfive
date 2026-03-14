@@ -10,7 +10,6 @@ import { CartProvider } from "./lib/cartStore";
 import { ContentProvider, useContent } from "./lib/contentStore";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 
-import { About } from "./pages/About";
 import { Admin } from "./pages/Admin";
 import { Contact } from "./pages/Contact";
 import { Home } from "./pages/Home";
@@ -112,15 +111,7 @@ const AnimatedRoutes = () => {
               </PageTransition>
             }
           />
-          <Route
-            path="/about"
-            element={
-              <PageTransition>
-                <About />
-              </PageTransition>
-            }
-          />
-          <Route
+<Route
             path="/contact"
             element={
               <PageTransition>

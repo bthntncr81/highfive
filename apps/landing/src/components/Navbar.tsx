@@ -19,8 +19,7 @@ export const Navbar = () => {
   const links = [
     { to: '/', label: 'Ana Sayfa' },
     { to: '/menu', label: 'Menü' },
-    { to: '/about', label: 'Hakkımızda' },
-    { to: '/contact', label: 'İletişim' },
+{ to: '/contact', label: 'İletişim' },
   ]
 
   const isActive = (path: string) => location.pathname === path
