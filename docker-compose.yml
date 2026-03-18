@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://highfive:highfive123@postgres:5432/highfive_suite
       JWT_SECRET: highfive-super-secret-key-2026
       PORT: 3000
+      API_URL: ${API_URL:-http://localhost:3000}
       IYZICO_API_KEY: sandbox-ifkcjkaPdtshoWkt36gjOwpZ9Z5XsUZM
       IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
     volumes:
