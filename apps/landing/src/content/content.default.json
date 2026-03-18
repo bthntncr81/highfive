@@ -8,14 +8,14 @@
     "accentColor": "#005387"
   },
   "whatsapp": {
-    "phone": "905056916831",
+    "phone": "905552438181",
     "defaultMessage": "Merhaba! Sipariş vermek istiyorum 🍕"
   },
   "links": {
     "instagram": "https://instagram.com/highfive",
     "tiktok": "https://tiktok.com/@highfive",
-    "googleMaps": "https://maps.google.com/maps?q=High+Five+Pizza+Makarna+Sandviç+Akçakoca+Düzce",
-    "phoneTel": "0505 691 68 31"
+    "googleMaps": "https://maps.google.com/maps?q=Cumhuriyet+Mahallesi+İstanbul+Caddesi+No+151/1+Akçakoca+Düzce",
+    "phoneTel": "0555 243 81 81"
   },
   "hero": {
     "headline": "Akçakoca'nın Lezzet Durağı!",
@@ -470,7 +470,7 @@
     ]
   },
   "contact": {
-    "address": "Akçakoca Merkez, Düzce",
+    "address": "Cumhuriyet Mahallesi, İstanbul Caddesi No 151/1, Akçakoca, Düzce",
     "hours": [
       { "day": "Pazartesi", "open": "11:00", "close": "23:00" },
       { "day": "Salı", "open": "11:00", "close": "23:00" },
