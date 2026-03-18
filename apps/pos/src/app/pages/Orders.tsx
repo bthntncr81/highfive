@@ -28,20 +28,22 @@ const STATUS_FILTERS = [
   { value: 'COMPLETED', label: 'Tamamlanan' },
 ];
 
-// Play notification sound using Web Audio API
+// Play alert notification sound - 3 rapid beeps
 const playNotificationSound = () => {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    gainNode.gain.value = 0.3;
-    oscillator.start();
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    oscillator.stop(ctx.currentTime + 0.5);
+    [0, 0.25, 0.5].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.18);
+    });
   } catch (e) {
     console.warn('Notification sound failed:', e);
   }

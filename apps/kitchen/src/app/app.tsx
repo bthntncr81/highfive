@@ -144,9 +144,24 @@ export default function App() {
   }, [fetchOrders, soundEnabled]);
 
   const playNotificationSound = () => {
-    const audio = new Audio('/sounds/notification.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(() => {});
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // 3 rapid alert beeps
+      [0, 0.25, 0.5].forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.18);
+      });
+    } catch (e) {
+      console.warn('Notification sound failed:', e);
+    }
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
