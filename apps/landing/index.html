@@ -8,15 +8,150 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#bb1e10" />
-    <title>High Five | Pizza • Makarna • Sandviç</title>
-    <meta name="description" content="High Five - En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur, hızlı teslimat!" />
+
+    <!-- SEO Title & Description -->
+    <title>High Five Pizza & Makarna | Akçakoca Düzce - Pizza, Makarna, Sandviç Sipariş</title>
+    <meta name="description" content="Akçakoca Düzce'nin en sevilen pizza, makarna ve sandviç restoranı High Five. El yapımı hamur, taze malzemeler, hızlı teslimat. Akçakoca'da online sipariş ver! ☎ 0505 691 68 31" />
+    <meta name="keywords" content="akçakoca pizza, akçakoca makarna, akçakoca sandviç, düzce pizza, düzce makarna, akçakoca restoran, akçakoca yemek siparişi, akçakoca online sipariş, high five pizza, akçakoca pizza sipariş, düzce akçakoca restoran, akçakoca pizza teslimat, akçakoca yemek, pizza akçakoca düzce" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="High Five Pizza & Makarna" />
+
+    <!-- Geo Tags for Local SEO -->
+    <meta name="geo.region" content="TR-81" />
+    <meta name="geo.placename" content="Akçakoca, Düzce" />
+    <meta name="geo.position" content="41.0889;30.6333" />
+    <meta name="ICBM" content="41.0889, 30.6333" />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="High Five | Pizza • Makarna • Sandviç" />
-    <meta property="og:description" content="En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur!" />
+    <meta property="og:type" content="restaurant" />
+    <meta property="og:title" content="High Five Pizza & Makarna | Akçakoca Düzce" />
+    <meta property="og:description" content="Akçakoca Düzce'nin en lezzetli pizza, makarna ve sandviç restoranı. El yapımı hamur, taze malzemeler, hızlı teslimat!" />
     <meta property="og:image" content="/icon-512x512.png" />
-    
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:site_name" content="High Five Pizza & Makarna" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="High Five Pizza & Makarna | Akçakoca Düzce" />
+    <meta name="twitter:description" content="Akçakoca'da el yapımı pizza, taze makarna ve özel sandviçler. Hemen sipariş ver!" />
+    <meta name="twitter:image" content="/icon-512x512.png" />
+
+    <!-- JSON-LD Structured Data - Restaurant -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "High Five Pizza & Makarna",
+      "alternateName": "High Five Akçakoca",
+      "description": "Akçakoca Düzce'nin en sevilen pizza, makarna ve sandviç restoranı. El yapımı hamur, taze malzemeler, hızlı teslimat.",
+      "image": "/icon-512x512.png",
+      "telephone": "+905056916831",
+      "url": "https://highfive.com.tr",
+      "servesCuisine": ["Pizza", "Makarna", "Sandviç", "İtalyan", "Türk"],
+      "priceRange": "₺₺",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Akçakoca Merkez",
+        "addressLocality": "Akçakoca",
+        "addressRegion": "Düzce",
+        "addressCountry": "TR"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 41.0889,
+        "longitude": 30.6333
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday"],
+          "opens": "11:00",
+          "closes": "23:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Friday", "Saturday"],
+          "opens": "11:00",
+          "closes": "00:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Sunday",
+          "opens": "12:00",
+          "closes": "23:00"
+        }
+      ],
+      "hasMenu": {
+        "@type": "Menu",
+        "hasMenuSection": [
+          {
+            "@type": "MenuSection",
+            "name": "Pizza",
+            "description": "El yapımı hamur ile hazırlanan İtalyan pizzalar"
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Makarna",
+            "description": "Taze soslarla hazırlanan İtalyan makarnalar"
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Sandviç",
+            "description": "Ciabatta ve Schiacciatta ekmeklerle özel sandviçler"
+          }
+        ]
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "500",
+        "bestRating": "5"
+      },
+      "areaServed": [
+        {
+          "@type": "City",
+          "name": "Akçakoca"
+        },
+        {
+          "@type": "State",
+          "name": "Düzce"
+        }
+      ],
+      "sameAs": [
+        "https://instagram.com/highfive",
+        "https://tiktok.com/@highfive"
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD Breadcrumb -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Ana Sayfa",
+          "item": "https://highfive.com.tr"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Menü",
+          "item": "https://highfive.com.tr/menu"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "İletişim",
+          "item": "https://highfive.com.tr/contact"
+        }
+      ]
+    }
+    </script>
+
     <!-- Preconnect to Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -1,8 +1,8 @@
 {
   "site": {
-    "name": "High Five",
-    "tagline": "Pizza • Makarna • Sandviç",
-    "description": "En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur, hızlı teslimat!",
+    "name": "High Five Pizza & Makarna",
+    "tagline": "Akçakoca'nın Lezzet Durağı - Pizza • Makarna • Sandviç",
+    "description": "Akçakoca Düzce'de el yapımı pizza, taze makarna ve özel sandviçler. Taze malzemeler, hızlı teslimat!",
     "logoText": "High Five",
     "primaryColor": "#bb1e10",
     "accentColor": "#005387"
@@ -14,12 +14,12 @@
   "links": {
     "instagram": "https://instagram.com/highfive",
     "tiktok": "https://tiktok.com/@highfive",
-    "googleMaps": "https://maps.google.com/?q=Istanbul",
+    "googleMaps": "https://maps.google.com/maps?q=High+Five+Pizza+Makarna+Sandviç+Akçakoca+Düzce",
     "phoneTel": "0505 691 68 31"
   },
   "hero": {
-    "headline": "Lezzetin Beşliği!",
-    "subheadline": "Taze malzemeler, el yapımı hamur ve bol peynirle hazırlanan pizzalarımız kapınızda. High Five ile her lokma bir şölen!",
+    "headline": "Akçakoca'nın Lezzet Durağı!",
+    "subheadline": "Akçakoca'da el yapımı pizza, taze makarna ve özel sandviçler. Taze malzemeler, bol peynir ve hızlı teslimat ile High Five farkını yaşayın!",
     "heroImages": [
       "/placeholders/pizza-hero.svg",
       "/placeholders/pasta-hero.svg",
@@ -470,7 +470,7 @@
     ]
   },
   "contact": {
-    "address": "Bağdat Caddesi No:123, Kadıköy, İstanbul",
+    "address": "Akçakoca Merkez, Düzce",
     "hours": [
       { "day": "Pazartesi", "open": "11:00", "close": "23:00" },
       { "day": "Salı", "open": "11:00", "close": "23:00" },
@@ -480,11 +480,11 @@
       { "day": "Cumartesi", "open": "11:00", "close": "00:00" },
       { "day": "Pazar", "open": "12:00", "close": "23:00" }
     ],
-    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3011.6504900327975!2d29.0!3d40.98!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDDCsDU4JzQ4LjAiTiAyOcKwMDAnMDAuMCJF!5e0!3m2!1str!2str!4v1234567890"
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12000!2d30.6333!3d41.0889!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zQWvDp2Frb2NhLCBEw7x6Y2U!5e0!3m2!1str!2str!4v1234567890"
   },
   "seo": {
-    "title": "High Five | Pizza • Makarna • Sandviç",
-    "description": "En lezzetli pizza, makarna ve sandviçler. Taze malzemeler, el yapımı hamur, hızlı teslimat! Hemen sipariş ver.",
-    "ogImage": "/placeholders/og-default.svg"
+    "title": "High Five Pizza & Makarna | Akçakoca Düzce - Pizza, Makarna, Sandviç Sipariş",
+    "description": "Akçakoca Düzce'nin en lezzetli pizza, makarna ve sandviç restoranı High Five. El yapımı hamur, taze malzemeler, hızlı teslimat. Akçakoca'da online sipariş ver!",
+    "ogImage": "/icon-512x512.png"
   }
 }
