@@ -244,7 +244,7 @@ export default async function printerRoutes(server: FastifyInstance) {
         let itemsToPrint = order.items;
         if (printer.categories && printer.categories.length > 0) {
           itemsToPrint = order.items.filter((item) =>
-            printer.categories.includes(item.menuItem?.categoryId)
+            item.menuItem?.categoryId && printer.categories.includes(item.menuItem.categoryId)
           );
         }
 
