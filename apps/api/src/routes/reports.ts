@@ -65,10 +65,10 @@ export default async function reportRoutes(server: FastifyInstance) {
     
     for (const order of orders) {
       for (const item of order.items) {
-        const key = item.menuItemId || item.id;
+        const key = String(item.menuItemId || item.id);
         if (!itemSales[key]) {
           itemSales[key] = {
-            id: item.menuItemId || item.id,
+            id: String(item.menuItemId || item.id),
             name: item.menuItem?.name || 'Silinmiş Ürün',
             count: 0,
             revenue: 0,
