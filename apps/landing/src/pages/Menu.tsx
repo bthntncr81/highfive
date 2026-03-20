@@ -5,19 +5,19 @@ import { useContent } from '../lib/contentStore'
 import { useCart } from '../lib/cartStore'
 import { orderApi, happyHourApi, type HappyHour, type Category, type MenuItem as APIMenuItem } from '../lib/api'
 import { SectionContainer } from '../components/SectionContainer'
-import { CategoryTabs } from '../components/CategoryTabs'
-import { SearchBar } from '../components/SearchBar'
 import { MenuGridFromAPI } from '../components/MenuGridFromAPI'
 import { RevealOnScroll } from '../components/RevealOnScroll'
+import { useSettings } from '../hooks/useSettings'
 
 export const Menu = () => {
   const { content } = useContent()
   const { tableSession, clearTableSession } = useCart()
+  const { whatsappEnabled } = useSettings()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialCategory = searchParams.get('category')
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [showCategoryDrawer, setShowCategoryDrawer] = useState(false)
 
   // API Data
   const [apiCategories, setApiCategories] = useState<Category[]>([])
@@ -36,11 +36,9 @@ export const Menu = () => {
         ])
 
         if (menuResponse.success && menuResponse.data) {
-          // Kategorileri çek
           if (menuResponse.data.categories) {
             setApiCategories(menuResponse.data.categories)
           }
-          // Menü öğelerini çek
           if (menuResponse.data.items) {
             setApiMenuItems(menuResponse.data.items)
           }
@@ -61,6 +59,7 @@ export const Menu = () => {
 
   const handleCategoryChange = (categoryId: string | null) => {
     setActiveCategory(categoryId)
+    setShowCategoryDrawer(false)
     if (categoryId) {
       setSearchParams({ category: categoryId })
     } else {
@@ -68,36 +67,15 @@ export const Menu = () => {
     }
   }
 
-  // API'den gelen verileri filtrele
+  // Filter by category only (search removed)
   const filteredItems = useMemo(() => {
-    let items = apiMenuItems
+    if (!activeCategory) return apiMenuItems
+    return apiMenuItems.filter((item) => item.category.id === activeCategory)
+  }, [apiMenuItems, activeCategory])
 
-    // Filter by category
-    if (activeCategory) {
-      items = items.filter((item) => item.category.id === activeCategory)
-    }
-
-    // Filter by search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      items = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          (item.description && item.description.toLowerCase().includes(query))
-      )
-    }
-
-    return items
-  }, [apiMenuItems, activeCategory, searchQuery])
-
-  // Kategorileri CategoryTabs formatına dönüştür
-  const categoriesForTabs = useMemo(() => {
-    return apiCategories.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      icon: cat.icon,
-    }))
-  }, [apiCategories])
+  const activeCategoryName = activeCategory
+    ? apiCategories.find(c => c.id === activeCategory)?.name || 'Kategori'
+    : 'Tümü'
 
   return (
     <main>
@@ -192,34 +170,117 @@ export const Menu = () => {
         </motion.div>
       </SectionContainer>
 
-      {/* Sticky Filters */}
+      {/* Sticky Category Bar */}
       <div className={`sticky ${tableSession ? 'top-[130px]' : activeHappyHours.length > 0 ? 'top-[120px]' : 'top-[72px]'} z-40 bg-white border-b border-border shadow-sm`}>
-        <div className="container-diner py-4 max-h-[80px] flex items-center gap-4">
-          {/* Search - compact */}
-          <div className="flex-shrink-0 w-64">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Ara..."
-            />
+        <div className="container-diner py-3">
+          {/* Mobile: single button that opens drawer */}
+          <div className="md:hidden flex items-center justify-between">
+            <button
+              onClick={() => setShowCategoryDrawer(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-display text-sm"
+            >
+              <span>🍽️</span>
+              {activeCategoryName}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <p className="text-sm text-foreground-muted">
+              <span className="font-display text-primary">{filteredItems.length}</span> ürün
+            </p>
           </div>
 
-          {/* Category tabs - horizontal scroll */}
-          <div className="flex-1 overflow-hidden">
-            <CategoryTabs
-              categories={categoriesForTabs}
-              activeCategory={activeCategory}
-              onCategoryChange={handleCategoryChange}
-            />
+          {/* Desktop: horizontal category tabs */}
+          <div className="hidden md:flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => handleCategoryChange(null)}
+              className={`flex-shrink-0 px-4 py-2 rounded-xl font-display text-sm transition-all ${
+                !activeCategory
+                  ? 'bg-primary text-white shadow-md'
+                  : 'bg-surface text-foreground border border-border hover:border-primary'
+              }`}
+            >
+              🍽️ Tümü
+            </button>
+            {apiCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl font-display text-sm transition-all ${
+                  activeCategory === cat.id
+                    ? 'bg-primary text-white shadow-md'
+                    : 'bg-surface text-foreground border border-border hover:border-primary'
+                }`}
+              >
+                {cat.icon} {cat.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Mobile Category Drawer - slides from right */}
+      <AnimatePresence>
+        {showCategoryDrawer && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setShowCategoryDrawer(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 shadow-2xl flex flex-col"
+            >
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-display text-lg text-foreground">Kategoriler</h3>
+                <button
+                  onClick={() => setShowCategoryDrawer(false)}
+                  className="p-2 text-foreground-muted hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <button
+                  onClick={() => handleCategoryChange(null)}
+                  className={`w-full text-left px-4 py-3 rounded-xl font-display text-base transition-all ${
+                    !activeCategory
+                      ? 'bg-primary text-white'
+                      : 'bg-surface text-foreground hover:bg-primary/10'
+                  }`}
+                >
+                  🍽️ Tümü
+                </button>
+                {apiCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryChange(cat.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-display text-base transition-all ${
+                      activeCategory === cat.id
+                        ? 'bg-primary text-white'
+                        : 'bg-surface text-foreground hover:bg-primary/10'
+                    }`}
+                  >
+                    {cat.icon} {cat.name}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Menu Items */}
       <SectionContainer variant="cream">
-        {/* Results count */}
+        {/* Results count - desktop only */}
         <RevealOnScroll>
-          <div className="flex items-center justify-between mb-8">
+          <div className="hidden md:flex items-center justify-between mb-8">
             <p className="font-body text-foreground-muted">
               <span className="font-display text-primary">{filteredItems.length}</span> ürün bulundu
               {activeHappyHours.length > 0 && (
@@ -279,7 +340,7 @@ export const Menu = () => {
         {!loading && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeCategory}-${searchQuery}`}
+              key={activeCategory || 'all'}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -291,29 +352,31 @@ export const Menu = () => {
         )}
       </SectionContainer>
 
-      {/* Bottom CTA */}
-      <SectionContainer variant="kraft">
-        <RevealOnScroll>
-          <div className="text-center">
-            <div className="dark-section inline-block max-w-2xl mx-auto">
-              <h3 className="text-3xl mb-4">Özel İstek mi Var? 🤔</h3>
-              <p className="text-background/80 mb-6">
-                Ekstra malzeme, özel diyet tercihleri veya alerjen bilgisi için
-                bize WhatsApp'tan yazın!
-              </p>
-              <a
-                href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent('Merhaba! Özel bir istekle ilgili sormak istiyorum.')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-whatsapp inline-flex"
-              >
-                <span>💬</span>
-                Bize Yazın
-              </a>
+      {/* Bottom CTA - only show if WhatsApp enabled */}
+      {whatsappEnabled && (
+        <SectionContainer variant="kraft">
+          <RevealOnScroll>
+            <div className="text-center">
+              <div className="dark-section inline-block max-w-2xl mx-auto">
+                <h3 className="text-3xl mb-4">Özel İstek mi Var? 🤔</h3>
+                <p className="text-background/80 mb-6">
+                  Ekstra malzeme, özel diyet tercihleri veya alerjen bilgisi için
+                  bize WhatsApp'tan yazın!
+                </p>
+                <a
+                  href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent('Merhaba! Özel bir istekle ilgili sormak istiyorum.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-whatsapp inline-flex"
+                >
+                  <span>💬</span>
+                  Bize Yazın
+                </a>
+              </div>
             </div>
-          </div>
-        </RevealOnScroll>
-      </SectionContainer>
+          </RevealOnScroll>
+        </SectionContainer>
+      )}
     </main>
   )
 }

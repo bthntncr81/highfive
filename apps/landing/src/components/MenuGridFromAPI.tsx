@@ -2,12 +2,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../lib/cartStore'
 import { useState } from 'react'
 import { suggestionApi, ALLERGEN_INFO, type Allergen, type UpsellSuggestion, type MenuItem as APIMenuItem } from '../lib/api'
+import { useSettings } from '../hooks/useSettings'
 
 type MenuGridFromAPIProps = {
   items: APIMenuItem[]
 }
 
 export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
+  const { services } = useSettings()
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -74,6 +76,7 @@ export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
           item={item}
           itemVariants={itemVariants}
           getBadgeStyle={getBadgeStyle}
+          cartEnabled={services.cartEnabled}
         />
       ))}
     </motion.div>
@@ -87,9 +90,10 @@ type MenuCardFromAPIProps = {
     visible: { opacity: number; y: number; rotate: number; transition: { type: string; stiffness: number } }
   }
   getBadgeStyle: (badge: string) => string
+  cartEnabled: boolean
 }
 
-const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIProps) => {
+const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle, cartEnabled }: MenuCardFromAPIProps) => {
   const { addItemFromAPI } = useCart()
   const [showAdded, setShowAdded] = useState(false)
   const [showUpsell, setShowUpsell] = useState(false)
@@ -105,7 +109,11 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
   const hasDiscount = discountPrice && discountPrice < item.price
   const displayPrice = hasDiscount ? discountPrice : item.price
   const originalPrice = item.price
-  const itemImage = item.image || '/placeholders/pizza-1.svg'
+  // Fake %20 markup price (always show as if discounted)
+  const fakeOriginalPrice = Math.ceil(Number(item.price) * 1.2)
+  const rawImage = item.image || ''
+  const hasRealImage = rawImage && !rawImage.startsWith('/placeholders/') && rawImage !== ''
+  const itemImage = hasRealImage ? rawImage : ''
 
   const handleAddToCart = async () => {
     if (isOutOfStock) return
@@ -174,7 +182,8 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
         whileHover={{ y: -4 }}
         className={`card-menu group relative ${isOutOfStock ? 'opacity-60' : ''}`}
       >
-        {/* Image */}
+        {/* Image - only show if real image exists */}
+        {hasRealImage ? (
         <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-surface">
           <img
             src={itemImage}
@@ -245,20 +254,14 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
             transition={{ delay: 0.2 }}
             className="absolute bottom-3 right-3"
           >
-            {hasDiscount ? (
-              <div className="flex flex-col items-end">
-                <span className="text-sm line-through text-white/80 bg-black/30 px-2 rounded">
-                  ₺{originalPrice}
-                </span>
-                <span className="bg-green-500 text-white font-display text-xl px-3 py-1 rounded-full shadow-md">
-                  ₺{discountPrice}
-                </span>
-              </div>
-            ) : (
-              <span className="bg-primary text-white font-display text-xl px-3 py-1 rounded-full shadow-md">
-                ₺{originalPrice}
+            <div className="flex flex-col items-end">
+              <span className="text-sm line-through text-white/80 bg-black/30 px-2 rounded">
+                ₺{hasDiscount ? originalPrice : fakeOriginalPrice}
               </span>
-            )}
+              <span className="bg-green-500 text-white font-display text-xl px-3 py-1 rounded-full shadow-md">
+                ₺{displayPrice}
+              </span>
+            </div>
           </motion.div>
 
           {/* Added to cart feedback */}
@@ -284,6 +287,15 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
             )}
           </AnimatePresence>
         </div>
+        ) : (
+          /* No image - show price inline */
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm line-through text-foreground-subtle">₺{hasDiscount ? originalPrice : fakeOriginalPrice}</span>
+              <span className="bg-green-500 text-white font-display text-lg px-3 py-1 rounded-full shadow-md">₺{displayPrice}</span>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex flex-col flex-1">
@@ -334,28 +346,30 @@ const MenuCardFromAPI = ({ item, itemVariants, getBadgeStyle }: MenuCardFromAPIP
             )}
           </AnimatePresence>
 
-          {/* Add to Cart button */}
-          <motion.button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            whileHover={{ scale: isOutOfStock ? 1 : 1.02 }}
-            whileTap={{ scale: isOutOfStock ? 1 : 0.98 }}
-            className={`btn-secondary w-full justify-center text-base ${
-              isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-300' : ''
-            }`}
-          >
-            {isOutOfStock ? (
-              <>
-                <span>❌</span>
-                Stokta Yok
-              </>
-            ) : (
-              <>
-                <span>🛒</span>
-                Sepete Ekle
-              </>
-            )}
-          </motion.button>
+          {/* Add to Cart button - only show when cart is enabled */}
+          {cartEnabled && (
+            <motion.button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              whileHover={{ scale: isOutOfStock ? 1 : 1.02 }}
+              whileTap={{ scale: isOutOfStock ? 1 : 0.98 }}
+              className={`btn-secondary w-full justify-center text-base ${
+                isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-300' : ''
+              }`}
+            >
+              {isOutOfStock ? (
+                <>
+                  <span>❌</span>
+                  Stokta Yok
+                </>
+              ) : (
+                <>
+                  <span>🛒</span>
+                  Sepete Ekle
+                </>
+              )}
+            </motion.button>
+          )}
         </div>
       </motion.article>
 

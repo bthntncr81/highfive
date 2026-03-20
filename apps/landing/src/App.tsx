@@ -9,6 +9,7 @@ import { Navbar } from "./components/Navbar";
 import { CartProvider } from "./lib/cartStore";
 import { ContentProvider, useContent } from "./lib/contentStore";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
+import { useSettings } from "./hooks/useSettings";
 
 import { Admin } from "./pages/Admin";
 import { Contact } from "./pages/Contact";
@@ -84,6 +85,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const isAdmin = location.pathname === "/admin";
+  const { services } = useSettings();
 
   return (
     <>
@@ -145,8 +147,8 @@ const AnimatedRoutes = () => {
       </AnimatePresence>
 
       {!isAdmin && <Footer />}
-      {!isAdmin && <CartButton />}
-      {!isAdmin && <Cart />}
+      {!isAdmin && services.cartEnabled && <CartButton />}
+      {!isAdmin && services.cartEnabled && <Cart />}
     </>
   );
 };

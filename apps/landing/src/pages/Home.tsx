@@ -7,6 +7,7 @@ import { useLoyalty } from '../lib/loyaltyStore'
 import { orderApi, type MenuItem as APIMenuItem } from '../lib/api'
 import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
+import { useSettings } from '../hooks/useSettings'
 
 // SVG Icon components for highlights
 const highlightIcons: Record<string, JSX.Element> = {
@@ -35,6 +36,7 @@ const highlightIcons: Record<string, JSX.Element> = {
 export const Home = () => {
   const { content } = useContent()
   const { member } = useLoyalty()
+  const { whatsappEnabled } = useSettings()
   const [featuredItems, setFeaturedItems] = useState<APIMenuItem[]>([])
 
   useEffect(() => {
@@ -358,17 +360,19 @@ export const Home = () => {
               Acıktın mı?
             </h2>
             <p className="font-body text-xl text-white/70 mb-8 max-w-xl mx-auto">
-              WhatsApp'tan hızlıca sipariş ver, kapına gelsin!
+              {whatsappEnabled ? "WhatsApp'tan hızlıca sipariş ver, kapına gelsin!" : "Menümüzü inceleyin!"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-whatsapp text-xl"
-              >
-                WhatsApp Sipariş
-              </a>
+              {whatsappEnabled && (
+                <a
+                  href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-whatsapp text-xl"
+                >
+                  WhatsApp Sipariş
+                </a>
+              )}
               <Link to="/menu" className="btn bg-white text-foreground font-bold text-xl">
                 Menüye Bak →
               </Link>

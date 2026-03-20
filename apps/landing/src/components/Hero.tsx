@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useContent } from "../lib/contentStore";
 import { orderApi, type MenuItem as APIMenuItem } from "../lib/api";
+import { useSettings } from "../hooks/useSettings";
 
 export const Hero = () => {
   const { content } = useContent();
+  const { whatsappEnabled } = useSettings();
   const [apiItems, setApiItems] = useState<APIMenuItem[]>([]);
 
   useEffect(() => {
@@ -105,16 +107,18 @@ export const Hero = () => {
                 Menüyü İncele
                 <span className="ml-1">→</span>
               </Link>
-              <a
-                href={`https://wa.me/${
-                  content.whatsapp.phone
-                }?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-whatsapp text-lg"
-              >
-                WhatsApp Sipariş
-              </a>
+              {whatsappEnabled && (
+                <a
+                  href={`https://wa.me/${
+                    content.whatsapp.phone
+                  }?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-whatsapp text-lg"
+                >
+                  WhatsApp Sipariş
+                </a>
+              )}
             </motion.div>
 
             {/* Social Proof */}

@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useContent } from '../lib/contentStore'
 import { useLoyalty } from '../lib/loyaltyStore'
 import { LiveOrderStatus } from './LiveOrderStatus'
+import { useSettings } from '../hooks/useSettings'
 
 export const Navbar = () => {
   const { content } = useContent()
   const { member, logout } = useLoyalty()
+  const { whatsappEnabled } = useSettings()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showMemberMenu, setShowMemberMenu] = useState(false)
@@ -136,14 +138,16 @@ export const Navbar = () => {
               </button>
             )}
 
-            <a
-              href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary text-sm"
-            >
-              Sipariş Ver
-            </a>
+            {whatsappEnabled && (
+              <a
+                href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary text-sm"
+              >
+                Sipariş Ver
+              </a>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -255,22 +259,24 @@ export const Navbar = () => {
                   </Link>
                 </motion.div>
               ))}
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="pt-2"
-              >
-                <a
-                  href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-whatsapp w-full justify-center"
-                  onClick={() => setMobileOpen(false)}
+              {whatsappEnabled && (
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="pt-2"
                 >
-                  WhatsApp'tan Sipariş
-                </a>
-              </motion.div>
+                  <a
+                    href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-whatsapp w-full justify-center"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    WhatsApp'tan Sipariş
+                  </a>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
