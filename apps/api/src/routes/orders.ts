@@ -313,7 +313,6 @@ export default async function orderRoutes(server: FastifyInstance) {
         items: {
           select: {
             quantity: true,
-            menuItemName: true,
             menuItem: {
               select: {
                 name: true,
@@ -339,7 +338,7 @@ export default async function orderRoutes(server: FastifyInstance) {
         total: Number(order.total),
         createdAt: order.createdAt.toISOString(),
         items: order.items.map((item) => ({
-          name: item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün',
+          name: item.menuItem?.name || 'Silinmiş Ürün',
           quantity: item.quantity,
         })),
       },
