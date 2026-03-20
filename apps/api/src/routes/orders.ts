@@ -146,10 +146,11 @@ async function deductRawMaterialStock(
 // Sipariş iptal edildiğinde stokları geri ekle
 async function restoreRawMaterialStock(
   prisma: PrismaClient,
-  orderItems: { menuItemId: string; quantity: number }[]
+  orderItems: { menuItemId: string | null; quantity: number }[]
 ) {
   try {
     for (const orderItem of orderItems) {
+      if (!orderItem.menuItemId) continue;
       const ingredients = await prisma.menuItemIngredient.findMany({
         where: { menuItemId: orderItem.menuItemId },
         include: { rawMaterial: true },
@@ -337,7 +338,7 @@ export default async function orderRoutes(server: FastifyInstance) {
         total: Number(order.total),
         createdAt: order.createdAt.toISOString(),
         items: order.items.map((item) => ({
-          name: item.menuItem.name,
+          name: item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün',
           quantity: item.quantity,
         })),
       },
