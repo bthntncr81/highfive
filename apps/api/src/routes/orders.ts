@@ -313,6 +313,7 @@ export default async function orderRoutes(server: FastifyInstance) {
         items: {
           select: {
             quantity: true,
+            menuItemName: true,
             menuItem: {
               select: {
                 name: true,
