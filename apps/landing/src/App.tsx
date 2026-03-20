@@ -19,6 +19,7 @@ import { NotFound } from "./pages/NotFound";
 import { Order } from "./pages/Order";
 import { Payment } from "./pages/Payment";
 import { QRCodes } from "./pages/QRCodes";
+import { SafeMenu } from "./pages/SafeMenu";
 import { TableScan } from "./pages/TableScan";
 
 // SEO meta updater component
@@ -133,6 +134,7 @@ const AnimatedRoutes = () => {
           <Route path="/table/:tableId" element={<TableScan />} />
           {/* Payment page */}
           <Route path="/payment" element={<Payment />} />
+          <Route path="/safemenu" element={<SafeMenu />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/qr" element={<QRCodes />} />
           <Route
