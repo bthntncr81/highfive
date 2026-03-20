@@ -427,7 +427,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         items: order.items.map((item) => ({
           id: item.id,
           menuItemId: item.menuItemId,
-          name: item.menuItem.name,
+          name: item.menuItem?.name || 'Ürün',
           quantity: item.quantity,
           unitPrice: Number(item.unitPrice),
           total: Number(item.total),
@@ -480,7 +480,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         items: order.items.map((item) => ({
           id: item.id,
           menuItemId: item.menuItemId,
-          name: item.menuItem.name,
+          name: item.menuItem?.name || 'Ürün',
           quantity: item.quantity,
           unitPrice: Number(item.unitPrice),
           total: Number(item.total),

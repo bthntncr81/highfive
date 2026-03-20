@@ -244,7 +244,7 @@ export default async function printerRoutes(server: FastifyInstance) {
         let itemsToPrint = order.items;
         if (printer.categories && printer.categories.length > 0) {
           itemsToPrint = order.items.filter((item) =>
-            printer.categories.includes(item.menuItem.categoryId)
+            printer.categories.includes(item.menuItem?.categoryId)
           );
         }
 
@@ -380,7 +380,7 @@ function generateReceipt(order: any, paperWidth: number): string {
 
   // Items
   for (const item of order.items) {
-    const name = item.menuItem.name.substring(0, width - 15);
+    const name = (item.menuItem?.name || 'Ürün').substring(0, width - 15);
     const qty = `${item.quantity}x`;
     const price = `${Number(item.total).toFixed(2)} TL`;
     lines.push(`${qty} ${name.padEnd(width - qty.length - price.length - 2)} ${price}`);
@@ -460,7 +460,7 @@ function generateKitchenTicket(order: any, items: any[], paperWidth: number): st
   // Items
   for (const item of items) {
     lines.push(ESCPOS.BOLD_ON);
-    lines.push(`${item.quantity}x ${item.menuItem.name}`);
+    lines.push(`${item.quantity}x ${(item.menuItem?.name || 'Ürün')}`);
     lines.push(ESCPOS.BOLD_OFF);
 
     if (item.notes) {

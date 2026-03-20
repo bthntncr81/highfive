@@ -65,11 +65,11 @@ export default async function reportRoutes(server: FastifyInstance) {
     
     for (const order of orders) {
       for (const item of order.items) {
-        const key = item.menuItemId;
+        const key = item.menuItemId || item.id;
         if (!itemSales[key]) {
           itemSales[key] = {
-            id: item.menuItemId,
-            name: item.menuItem.name,
+            id: item.menuItemId || item.id,
+            name: item.menuItem?.name || 'Silinmiş Ürün',
             count: 0,
             revenue: 0,
           };
@@ -214,6 +214,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     
     for (const order of orders) {
       for (const item of order.items) {
+        if (!item.menuItem) continue;
         const catId = item.menuItem.categoryId;
         if (!categoryBreakdown[catId]) {
           categoryBreakdown[catId] = {

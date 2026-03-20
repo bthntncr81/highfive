@@ -255,7 +255,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
       orderItems = order.items.map((item: any) => ({
         id: item.id,
-        name: item.menuItem.name,
+        name: item.menuItem?.name || 'Ürün',
         category1: 'Yemek',
         itemType: 'PHYSICAL',
         price: (Number(item.unitPrice) * item.quantity).toFixed(2),
