@@ -376,6 +376,20 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'En az bir ürün gerekli' });
     }
 
+    // Check if takeaway/delivery is enabled
+    if (type === 'TAKEAWAY' || type === 'DELIVERY') {
+      const servicesSetting = await prisma.settings.findUnique({
+        where: { key: 'services' },
+      });
+      const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
+      if (type === 'TAKEAWAY' && services.takeawayEnabled === false) {
+        return reply.status(403).send({ error: 'Gel Al siparişi şu anda kapalıdır' });
+      }
+      if (type === 'DELIVERY' && services.deliveryEnabled === false) {
+        return reply.status(403).send({ error: 'Eve Servis şu anda kapalıdır' });
+      }
+    }
+
     // Validate session token for table orders
     if (tableId) {
       const table = await prisma.table.findUnique({

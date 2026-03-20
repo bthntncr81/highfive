@@ -47,6 +47,15 @@ interface LoyaltySettings {
   minRedeemPoints: number; // Minimum kullanılabilir puan
 }
 
+interface ServiceSettings {
+  takeawayEnabled: boolean;
+  deliveryEnabled: boolean;
+  onlinePaymentEnabled: boolean;
+  iyzicoApiKey: string;
+  iyzicoSecretKey: string;
+  iyzicoBaseUrl: string;
+}
+
 interface IntegrationPartner {
   id: string;
   name: string;
@@ -98,6 +107,14 @@ export default function Settings() {
     welcomePoints: 50,
     minRedeemPoints: 100,
   });
+  const [services, setServices] = useState<ServiceSettings>({
+    takeawayEnabled: true,
+    deliveryEnabled: true,
+    onlinePaymentEnabled: true,
+    iyzicoApiKey: '',
+    iyzicoSecretKey: '',
+    iyzicoBaseUrl: 'https://sandbox-api.iyzipay.com',
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -129,6 +146,9 @@ export default function Settings() {
       }
       if (response.settings?.whatsapp) {
         setWhatsApp(response.settings.whatsapp);
+      }
+      if (response.settings?.services) {
+        setServices({ ...services, ...response.settings.services });
       }
     } catch (error) {
       console.error('Settings fetch error:', error);
@@ -241,6 +261,7 @@ export default function Settings() {
     try {
       await api.put('/api/settings/restaurant', { value: restaurant }, token!);
       await api.put('/api/settings/whatsapp', { value: whatsapp }, token!);
+      await api.put('/api/settings/services', { value: services }, token!);
       setMessage('Ayarlar kaydedildi!');
     } catch (error) {
       setMessage('Kaydetme hatası!');
@@ -365,6 +386,116 @@ export default function Settings() {
               </select>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Service Settings - Paket Servis */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Store className="w-5 h-5 text-orange-500" />
+          Hizmet Ayarları
+        </h2>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Gel Al (Takeaway)</p>
+              <p className="text-sm text-gray-500">Müşteriler mağazadan teslim alabilir</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={services.takeawayEnabled}
+                onChange={(e) => setServices({ ...services, takeawayEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Eve Servis (Delivery)</p>
+              <p className="text-sm text-gray-500">Kurye ile adrese teslim</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={services.deliveryEnabled}
+                onChange={(e) => setServices({ ...services, deliveryEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Online Payment Settings */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Wifi className="w-5 h-5 text-blue-500" />
+          Online Ödeme (iyzico)
+        </h2>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Online Kart ile Ödeme</p>
+              <p className="text-sm text-gray-500">iyzico 3D Secure ile kart ödemesi</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={services.onlinePaymentEnabled}
+                onChange={(e) => setServices({ ...services, onlinePaymentEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+            </label>
+          </div>
+
+          {services.onlinePaymentEnabled && (
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  iyzico API Key
+                </label>
+                <input
+                  type="text"
+                  value={services.iyzicoApiKey}
+                  onChange={(e) => setServices({ ...services, iyzicoApiKey: e.target.value })}
+                  className="input font-mono text-sm"
+                  placeholder="sandbox-xxxxxxxxxxxx"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  iyzico Secret Key
+                </label>
+                <input
+                  type="password"
+                  value={services.iyzicoSecretKey}
+                  onChange={(e) => setServices({ ...services, iyzicoSecretKey: e.target.value })}
+                  className="input font-mono text-sm"
+                  placeholder="sandbox-xxxxxxxxxxxx"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  iyzico Base URL
+                </label>
+                <select
+                  value={services.iyzicoBaseUrl}
+                  onChange={(e) => setServices({ ...services, iyzicoBaseUrl: e.target.value })}
+                  className="input"
+                >
+                  <option value="https://sandbox-api.iyzipay.com">Sandbox (Test)</option>
+                  <option value="https://api.iyzipay.com">Production (Canlı)</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

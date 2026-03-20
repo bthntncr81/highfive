@@ -446,7 +446,8 @@ model Order {
 model OrderItem {
   id           String      @id @default(cuid())
   orderId      String
-  menuItemId   String
+  menuItemId   String?
+  menuItemName String?     // Preserved name when menu item is deleted
   quantity     Int         @default(1)
   paidQuantity Int         @default(0) // Ödenen miktar
   unitPrice    Decimal     @db.Decimal(10, 2)
@@ -459,8 +460,8 @@ model OrderItem {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
 }
 
 // ==================== PAYMENT & INVOICING ====================

@@ -234,38 +234,29 @@ export default async function menuRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Ürün bulunamadı' });
     }
 
-    // Check if item is used in any order
-    const orderItemCount = await prisma.orderItem.count({
-      where: { menuItemId: id },
-    });
-
-    if (orderItemCount > 0) {
-      // Soft delete - just set unavailable
-      await prisma.menuItem.update({
-        where: { id },
-        data: { available: false },
-      });
-      return { success: true, softDeleted: true, message: 'Ürün siparişlerde kullanıldığı için pasife alındı' };
-    } else {
-      // Hard delete - use transaction to delete all related records
-      try {
-        await prisma.$transaction(async (tx) => {
-          // Delete all related records first
-          await tx.menuItemIngredient.deleteMany({ where: { menuItemId: id } });
-          await tx.modifier.deleteMany({ where: { menuItemId: id } });
-          await tx.menuItemCrossSell.deleteMany({ where: { OR: [{ fromItemId: id }, { toItemId: id }] } });
-          await tx.menuItemUpsell.deleteMany({ where: { OR: [{ fromItemId: id }, { toItemId: id }] } });
-          await tx.menuItemLocation.deleteMany({ where: { menuItemId: id } });
-          await tx.happyHourItem.deleteMany({ where: { menuItemId: id } });
-          await tx.bundleItem.deleteMany({ where: { menuItemId: id } });
-          // Now safely delete the menu item
-          await tx.menuItem.delete({ where: { id } });
+    // Force delete - remove all related records including order references
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Save item name to order items before disconnecting
+        await tx.orderItem.updateMany({
+          where: { menuItemId: id },
+          data: { menuItemName: item.name },
         });
-        return { success: true };
-      } catch (error: any) {
-        console.error('Delete menu item error:', error);
-        return reply.status(500).send({ error: 'Ürün silinirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata') });
-      }
+        // Delete all related records
+        await tx.menuItemIngredient.deleteMany({ where: { menuItemId: id } });
+        await tx.modifier.deleteMany({ where: { menuItemId: id } });
+        await tx.menuItemCrossSell.deleteMany({ where: { OR: [{ fromItemId: id }, { toItemId: id }] } });
+        await tx.menuItemUpsell.deleteMany({ where: { OR: [{ fromItemId: id }, { toItemId: id }] } });
+        await tx.menuItemLocation.deleteMany({ where: { menuItemId: id } });
+        await tx.happyHourItem.deleteMany({ where: { menuItemId: id } });
+        await tx.bundleItem.deleteMany({ where: { menuItemId: id } });
+        // Now safely delete the menu item
+        await tx.menuItem.delete({ where: { id } });
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Delete menu item error:', error);
+      return reply.status(500).send({ error: 'Ürün silinirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata') });
     }
   });
 

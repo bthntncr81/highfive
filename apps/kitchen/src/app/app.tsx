@@ -21,10 +21,11 @@ interface OrderItem {
   quantity: number;
   notes?: string;
   status: string;
-  menuItem: {
+  menuItemName?: string;
+  menuItem?: {
     name: string;
     ingredients?: Ingredient[];
-  };
+  } | null;
 }
 
 interface Order {
@@ -501,7 +502,7 @@ function OrderCard({
       {/* Items */}
       <div className="p-4 space-y-2">
         {order.items.map((item) => {
-          const ingredients = item.menuItem.ingredients || [];
+          const ingredients = item.menuItem?.ingredients || [];
           const unitShort: Record<string, string> = {
             GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
           };
@@ -546,7 +547,7 @@ function OrderCard({
                     {item.quantity}x
                   </div>
                   <div>
-                    <p className="font-semibold text-white text-lg">{item.menuItem.name}</p>
+                    <p className="font-semibold text-white text-lg">{item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün'}</p>
                     {customerNote && (
                       <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
                         <span>📝</span>

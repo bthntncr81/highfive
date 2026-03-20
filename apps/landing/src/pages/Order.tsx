@@ -9,6 +9,12 @@ import { orderApi, happyHourApi, serviceChargeApi, type HappyHour } from '../lib
 
 type OrderMode = 'table' | 'takeaway' | 'delivery' | null;
 
+interface ServiceSettings {
+  takeawayEnabled: boolean;
+  deliveryEnabled: boolean;
+  onlinePaymentEnabled: boolean;
+}
+
 const DELIVERY_FEE = 29; // Kurye ücreti
 
 const TIP_OPTIONS = [
@@ -61,6 +67,13 @@ export const Order = () => {
   // Happy Hour
   const [activeHappyHours, setActiveHappyHours] = useState<HappyHour[]>([]);
 
+  // Service settings
+  const [serviceSettings, setServiceSettings] = useState<ServiceSettings>({
+    takeawayEnabled: true,
+    deliveryEnabled: true,
+    onlinePaymentEnabled: true,
+  });
+
   // Loyalty Program - Puan kullanma
   const [usePoints, setUsePoints] = useState(false);
   const [pointsToUse, setPointsToUse] = useState(0);
@@ -98,6 +111,23 @@ export const Order = () => {
       setApiMenuItems(response.data.items);
     }
   };
+
+  // Fetch service settings (takeaway/delivery availability)
+  useEffect(() => {
+    const fetchServiceSettings = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${API_BASE}/api/settings/public/services`);
+        const data = await res.json();
+        if (data.services) {
+          setServiceSettings(data.services);
+        }
+      } catch (e) {
+        // Default: all enabled
+      }
+    };
+    fetchServiceSettings();
+  }, []);
 
   const fetchServiceCharge = async () => {
     const response = await serviceChargeApi.calculate(totalPrice, undefined, orderMode || undefined);
@@ -347,27 +377,31 @@ export const Order = () => {
                 </motion.button>
               )}
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setOrderMode('takeaway')}
-                className="p-6 border-2 border-border rounded-xl hover:border-primary hover:bg-background/50 transition-all"
-              >
-                <span className="text-4xl block mb-2">🥡</span>
-                <span className="font-display text-foreground">Gel Al</span>
-                <p className="text-sm text-foreground-muted mt-1">Siparişinizi mağazadan alın</p>
-              </motion.button>
+              {serviceSettings.takeawayEnabled && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setOrderMode('takeaway')}
+                  className="p-6 border-2 border-border rounded-xl hover:border-primary hover:bg-background/50 transition-all"
+                >
+                  <span className="text-4xl block mb-2">🥡</span>
+                  <span className="font-display text-foreground">Gel Al</span>
+                  <p className="text-sm text-foreground-muted mt-1">Siparişinizi mağazadan alın</p>
+                </motion.button>
+              )}
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setOrderMode('delivery')}
-                className="p-6 border-2 border-border rounded-xl hover:border-blue-500 hover:bg-blue-50/50 transition-all"
-              >
-                <span className="text-4xl block mb-2">🚚</span>
-                <span className="font-display text-foreground">Eve Servis</span>
-                <p className="text-sm text-foreground-muted mt-1">Kapınıza getirelim (+{DELIVERY_FEE}₺)</p>
-              </motion.button>
+              {serviceSettings.deliveryEnabled && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setOrderMode('delivery')}
+                  className="p-6 border-2 border-border rounded-xl hover:border-blue-500 hover:bg-blue-50/50 transition-all"
+                >
+                  <span className="text-4xl block mb-2">🚚</span>
+                  <span className="font-display text-foreground">Eve Servis</span>
+                  <p className="text-sm text-foreground-muted mt-1">Kapınıza getirelim (+{DELIVERY_FEE}₺)</p>
+                </motion.button>
+              )}
             </div>
           </motion.div>
         )}

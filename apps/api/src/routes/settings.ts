@@ -62,6 +62,21 @@ export default async function settingsRoutes(server: FastifyInstance) {
     };
   });
 
+  // Get public service settings (takeaway, delivery, online payment)
+  server.get('/public/services', async () => {
+    const servicesSetting = await prisma.settings.findUnique({
+      where: { key: 'services' },
+    });
+
+    const defaults = {
+      takeawayEnabled: true,
+      deliveryEnabled: true,
+      onlinePaymentEnabled: true,
+    };
+
+    return { services: servicesSetting?.value || defaults };
+  });
+
   // Backup all settings
   server.get('/backup', { preHandler: verifyAdmin }, async () => {
     const settings = await prisma.settings.findMany();
