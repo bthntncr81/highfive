@@ -3,9 +3,11 @@ import { useContent } from '../lib/contentStore'
 import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
 import { createWhatsAppLink } from '../lib/whatsapp'
+import { useSettings } from '../hooks/useSettings'
 
 export const Contact = () => {
   const { content } = useContent()
+  const { whatsappEnabled } = useSettings()
 
   return (
     <main>
@@ -79,6 +81,7 @@ export const Contact = () => {
           </StaggerItem>
 
           {/* WhatsApp */}
+          {whatsappEnabled && (
           <StaggerItem>
             <motion.div
               whileHover={{ y: -8, rotate: -2 }}
@@ -98,6 +101,7 @@ export const Contact = () => {
               </a>
             </motion.div>
           </StaggerItem>
+          )}
 
           {/* Social */}
           <StaggerItem>
@@ -218,6 +222,7 @@ export const Contact = () => {
       </SectionContainer>
 
       {/* CTA */}
+      {whatsappEnabled && (
       <SectionContainer variant="red">
         <RevealOnScroll>
           <div className="text-center">
@@ -246,6 +251,7 @@ export const Contact = () => {
           </div>
         </RevealOnScroll>
       </SectionContainer>
+      )}
     </main>
   )
 }

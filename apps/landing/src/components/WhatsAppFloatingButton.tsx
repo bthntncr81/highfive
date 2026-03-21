@@ -2,13 +2,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { useContent } from "../lib/contentStore";
 import { createWhatsAppLink } from "../lib/whatsapp";
+import { useSettings } from "../hooks/useSettings";
 
 export const WhatsAppFloatingButton = () => {
   const { content } = useContent();
+  const { whatsappEnabled } = useSettings();
   const location = useLocation();
 
-  // Hide on admin page
+  // Hide on admin page or when WhatsApp is disabled
   if (location.pathname === "/admin") return null;
+  if (!whatsappEnabled) return null;
 
   const whatsappUrl = createWhatsAppLink(
     content.whatsapp.phone,
