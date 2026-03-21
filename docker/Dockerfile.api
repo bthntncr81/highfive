@@ -30,5 +30,5 @@ EXPOSE 3000
 # Environment
 ENV NODE_ENV=production
 
-# Start command - run migrations and start server
-CMD sh -c "cd packages/database && npx prisma migrate deploy && cd /app && npx ts-node apps/api/src/main.ts"
+# Start command - push schema and start server
+CMD sh -c "cd packages/database && npx prisma db push --skip-generate && cd /app && npx ts-node apps/api/src/main.ts"
