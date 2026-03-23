@@ -73,7 +73,8 @@ export const Footer = () => {
               {[
                 { to: '/', label: 'Ana Sayfa' },
                 { to: '/menu', label: 'Menü' },
-{ to: '/contact', label: 'İletişim' },
+                { to: '/about', label: 'Hakkımızda' },
+                { to: '/contact', label: 'İletişim' },
               ].map((link) => (
                 <li key={link.to}>
                   <Link
@@ -145,6 +146,33 @@ export const Footer = () => {
 
         {/* Divider */}
         <div className="border-t border-white/10 my-10" />
+
+        {/* Legal Links */}
+        <div className="flex flex-wrap justify-center gap-4 mb-6">
+          {[
+            { to: '/about', label: 'Hakkımızda' },
+            { to: '/privacy', label: 'Gizlilik Sözleşmesi' },
+            { to: '/delivery-terms', label: 'Teslimat ve İade Şartları' },
+            { to: '/distance-sales', label: 'Mesafeli Satış Sözleşmesi' },
+          ].map((link) => (
+            <Link key={link.to} to={link.to} className="font-body text-white/50 hover:text-white text-xs transition-colors">
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Payment Logos */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="bg-white rounded-lg px-3 py-1.5 flex items-center gap-1">
+            <svg viewBox="0 0 48 32" className="h-6"><rect fill="#1A1F71" width="48" height="32" rx="4"/><text x="24" y="20" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="Arial">VISA</text></svg>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-1.5 flex items-center gap-1">
+            <svg viewBox="0 0 48 32" className="h-6"><rect fill="#EB001B" width="48" height="32" rx="4"/><circle cx="19" cy="16" r="10" fill="#EB001B"/><circle cx="29" cy="16" r="10" fill="#F79E1B"/><path d="M24 8.5a10 10 0 010 15 10 10 0 010-15z" fill="#FF5F00"/></svg>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <span className="text-xs font-bold text-gray-800">iyzico ile öde</span>
+          </div>
+        </div>
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-center">

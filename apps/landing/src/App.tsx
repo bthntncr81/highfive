@@ -19,6 +19,10 @@ import { NotFound } from "./pages/NotFound";
 import { Order } from "./pages/Order";
 import { Payment } from "./pages/Payment";
 import { QRCodes } from "./pages/QRCodes";
+import { About } from "./pages/About";
+import { Privacy } from "./pages/Privacy";
+import { DeliveryTerms } from "./pages/DeliveryTerms";
+import { DistanceSales } from "./pages/DistanceSales";
 import { SafeMenu } from "./pages/SafeMenu";
 import { TableScan } from "./pages/TableScan";
 
@@ -134,6 +138,10 @@ const AnimatedRoutes = () => {
           <Route path="/table/:tableId" element={<TableScan />} />
           {/* Payment page */}
           <Route path="/payment" element={<Payment />} />
+          <Route path="/about" element={<PageTransition><About /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
+          <Route path="/delivery-terms" element={<PageTransition><DeliveryTerms /></PageTransition>} />
+          <Route path="/distance-sales" element={<PageTransition><DistanceSales /></PageTransition>} />
           <Route path="/safemenu" element={<SafeMenu />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/qr" element={<QRCodes />} />
