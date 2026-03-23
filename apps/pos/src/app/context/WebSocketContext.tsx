@@ -45,8 +45,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       ws.onmessage = (event) => {
         try {
           const message: WSMessage = JSON.parse(event.data);
-          
+
           if (message.type === 'message' && message.channel) {
+            // Global notification sound for new orders - plays on ANY page
+            if (message.channel === 'orders' && message.data?.action === 'new') {
+              try {
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                [0, 0.25, 0.5].forEach((delay) => {
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.frequency.value = 880;
+                  osc.type = 'square';
+                  gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
+                  osc.start(ctx.currentTime + delay);
+                  osc.stop(ctx.currentTime + delay + 0.18);
+                });
+              } catch (e) { /* silent */ }
+            }
+
             const listeners = listenersRef.current.get(message.channel);
             listeners?.forEach((callback) => callback(message.data));
           }

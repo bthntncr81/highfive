@@ -15,26 +15,22 @@ const CHANNELS = {
 };
 
 export function setupWebSocket(server: FastifyInstance) {
-  // In @fastify/websocket 10+, the handler receives (socket, request) where socket is a WebSocket
+  // @fastify/websocket v11: socket IS the WebSocket object directly
   server.get('/ws', { websocket: true }, (socket: any, req) => {
     const clientId = Math.random().toString(36).substring(7);
     console.log(`✅ Client connected: ${clientId}`);
-    
-    // Debug what we have
-    console.log(`🔍 socket.ws type:`, typeof socket?.ws);
-    console.log(`🔍 socket.ws.on type:`, typeof socket?.ws?.on);
-    console.log(`🔍 socket.ws.send type:`, typeof socket?.ws?.send);
-    
-    // In @fastify/websocket, when the handler gets a request object,
-    // the actual WebSocket is in request.ws (which is socket.ws here since socket IS the request)
-    const ws = socket.ws;
-    
-    if (!ws || typeof ws.on !== 'function') {
-      console.error('❌ Cannot find valid WebSocket!');
+
+    // In @fastify/websocket v11, socket itself is the WebSocket
+    // But it could also be a wrapper with .socket property
+    let ws = socket;
+    if (typeof socket.on !== 'function' && socket.socket && typeof socket.socket.on === 'function') {
+      ws = socket.socket;
+    }
+
+    if (typeof ws.on !== 'function') {
+      console.error('❌ Cannot find valid WebSocket! typeof socket:', typeof socket, 'keys:', Object.keys(socket || {}));
       return;
     }
-    
-    console.log('🎯 Using socket.ws');
 
     // Default to notifications channel
     let subscribedChannels = new Set<string>([CHANNELS.NOTIFICATIONS]);
