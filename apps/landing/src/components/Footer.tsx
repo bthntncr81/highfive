@@ -161,17 +161,10 @@ export const Footer = () => {
           ))}
         </div>
 
-        {/* Payment Logos */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="bg-white rounded-lg px-3 py-1.5 flex items-center gap-1">
-            <svg viewBox="0 0 48 32" className="h-6"><rect fill="#1A1F71" width="48" height="32" rx="4"/><text x="24" y="20" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="Arial">VISA</text></svg>
-          </div>
-          <div className="bg-white rounded-lg px-3 py-1.5 flex items-center gap-1">
-            <svg viewBox="0 0 48 32" className="h-6"><rect fill="#EB001B" width="48" height="32" rx="4"/><circle cx="19" cy="16" r="10" fill="#EB001B"/><circle cx="29" cy="16" r="10" fill="#F79E1B"/><path d="M24 8.5a10 10 0 010 15 10 10 0 010-15z" fill="#FF5F00"/></svg>
-          </div>
-          <div className="bg-white rounded-lg px-3 py-2">
-            <span className="text-xs font-bold text-gray-800">iyzico ile öde</span>
-          </div>
+        {/* Payment Logos - Official iyzico */}
+        <div className="flex flex-col items-center gap-4 mb-6">
+          <img src="/iyzico-band.svg" alt="iyzico ile güvenli ödeme - Visa, MasterCard, Troy" className="h-10" />
+          <img src="/iyzico-ile-ode.svg" alt="iyzico ile öde" className="h-8" />
         </div>
 
         {/* Bottom bar */}
