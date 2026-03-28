@@ -3,6 +3,36 @@ import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, Tab
 import { verifyAuth } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate } from '../websocket';
 import { webhookService } from '../services/webhook.service';
+import * as nodemailer from 'nodemailer';
+
+// Send email notification for new orders
+async function sendOrderNotification(order: any) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || '',
+      },
+    });
+
+    const itemList = order.items?.map((i: any) =>
+      `${i.quantity}x ${i.menuItem?.name || 'Ürün'} - ₺${Number(i.total)}`
+    ).join('\n') || '';
+
+    await transporter.sendMail({
+      from: process.env.SMTP_USER || 'noreply@highfivepps.com',
+      to: 'batuhan.tuncer@adspotz.com',
+      subject: `🍕 Yeni Sipariş #${order.orderNumber} - High Five`,
+      text: `Yeni sipariş geldi!\n\nSipariş #${order.orderNumber}\nTür: ${order.type}\nMüşteri: ${order.customerName || '-'}\nTelefon: ${order.customerPhone || '-'}\nToplam: ₺${Number(order.total)}\n\nÜrünler:\n${itemList}\n\nNotlar: ${order.notes || '-'}`,
+    });
+    console.log(`📧 Order notification email sent for #${order.orderNumber}`);
+  } catch (err) {
+    console.error('📧 Email send failed:', err);
+  }
+}
 
 // Award loyalty points after payment
 async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: string, totalAmount: number) {
@@ -506,6 +536,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     // Broadcast new order
     broadcastNewOrder(order);
 
+    // Send email notification (async, don't wait)
+    sendOrderNotification(order).catch(() => {});
+
     return { order };
   });
 
@@ -612,6 +645,9 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Broadcast new order
     broadcastNewOrder(order);
+
+    // Send email notification (async, don't wait)
+    sendOrderNotification(order).catch(() => {});
 
     return { order };
   });
