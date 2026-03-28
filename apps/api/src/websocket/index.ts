@@ -94,15 +94,15 @@ export function setupWebSocket(server: FastifyInstance) {
       });
     };
 
-    // Attach event listeners - try different patterns
-    if (typeof socket.on === 'function') {
-      socket.on('message', onMessage);
-      socket.on('close', onClose);
-      socket.on('error', () => onClose());
-    } else if (typeof socket.addEventListener === 'function') {
-      socket.addEventListener('message', (e: any) => onMessage(e.data));
-      socket.addEventListener('close', onClose);
-      socket.addEventListener('error', () => onClose());
+    // Attach event listeners
+    if (typeof ws.on === 'function') {
+      ws.on('message', onMessage);
+      ws.on('close', onClose);
+      ws.on('error', () => onClose());
+    } else if (typeof ws.addEventListener === 'function') {
+      ws.addEventListener('message', (e: any) => onMessage(e.data));
+      ws.addEventListener('close', onClose);
+      ws.addEventListener('error', () => onClose());
     }
   });
 }
