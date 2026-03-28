@@ -16,6 +16,7 @@ interface Order {
   user?: { name: string };
   customerName?: string;
   customerPhone?: string;
+  customerAddress?: string;
   source?: string;
   items: any[];
 }
@@ -247,8 +248,14 @@ export default function Orders() {
                     
                     <p className="text-sm text-gray-500">
                       {order.items.length} ürün • {order.customerName || order.user?.name || 'Sistem'}
+                      {order.customerPhone && <span> • {order.customerPhone}</span>}
                     </p>
-                    
+                    {order.customerAddress && (
+                      <p className="text-sm text-blue-600 mt-0.5">
+                        📍 {order.customerAddress}
+                      </p>
+                    )}
+
                     <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
                       <Clock className="w-3 h-3" />
                       <span>{formatDate(order.createdAt)}</span>
