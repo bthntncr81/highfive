@@ -134,16 +134,13 @@ export function broadcast(channel: string, data: any) {
 
   let sentCount = 0;
   channelClients.forEach((client: any) => {
-    // Check readyState - can be number (1) or string ('open')
-    const state = client.readyState;
-    const isOpen = state === 1 || state === WebSocket.OPEN || state === 'open';
-    if (isOpen) {
-      try {
-        client.send(message);
-        sentCount++;
-      } catch (err) {
-        console.error('  ❌ Send error:', err);
-      }
+    // Just try to send - don't check readyState (it varies by WS implementation)
+    try {
+      client.send(message);
+      sentCount++;
+    } catch (err) {
+      // Remove dead client
+      channelClients.delete(client);
     }
   });
 
