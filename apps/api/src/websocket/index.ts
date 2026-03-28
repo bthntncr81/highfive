@@ -13,26 +13,37 @@ const CHANNELS = {
 };
 
 export function setupWebSocket(server: FastifyInstance) {
-  server.get('/ws', { websocket: true }, (socket: any, req: any) => {
+  // Use regular function to get proper 'this' context from fastify
+  server.get('/ws', { websocket: true }, function (this: any, connection: any, request: any) {
     const clientId = Math.random().toString(36).substring(7);
-    console.log(`✅ WS Client connected: ${clientId}`);
 
-    // Debug: log what socket actually is
-    const proto = Object.getOwnPropertyNames(Object.getPrototypeOf(socket));
-    console.log(`🔍 ${clientId} socket proto methods: ${proto.filter(m => !m.startsWith('_')).join(', ')}`);
-    console.log(`🔍 ${clientId} socket.send=${typeof socket.send}, socket.write=${typeof socket.write}, socket.on=${typeof socket.on}`);
-    console.log(`🔍 ${clientId} constructor: ${socket.constructor?.name}`);
+    // In @fastify/websocket v11, first arg could be WebSocket or Request depending on version
+    // Detect: if connection has .send it's WebSocket, if it has .raw it's Request
+    let ws: any = connection;
+    if (!ws.send && request && request.send) {
+      // Parameters are swapped
+      ws = request;
+    }
+    if (!ws.send && connection.socket && connection.socket.send) {
+      ws = connection.socket;
+    }
 
-    // socket from @fastify/websocket v11 wsHandler IS the raw WebSocket
-    // .send() should be on the prototype
-    const sendFn = (data: string) => {
-      try {
-        if (typeof socket.send === 'function') {
-          socket.send(data);
-        } else if (typeof socket.write === 'function') {
-          socket.write(data);
+    console.log(`✅ WS Client ${clientId}: ws.send=${typeof ws.send}, ws.on=${typeof ws.on}, ws.constructor=${ws.constructor?.name}`);
+
+    if (typeof ws.send !== 'function') {
+      console.error(`❌ ${clientId}: Cannot find WebSocket.send! Args: connection.constructor=${connection.constructor?.name}, request.constructor=${request?.constructor?.name}`);
+      // Log all args to find the WebSocket
+      for (const [i, arg] of [connection, request].entries()) {
+        if (arg) {
+          const p = Object.getOwnPropertyNames(Object.getPrototypeOf(arg)).filter((m: string) => !m.startsWith('_'));
+          console.log(`  arg${i}: constructor=${arg.constructor?.name}, methods=${p.slice(0,10).join(',')}`);
         }
-      } catch (e) { /* dead connection */ }
+      }
+      return;
+    }
+
+    const sendFn = (data: string) => {
+      try { ws.send(data); } catch (e) { /* dead */ }
     };
 
     const client = { send: sendFn };
