@@ -477,7 +477,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Get tax rate from settings
     const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
-    const taxRate = (settings?.value as any)?.taxRate || 10;
+    const taxRate = (settings?.value as any)?.taxRate ?? 10;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
 
@@ -597,7 +597,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Get tax rate from settings
     const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
-    const taxRate = (settings?.value as any)?.taxRate || 10;
+    const taxRate = (settings?.value as any)?.taxRate ?? 10;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
 
@@ -818,7 +818,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Update order totals
     const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
-    const taxRate = (settings?.value as any)?.taxRate || 10;
+    const taxRate = (settings?.value as any)?.taxRate ?? 10;
     const newSubtotal = Number(order.subtotal) + additionalTotal;
     const newTax = newSubtotal * (taxRate / 100);
     const newTotal = newSubtotal + newTax;
