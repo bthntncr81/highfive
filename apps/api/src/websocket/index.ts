@@ -17,40 +17,23 @@ export function setupWebSocket(server: FastifyInstance) {
     const clientId = Math.random().toString(36).substring(7);
     console.log(`✅ WS Client connected: ${clientId}`);
 
-    // In @fastify/websocket v11, first param is a WebSocket-like Duplex stream
-    // It has .on() for events and we need to use .send() if available,
-    // otherwise fall back to raw connection methods
+    // Debug: log what socket actually is
+    const proto = Object.getOwnPropertyNames(Object.getPrototypeOf(socket));
+    console.log(`🔍 ${clientId} socket proto methods: ${proto.filter(m => !m.startsWith('_')).join(', ')}`);
+    console.log(`🔍 ${clientId} socket.send=${typeof socket.send}, socket.write=${typeof socket.write}, socket.on=${typeof socket.on}`);
+    console.log(`🔍 ${clientId} constructor: ${socket.constructor?.name}`);
 
-    // Try to find the actual send function
-    let sendFn: ((data: string) => void) | null = null;
-
-    if (typeof socket.send === 'function') {
-      sendFn = (data: string) => socket.send(data);
-    } else if (socket.socket && typeof socket.socket.send === 'function') {
-      sendFn = (data: string) => socket.socket.send(data);
-    } else if (socket.raw && socket.raw.socket) {
-      // Fastify request - the WS connection is on the raw request upgrade
-      const rawWs = socket.raw.socket;
-      if (typeof rawWs.send === 'function') {
-        sendFn = (data: string) => rawWs.send(data);
-      }
-    }
-
-    // If still no send, try using the connection as a writable stream
-    if (!sendFn) {
-      // @fastify/websocket passes a WebSocket that wraps the stream
-      // The .write() method should work for sending data
-      if (typeof socket.write === 'function') {
-        sendFn = (data: string) => {
-          try { socket.write(data); } catch(e) { /* dead */ }
-        };
-      }
-    }
-
-    if (!sendFn) {
-      console.error(`❌ ${clientId}: No way to send data to client!`);
-      return;
-    }
+    // socket from @fastify/websocket v11 wsHandler IS the raw WebSocket
+    // .send() should be on the prototype
+    const sendFn = (data: string) => {
+      try {
+        if (typeof socket.send === 'function') {
+          socket.send(data);
+        } else if (typeof socket.write === 'function') {
+          socket.write(data);
+        }
+      } catch (e) { /* dead connection */ }
+    };
 
     const client = { send: sendFn };
 
