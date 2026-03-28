@@ -3,7 +3,8 @@ import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, Tab
 import { verifyAuth } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate } from '../websocket';
 import { webhookService } from '../services/webhook.service';
-import * as nodemailer from 'nodemailer';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const nodemailer = require('nodemailer');
 
 // Send email notification for new orders
 async function sendOrderNotification(order: any) {
