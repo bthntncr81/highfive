@@ -9,8 +9,8 @@ RUN apk add --no-cache openssl
 # Copy package files
 COPY package*.json ./
 
-# Install root dependencies
-RUN npm install
+# Install root dependencies + nodemailer for email notifications
+RUN npm install && npm install nodemailer
 
 # Copy Prisma schema and generate client
 COPY packages/database/prisma ./packages/database/prisma
