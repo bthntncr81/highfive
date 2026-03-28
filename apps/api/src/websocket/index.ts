@@ -133,16 +133,23 @@ export function broadcast(channel: string, data: any) {
   });
 
   let sentCount = 0;
+  const deadClients: any[] = [];
   channelClients.forEach((client: any) => {
-    // Just try to send - don't check readyState (it varies by WS implementation)
     try {
-      client.send(message);
-      sentCount++;
-    } catch (err) {
-      // Remove dead client
-      channelClients.delete(client);
+      console.log(`  📤 Sending to client: typeof=${typeof client}, hasOn=${typeof client?.on}, hasSend=${typeof client?.send}, readyState=${client?.readyState}`);
+      if (typeof client.send === 'function') {
+        client.send(message);
+        sentCount++;
+      } else {
+        console.log('  ⚠️ Client has no send method, removing');
+        deadClients.push(client);
+      }
+    } catch (err: any) {
+      console.error(`  ❌ Send error: ${err.message}`);
+      deadClients.push(client);
     }
   });
+  deadClients.forEach(c => channelClients.delete(c));
 
   console.log(`✅ Sent to ${sentCount}/${clientCount} clients on ${channel}`);
 }
