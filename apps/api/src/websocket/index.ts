@@ -20,16 +20,38 @@ export function setupWebSocket(server: FastifyInstance) {
     const clientId = Math.random().toString(36).substring(7);
     console.log(`✅ Client connected: ${clientId}`);
 
-    // In @fastify/websocket v11, socket itself is the WebSocket
-    // But it could also be a wrapper with .socket property
-    let ws = socket;
-    if (typeof socket.on !== 'function' && socket.socket && typeof socket.socket.on === 'function') {
-      ws = socket.socket;
+    // @fastify/websocket v11: socket is a Duplex stream wrapper
+    // The actual WebSocket with .send() can be at different places
+    let ws: any = null;
+    if (typeof socket.send === 'function') {
+      ws = socket; // Direct WebSocket
+    } else if (socket.socket && typeof socket.socket.send === 'function') {
+      ws = socket.socket; // Wrapped in .socket
+    } else if (socket._ws && typeof socket._ws.send === 'function') {
+      ws = socket._ws;
+    } else {
+      // Last resort: use socket as Duplex stream - write JSON directly
+      console.log('🔍 Socket keys:', Object.getOwnPropertyNames(Object.getPrototypeOf(socket)).join(', '));
+      console.log('🔍 Socket direct keys:', Object.keys(socket).join(', '));
+      // Try to find the raw websocket
+      for (const key of Object.keys(socket)) {
+        const val = (socket as any)[key];
+        if (val && typeof val === 'object' && typeof val.send === 'function') {
+          ws = val;
+          console.log(`🎯 Found WS at socket.${key}`);
+          break;
+        }
+      }
     }
 
-    if (typeof ws.on !== 'function') {
-      console.error('❌ Cannot find valid WebSocket! typeof socket:', typeof socket, 'keys:', Object.keys(socket || {}));
-      return;
+    if (!ws) {
+      console.error('❌ Cannot find valid WebSocket with send()! Using socket.write fallback');
+      // Use socket itself with write() method for Duplex streams
+      ws = {
+        on: socket.on.bind(socket),
+        send: (data: string) => socket.write(data),
+        readyState: 'open',
+      };
     }
 
     // Default to notifications channel
