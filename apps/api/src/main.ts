@@ -96,8 +96,10 @@ server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
 server.register(integrationPartnerRoutes, { prefix: '/api/integration-partners' }); // Partner management UI
 
-// WebSocket
-setupWebSocket(server);
+// WebSocket - must be registered AFTER websocket plugin is ready
+server.after(() => {
+  setupWebSocket(server);
+});
 
 // Start server
 const start = async () => {
