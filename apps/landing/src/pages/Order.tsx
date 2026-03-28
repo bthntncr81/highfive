@@ -164,10 +164,36 @@ export const Order = () => {
   const handleSubmitOrder = async () => {
     if (items.length === 0) return;
 
-    // Validation for delivery
-    if (orderMode === 'delivery' && !customerAddress.trim()) {
-      setError('Lütfen adres bilgisi girin');
-      return;
+    // Form validations
+    if (orderMode === 'takeaway' || orderMode === 'delivery') {
+      if (!customerName.trim() || customerName.trim().length < 2) {
+        setError('Lütfen adınızı girin (en az 2 karakter)');
+        return;
+      }
+      if (customerName.includes('@')) {
+        setError('Ad alanına email adresi girmeyin, lütfen adınızı yazın');
+        return;
+      }
+      if (!customerPhone.trim() || !/^0?5\d{9}$/.test(customerPhone.replace(/\s/g, ''))) {
+        setError('Geçerli bir telefon numarası girin (05XX XXX XX XX)');
+        return;
+      }
+    }
+    if (orderMode === 'delivery') {
+      if (!customerAddress.trim() || customerAddress.trim().length < 10) {
+        setError('Lütfen açık adres girin (en az 10 karakter)');
+        return;
+      }
+      if (customerAddress.includes('@')) {
+        setError('Adres alanına email adresi girmeyin, lütfen teslimat adresinizi yazın');
+        return;
+      }
+    }
+    if (paymentMethod === 'card' && customerEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+        setError('Geçerli bir email adresi girin');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -508,9 +534,10 @@ export const Order = () => {
                 <input
                   type="text"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => setCustomerName(e.target.value.replace(/[@]/g, ''))}
                   className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none"
                   placeholder="Adınız Soyadınız"
+                  maxLength={50}
                 />
               </div>
               <div>
@@ -518,9 +545,11 @@ export const Order = () => {
                 <input
                   type="tel"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9\s]/g, ''))}
                   className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none"
                   placeholder="05XX XXX XX XX"
+                  maxLength={15}
+                  pattern="[0-9\s]*"
                 />
               </div>
 
@@ -536,7 +565,8 @@ export const Order = () => {
                     onChange={(e) => setCustomerAddress(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none"
                     rows={3}
-                    placeholder="Mahalle, sokak, bina no, daire no..."
+                    placeholder="Örn: Cumhuriyet Mah. İstanbul Cad. No:5 Daire:3"
+                    maxLength={200}
                   />
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2 text-blue-700">
