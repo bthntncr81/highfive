@@ -1,10 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import WebSocket from 'ws';
 
-// Connected clients
-const clients = new Map<string, Set<WebSocket>>();
+// Connected clients - store raw write functions
+const clients = new Map<string, Set<{ send: (data: string) => void }>>();
 
-// Channels
 const CHANNELS = {
   ORDERS: 'orders',
   KITCHEN: 'kitchen',
@@ -15,123 +13,103 @@ const CHANNELS = {
 };
 
 export function setupWebSocket(server: FastifyInstance) {
-  // @fastify/websocket v11: socket IS the WebSocket object directly
-  server.get('/ws', { websocket: true }, (socket: any, req) => {
+  server.get('/ws', { websocket: true }, (socket: any, req: any) => {
     const clientId = Math.random().toString(36).substring(7);
-    console.log(`✅ Client connected: ${clientId}`);
+    console.log(`✅ WS Client connected: ${clientId}`);
 
-    // @fastify/websocket v11: socket is a Duplex stream wrapper
-    // The actual WebSocket with .send() can be at different places
-    let ws: any = null;
+    // In @fastify/websocket v11, first param is a WebSocket-like Duplex stream
+    // It has .on() for events and we need to use .send() if available,
+    // otherwise fall back to raw connection methods
+
+    // Try to find the actual send function
+    let sendFn: ((data: string) => void) | null = null;
+
     if (typeof socket.send === 'function') {
-      ws = socket; // Direct WebSocket
+      sendFn = (data: string) => socket.send(data);
     } else if (socket.socket && typeof socket.socket.send === 'function') {
-      ws = socket.socket; // Wrapped in .socket
-    } else if (socket._ws && typeof socket._ws.send === 'function') {
-      ws = socket._ws;
-    } else {
-      // Last resort: use socket as Duplex stream - write JSON directly
-      console.log('🔍 Socket keys:', Object.getOwnPropertyNames(Object.getPrototypeOf(socket)).join(', '));
-      console.log('🔍 Socket direct keys:', Object.keys(socket).join(', '));
-      // Try to find the raw websocket
-      for (const key of Object.keys(socket)) {
-        const val = (socket as any)[key];
-        if (val && typeof val === 'object' && typeof val.send === 'function') {
-          ws = val;
-          console.log(`🎯 Found WS at socket.${key}`);
-          break;
-        }
+      sendFn = (data: string) => socket.socket.send(data);
+    } else if (socket.raw && socket.raw.socket) {
+      // Fastify request - the WS connection is on the raw request upgrade
+      const rawWs = socket.raw.socket;
+      if (typeof rawWs.send === 'function') {
+        sendFn = (data: string) => rawWs.send(data);
       }
     }
 
-    if (!ws) {
-      console.error('❌ Cannot find valid WebSocket with send()! Using socket.write fallback');
-      // Use socket itself with write() method for Duplex streams
-      ws = {
-        on: socket.on.bind(socket),
-        send: (data: string) => socket.write(data),
-        readyState: 'open',
-      };
+    // If still no send, try using the connection as a writable stream
+    if (!sendFn) {
+      // @fastify/websocket passes a WebSocket that wraps the stream
+      // The .write() method should work for sending data
+      if (typeof socket.write === 'function') {
+        sendFn = (data: string) => {
+          try { socket.write(data); } catch(e) { /* dead */ }
+        };
+      }
     }
 
-    // Default to notifications channel
-    let subscribedChannels = new Set<string>([CHANNELS.NOTIFICATIONS]);
-    
-    // Auto-subscribe to notifications and kitchen channels
-    [CHANNELS.NOTIFICATIONS, CHANNELS.KITCHEN, CHANNELS.ORDERS].forEach(channel => {
-      if (!clients.has(channel)) {
-        clients.set(channel, new Set());
-      }
-      clients.get(channel)!.add(ws);
+    if (!sendFn) {
+      console.error(`❌ ${clientId}: No way to send data to client!`);
+      return;
+    }
+
+    const client = { send: sendFn };
+
+    // Subscribe to default channels
+    const subscribedChannels = new Set<string>([CHANNELS.NOTIFICATIONS, CHANNELS.KITCHEN, CHANNELS.ORDERS]);
+    subscribedChannels.forEach(channel => {
+      if (!clients.has(channel)) clients.set(channel, new Set());
+      clients.get(channel)!.add(client);
     });
-    subscribedChannels.add(CHANNELS.KITCHEN);
-    subscribedChannels.add(CHANNELS.ORDERS);
-    console.log(`📢 ${clientId} auto-subscribed to notifications, kitchen, orders`);
+    console.log(`📢 ${clientId} subscribed to orders, kitchen, notifications`);
 
-    ws.on('message', (rawMessage: any) => {
+    // Handle incoming messages
+    const onMessage = (rawMessage: any) => {
       try {
         const msgStr = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString();
         const message = JSON.parse(msgStr);
-        console.log(`📨 Message from ${clientId}:`, message.type);
 
         switch (message.type) {
           case 'subscribe':
-            if (
-              message.channel &&
-              Object.values(CHANNELS).includes(message.channel)
-            ) {
+            if (message.channel && Object.values(CHANNELS).includes(message.channel)) {
               subscribedChannels.add(message.channel);
-
-              if (!clients.has(message.channel)) {
-                clients.set(message.channel, new Set());
-              }
-              clients.get(message.channel)!.add(ws);
-
-              console.log(`📢 ${clientId} subscribed to ${message.channel}`);
-
-              ws.send(
-                JSON.stringify({
-                  type: 'subscribed',
-                  channel: message.channel,
-                }),
-              );
+              if (!clients.has(message.channel)) clients.set(message.channel, new Set());
+              clients.get(message.channel)!.add(client);
+              sendFn!(JSON.stringify({ type: 'subscribed', channel: message.channel }));
             }
             break;
-
           case 'unsubscribe':
             if (message.channel) {
               subscribedChannels.delete(message.channel);
-              clients.get(message.channel)?.delete(ws);
-
-              ws.send(
-                JSON.stringify({
-                  type: 'unsubscribed',
-                  channel: message.channel,
-                }),
-              );
+              clients.get(message.channel)?.delete(client);
+              sendFn!(JSON.stringify({ type: 'unsubscribed', channel: message.channel }));
             }
             break;
-
           case 'ping':
-            ws.send(JSON.stringify({ type: 'pong' }));
+            sendFn!(JSON.stringify({ type: 'pong' }));
             break;
         }
       } catch (err) {
-        console.error('WebSocket message error:', err);
+        // ignore parse errors
       }
-    });
+    };
 
-    ws.on('close', () => {
-      console.log(`❌ Client disconnected: ${clientId}`);
-      // Remove from all channels
-      subscribedChannels.forEach((channel) => {
-        clients.get(channel)?.delete(ws);
+    const onClose = () => {
+      console.log(`❌ WS Client disconnected: ${clientId}`);
+      subscribedChannels.forEach(channel => {
+        clients.get(channel)?.delete(client);
       });
-    });
+    };
 
-    ws.on('error', (err: Error) => {
-      console.error('WebSocket error:', err);
-    });
+    // Attach event listeners - try different patterns
+    if (typeof socket.on === 'function') {
+      socket.on('message', onMessage);
+      socket.on('close', onClose);
+      socket.on('error', () => onClose());
+    } else if (typeof socket.addEventListener === 'function') {
+      socket.addEventListener('message', (e: any) => onMessage(e.data));
+      socket.addEventListener('close', onClose);
+      socket.addEventListener('error', () => onClose());
+    }
   });
 }
 
@@ -140,12 +118,7 @@ export function broadcast(channel: string, data: any) {
   const channelClients = clients.get(channel);
   const clientCount = channelClients?.size || 0;
 
-  console.log(`📡 Broadcasting to ${channel}: ${clientCount} clients`);
-
-  if (!channelClients || clientCount === 0) {
-    console.log(`⚠️ No clients subscribed to ${channel}`);
-    return;
-  }
+  if (!channelClients || clientCount === 0) return;
 
   const message = JSON.stringify({
     type: 'message',
@@ -155,70 +128,45 @@ export function broadcast(channel: string, data: any) {
   });
 
   let sentCount = 0;
-  const deadClients: any[] = [];
-  channelClients.forEach((client: any) => {
+  const dead: any[] = [];
+  channelClients.forEach((client) => {
     try {
-      console.log(`  📤 Sending to client: typeof=${typeof client}, hasOn=${typeof client?.on}, hasSend=${typeof client?.send}, readyState=${client?.readyState}`);
-      if (typeof client.send === 'function') {
-        client.send(message);
-        sentCount++;
-      } else {
-        console.log('  ⚠️ Client has no send method, removing');
-        deadClients.push(client);
-      }
-    } catch (err: any) {
-      console.error(`  ❌ Send error: ${err.message}`);
-      deadClients.push(client);
+      client.send(message);
+      sentCount++;
+    } catch (err) {
+      dead.push(client);
     }
   });
-  deadClients.forEach(c => channelClients.delete(c));
+  dead.forEach(c => channelClients.delete(c));
 
-  console.log(`✅ Sent to ${sentCount}/${clientCount} clients on ${channel}`);
+  console.log(`📡 Broadcast ${channel}: ${sentCount}/${clientCount} sent`);
 }
 
-// Broadcast order updates
 export function broadcastOrderUpdate(order: any) {
   broadcast(CHANNELS.ORDERS, { action: 'update', order });
   broadcast(CHANNELS.KITCHEN, { action: 'update', order });
 }
 
-// Broadcast new order
 export function broadcastNewOrder(order: any) {
   broadcast(CHANNELS.ORDERS, { action: 'new', order });
   broadcast(CHANNELS.KITCHEN, { action: 'new', order });
-  broadcast(CHANNELS.NOTIFICATIONS, {
-    action: 'new_order',
-    message: `Yeni sipariş: #${order.orderNumber}`,
-    order,
-  });
+  broadcast(CHANNELS.NOTIFICATIONS, { action: 'new_order', message: `Yeni sipariş: #${order.orderNumber}`, order });
 }
 
-// Broadcast table update
 export function broadcastTableUpdate(table: any) {
   broadcast(CHANNELS.TABLES, { action: 'update', table });
 }
 
-// Broadcast menu update (stock, availability, price changes)
 export function broadcastMenuUpdate(data: any) {
   broadcast(CHANNELS.MENU, data);
-  // Also notify kitchen if item becomes unavailable
   if (data.action === 'availability' && !data.item?.available) {
-    broadcast(CHANNELS.KITCHEN, {
-      action: 'item_unavailable',
-      item: data.item,
-    });
+    broadcast(CHANNELS.KITCHEN, { action: 'item_unavailable', item: data.item });
   }
-  // Notify about low stock
   if (data.action === 'low-stock-alert') {
-    broadcast(CHANNELS.NOTIFICATIONS, {
-      action: 'low_stock',
-      message: `⚠️ Düşük stok: ${data.item.name} (${data.remaining} adet kaldı)`,
-      item: data.item,
-    });
+    broadcast(CHANNELS.NOTIFICATIONS, { action: 'low_stock', message: `⚠️ Düşük stok: ${data.item.name}`, item: data.item });
   }
 }
 
-// Broadcast analytics event
 export function broadcastAnalytics(data: any) {
   broadcast(CHANNELS.ANALYTICS, data);
 }
