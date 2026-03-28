@@ -34,6 +34,8 @@ services:
       API_URL: ${API_URL:-http://localhost:3000}
       IYZICO_API_KEY: sandbox-ifkcjkaPdtshoWkt36gjOwpZ9Z5XsUZM
       IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     volumes:
       - uploads_data:/app/uploads
     depends_on:
