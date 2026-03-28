@@ -9,7 +9,7 @@ type MenuGridFromAPIProps = {
 }
 
 export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
-  const { services } = useSettings()
+  const { services, isWithinOrderHours } = useSettings()
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -76,7 +76,7 @@ export const MenuGridFromAPI = ({ items }: MenuGridFromAPIProps) => {
           item={item}
           itemVariants={itemVariants}
           getBadgeStyle={getBadgeStyle}
-          cartEnabled={services.cartEnabled}
+          cartEnabled={services.cartEnabled && isWithinOrderHours}
         />
       ))}
     </motion.div>

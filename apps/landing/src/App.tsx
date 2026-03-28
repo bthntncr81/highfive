@@ -90,7 +90,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const isAdmin = location.pathname === "/admin";
-  const { services } = useSettings();
+  const { services, isWithinOrderHours } = useSettings();
 
   return (
     <>
@@ -157,8 +157,8 @@ const AnimatedRoutes = () => {
       </AnimatePresence>
 
       {!isAdmin && <Footer />}
-      {!isAdmin && services.cartEnabled && <CartButton />}
-      {!isAdmin && services.cartEnabled && <Cart />}
+      {!isAdmin && services.cartEnabled && isWithinOrderHours && <CartButton />}
+      {!isAdmin && services.cartEnabled && isWithinOrderHours && <Cart />}
     </>
   );
 };
