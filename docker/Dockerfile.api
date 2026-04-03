@@ -43,4 +43,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Start command - push schema and start server
-CMD sh -c "cd packages/database && npx prisma db push --skip-generate && cd /app && npx ts-node --skip-project apps/api/src/main.ts"
+CMD sh -c "cd packages/database && npx prisma db push --skip-generate && cd /app && npx ts-node apps/api/src/main.ts"
