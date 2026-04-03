@@ -39,7 +39,6 @@ services:
       WA_PHONE_NUMBER_ID: ${WA_PHONE_NUMBER_ID:-}
       WA_ACCESS_TOKEN: ${WA_ACCESS_TOKEN:-}
       WA_NOTIFY_PHONE: ${WA_NOTIFY_PHONE:-905552438181}
-    command: sh -c "cd packages/database && npx prisma db push --skip-generate && cd /app && npx ts-node --skip-project apps/api/src/main.ts"
     volumes:
       - uploads_data:/app/uploads
     depends_on:
