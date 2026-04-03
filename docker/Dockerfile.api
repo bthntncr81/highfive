@@ -21,8 +21,8 @@ RUN cd packages/database && npm install && npx prisma generate
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
-# Fix tsconfig for nodemailer compatibility + jsonwebtoken types
-RUN node -e "const f=require('fs');const c=JSON.parse(f.readFileSync('tsconfig.base.json'));c.compilerOptions.rootDir='.';f.writeFileSync('tsconfig.base.json',JSON.stringify(c,null,2));" && \
+# Fix tsconfig + jsonwebtoken types
+RUN node -e "const f=require('fs');const c=JSON.parse(f.readFileSync('tsconfig.base.json'));c.compilerOptions.rootDir='.';c.compilerOptions.module='commonjs';c.compilerOptions.moduleResolution='node';c.compilerOptions.noEmitOnError=false;delete c.compilerOptions.customConditions;f.writeFileSync('tsconfig.base.json',JSON.stringify(c,null,2));" && \
     mkdir -p node_modules/@types/jsonwebtoken && \
     echo 'declare module "jsonwebtoken" { function sign(p:any,s:any,o?:any):string; function verify(t:string,s:any,o?:any):any; function decode(t:string,o?:any):any; export {sign,verify,decode}; export default {sign,verify,decode}; }' > node_modules/@types/jsonwebtoken/index.d.ts && \
     echo '{"name":"@types/jsonwebtoken","version":"9.0.0","types":"index.d.ts"}' > node_modules/@types/jsonwebtoken/package.json
