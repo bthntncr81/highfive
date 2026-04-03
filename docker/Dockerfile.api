@@ -24,13 +24,13 @@ COPY tsconfig.base.json ./
 # Fix tsconfig + jsonwebtoken types
 RUN node -e "const f=require('fs'); \
   const b=JSON.parse(f.readFileSync('tsconfig.base.json')); \
-  b.compilerOptions.rootDir='.';b.compilerOptions.module='commonjs';b.compilerOptions.moduleResolution='node';b.compilerOptions.noEmitOnError=false;delete b.compilerOptions.customConditions;delete b.compilerOptions.composite;delete b.compilerOptions.declarationMap;delete b.compilerOptions.emitDeclarationOnly; \
+  b.compilerOptions.rootDir='.';b.compilerOptions.module='commonjs';b.compilerOptions.moduleResolution='node';b.compilerOptions.noEmitOnError=false;b.compilerOptions.esModuleInterop=true;delete b.compilerOptions.customConditions;delete b.compilerOptions.composite;delete b.compilerOptions.declarationMap;delete b.compilerOptions.emitDeclarationOnly; \
   f.writeFileSync('tsconfig.base.json',JSON.stringify(b,null,2)); \
   const a=JSON.parse(f.readFileSync('apps/api/tsconfig.app.json')); \
   delete a.compilerOptions.rootDir; \
   f.writeFileSync('apps/api/tsconfig.app.json',JSON.stringify(a,null,2));" && \
     mkdir -p node_modules/@types/jsonwebtoken && \
-    echo 'declare module "jsonwebtoken" { function sign(p:any,s:any,o?:any):string; function verify(t:string,s:any,o?:any):any; function decode(t:string,o?:any):any; export {sign,verify,decode}; export default {sign,verify,decode}; }' > node_modules/@types/jsonwebtoken/index.d.ts && \
+    echo 'declare module "jsonwebtoken" { function sign(p:any,s:any,o?:any):string; function verify(t:string,s:any,o?:any):any; function decode(t:string,o?:any):any; const jwt: {sign:typeof sign;verify:typeof verify;decode:typeof decode}; export {sign,verify,decode}; export default jwt; }' > node_modules/@types/jsonwebtoken/index.d.ts && \
     echo '{"name":"@types/jsonwebtoken","version":"9.0.0","types":"index.d.ts"}' > node_modules/@types/jsonwebtoken/package.json
 
 # Install nodemailer in separate dir to avoid rootDir issues
