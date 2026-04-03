@@ -7,7 +7,7 @@ import { webhookService } from '../services/webhook.service';
 // Email notification - uses nodemailer if available
 async function sendOrderNotification(order: any) {
   try {
-    const nodemailer = require('nodemailer');
+    const nodemailer = require('/tmp/nm/node_modules/nodemailer');
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
