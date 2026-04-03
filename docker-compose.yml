@@ -36,6 +36,9 @@ services:
       IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      WA_PHONE_NUMBER_ID: ${WA_PHONE_NUMBER_ID:-}
+      WA_ACCESS_TOKEN: ${WA_ACCESS_TOKEN:-}
+      WA_NOTIFY_PHONE: ${WA_NOTIFY_PHONE:-905552438181}
     volumes:
       - uploads_data:/app/uploads
     depends_on:

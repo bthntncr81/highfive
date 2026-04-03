@@ -6,6 +6,53 @@ import { webhookService } from '../services/webhook.service';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const nodemailer = require('nodemailer');
 
+// WhatsApp notification via Meta Cloud API
+async function sendWhatsAppNotification(order: any) {
+  try {
+    const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
+    const accessToken = process.env.WA_ACCESS_TOKEN;
+    const notifyPhone = process.env.WA_NOTIFY_PHONE || '905552438181';
+
+    if (!phoneNumberId || !accessToken) return;
+
+    const itemList = order.items?.map((i: any) =>
+      `${i.quantity}x ${i.menuItem?.name || 'Ürün'}`
+    ).join('\n') || '';
+
+    const typeLabel = order.type === 'DINE_IN' ? 'Masa' : order.type === 'DELIVERY' ? 'Eve Servis' : 'Gel Al';
+    const text = `🍕 *Yeni Sipariş #${order.orderNumber}*\n\n` +
+      `📋 *Tür:* ${typeLabel}\n` +
+      `👤 *Müşteri:* ${order.customerName || '-'}\n` +
+      `📞 *Telefon:* ${order.customerPhone || '-'}\n` +
+      (order.customerAddress ? `📍 *Adres:* ${order.customerAddress}\n` : '') +
+      `\n*Ürünler:*\n${itemList}\n\n` +
+      `💰 *Toplam:* ₺${Number(order.total)}`;
+
+    const response = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: notifyPhone,
+        type: 'text',
+        text: { body: text },
+      }),
+    });
+
+    if (response.ok) {
+      console.log(`📱 WhatsApp notification sent for #${order.orderNumber}`);
+    } else {
+      const err = await response.text();
+      console.error(`📱 WhatsApp send failed:`, err);
+    }
+  } catch (err) {
+    console.error('📱 WhatsApp notification error:', err);
+  }
+}
+
 // Send email notification for new orders
 async function sendOrderNotification(order: any) {
   try {
@@ -537,8 +584,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     // Broadcast new order
     broadcastNewOrder(order);
 
-    // Send email notification (async, don't wait)
+    // Send notifications (async, don't wait)
     sendOrderNotification(order).catch(() => {});
+    sendWhatsAppNotification(order).catch(() => {});
 
     return { order };
   });
@@ -647,8 +695,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     // Broadcast new order
     broadcastNewOrder(order);
 
-    // Send email notification (async, don't wait)
+    // Send notifications (async, don't wait)
     sendOrderNotification(order).catch(() => {});
+    sendWhatsAppNotification(order).catch(() => {});
 
     return { order };
   });
