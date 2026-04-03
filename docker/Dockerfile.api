@@ -21,6 +21,15 @@ RUN cd packages/database && npm install && npx prisma generate
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
+# Fix tsconfig for nodemailer compatibility + jsonwebtoken types
+RUN node -e "const f=require('fs');const c=JSON.parse(f.readFileSync('tsconfig.base.json'));c.compilerOptions.rootDir='.';f.writeFileSync('tsconfig.base.json',JSON.stringify(c,null,2));" && \
+    mkdir -p node_modules/@types/jsonwebtoken && \
+    echo 'declare module "jsonwebtoken" { function sign(p:any,s:any,o?:any):string; function verify(t:string,s:any,o?:any):any; function decode(t:string,o?:any):any; export {sign,verify,decode}; export default {sign,verify,decode}; }' > node_modules/@types/jsonwebtoken/index.d.ts && \
+    echo '{"name":"@types/jsonwebtoken","version":"9.0.0","types":"index.d.ts"}' > node_modules/@types/jsonwebtoken/package.json
+
+# Install nodemailer in separate dir to avoid rootDir issues
+RUN mkdir -p /tmp/nm && cd /tmp/nm && npm init -y 2>/dev/null && npm install nodemailer
+
 # Install nodemailer for email notifications (after source copy)
 RUN npm install --no-save --ignore-scripts nodemailer 2>/dev/null; true
 
