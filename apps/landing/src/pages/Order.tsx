@@ -12,10 +12,11 @@ type OrderMode = 'table' | 'takeaway' | 'delivery' | null;
 interface ServiceSettings {
   takeawayEnabled: boolean;
   deliveryEnabled: boolean;
+  deliveryFee: number;
   onlinePaymentEnabled: boolean;
 }
 
-const DELIVERY_FEE = 29; // Kurye ücreti
+const DEFAULT_DELIVERY_FEE = 29; // Varsayılan kurye ücreti
 
 const TIP_OPTIONS = [
   { percent: 0, label: 'Yok' },
@@ -92,7 +93,8 @@ export const Order = () => {
     ? parseFloat(customTip) || 0
     : Math.round(totalPrice * (selectedTipPercent / 100) * 100) / 100;
 
-  // Calculate delivery fee
+  // Calculate delivery fee (from settings or default)
+  const DELIVERY_FEE = serviceSettings.deliveryFee ?? DEFAULT_DELIVERY_FEE;
   const deliveryFee = orderMode === 'delivery' ? DELIVERY_FEE : 0;
 
   // Calculate grand total with points discount and delivery fee

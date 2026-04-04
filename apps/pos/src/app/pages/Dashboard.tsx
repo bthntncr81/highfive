@@ -51,23 +51,8 @@ export default function Dashboard() {
 
     // Subscribe to order updates
     const unsubscribe = onMessage('orders', (data) => {
-      if (data.action === 'new') {
-        // Play alert sound for new orders
-        try {
-          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          [0, 0.25, 0.5].forEach((delay) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            osc.type = 'square';
-            gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
-            osc.start(ctx.currentTime + delay);
-            osc.stop(ctx.currentTime + delay + 0.18);
-          });
-        } catch (e) { /* silent */ }
+      // Sound is handled globally in WebSocketContext (only on 'new')
+      if (data.action === 'new' || data.action === 'update') {
         fetchDashboardData();
       }
       if (data.action === 'update') {

@@ -7,6 +7,7 @@ interface ServiceSettings {
   deliveryEnabled: boolean
   onlinePaymentEnabled: boolean
   cartEnabled: boolean
+  deliveryFee: number
   orderHoursEnabled: boolean
   orderHoursStart: string
   orderHoursEnd: string
@@ -24,6 +25,7 @@ const defaultSettings: PublicSettings = {
     deliveryEnabled: true,
     onlinePaymentEnabled: true,
     cartEnabled: true,
+    deliveryFee: 29,
     orderHoursEnabled: false,
     orderHoursStart: '11:00',
     orderHoursEnd: '23:00',

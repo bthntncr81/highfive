@@ -52,6 +52,7 @@ interface ServiceSettings {
   deliveryEnabled: boolean;
   onlinePaymentEnabled: boolean;
   cartEnabled: boolean;
+  deliveryFee: number;
   orderHoursEnabled: boolean;
   orderHoursStart: string;
   orderHoursEnd: string;
@@ -116,6 +117,7 @@ export default function Settings() {
     deliveryEnabled: true,
     onlinePaymentEnabled: true,
     cartEnabled: true,
+    deliveryFee: 29,
     orderHoursEnabled: false,
     orderHoursStart: '11:00',
     orderHoursEnd: '23:00',
@@ -456,6 +458,20 @@ export default function Settings() {
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
             </label>
           </div>
+
+          {services.deliveryEnabled && (
+            <div className="pl-4 border-l-2 border-orange-200">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Getirme Ücreti (₺)</label>
+              <input
+                type="number"
+                value={services.deliveryFee}
+                onChange={(e) => setServices({ ...services, deliveryFee: Number(e.target.value) })}
+                className="input w-32"
+                min="0"
+                step="1"
+              />
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div>

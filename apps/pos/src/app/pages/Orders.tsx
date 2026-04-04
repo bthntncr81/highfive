@@ -63,7 +63,7 @@ export default function Orders() {
     fetchOrders();
 
     const unsubscribe = onMessage('orders', () => {
-      playNotificationSound();
+      // Sound is handled globally in WebSocketContext (only on 'new')
       fetchOrders();
     });
 
