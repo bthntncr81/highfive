@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = 60 * 60 * 24 * 7; // 7 days in seconds

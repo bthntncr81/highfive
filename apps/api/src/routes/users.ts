@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, UserRole } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function userRoutes(server: FastifyInstance) {
