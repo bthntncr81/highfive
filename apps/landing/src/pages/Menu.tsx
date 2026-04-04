@@ -12,7 +12,7 @@ import { useSettings } from '../hooks/useSettings'
 export const Menu = () => {
   const { content } = useContent()
   const { tableSession, clearTableSession } = useCart()
-  const { whatsappEnabled } = useSettings()
+  const { whatsappEnabled, services } = useSettings()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialCategory = searchParams.get('category')
@@ -79,6 +79,30 @@ export const Menu = () => {
 
   return (
     <main>
+      {/* Busy Mode Banner */}
+      {services.busyMode && (
+        <motion.div
+          initial={{ y: -30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-red-600 text-white"
+        >
+          <div className="container-diner py-3 flex items-center justify-center gap-3">
+            <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="text-xl">🔴</motion.span>
+            <p className="font-display text-sm md:text-base">{services.busyMessage || 'Şu anda yoğunuz, siparişler gecikmeli olabilir.'}</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Estimated Delivery Time Banner */}
+      {services.estimatedDeliveryTime && (
+        <div className="bg-blue-50 border-b border-blue-200">
+          <div className="container-diner py-2 flex items-center justify-center gap-2 text-blue-700 text-sm">
+            <span>🕐</span>
+            <span>Tahmini teslimat süresi: <strong>{services.estimatedDeliveryTime}</strong></span>
+          </div>
+        </div>
+      )}
+
       {/* Table Session Banner */}
       {tableSession && (
         <motion.div

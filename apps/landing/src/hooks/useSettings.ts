@@ -8,6 +8,9 @@ interface ServiceSettings {
   onlinePaymentEnabled: boolean
   cartEnabled: boolean
   deliveryFee: number
+  busyMode: boolean
+  busyMessage: string
+  estimatedDeliveryTime: string
   orderHoursEnabled: boolean
   orderHoursStart: string
   orderHoursEnd: string
@@ -26,6 +29,9 @@ const defaultSettings: PublicSettings = {
     onlinePaymentEnabled: true,
     cartEnabled: true,
     deliveryFee: 29,
+    busyMode: false,
+    busyMessage: '',
+    estimatedDeliveryTime: '30-45 dk',
     orderHoursEnabled: false,
     orderHoursStart: '11:00',
     orderHoursEnd: '23:00',

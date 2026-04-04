@@ -359,6 +359,24 @@ export const Order = () => {
           )}
         </motion.div>
 
+        {/* Busy Mode Banner */}
+        {serviceSettings.busyMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3"
+          >
+            <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="text-2xl">🔴</motion.span>
+            <div>
+              <p className="font-display text-red-800 font-bold">Yoğun Dönem</p>
+              <p className="text-sm text-red-700">{serviceSettings.busyMessage || 'Şu anda yoğunuz, siparişler gecikmeli olabilir.'}</p>
+              {serviceSettings.estimatedDeliveryTime && (
+                <p className="text-xs text-red-600 mt-1">🕐 Tahmini süre: {serviceSettings.estimatedDeliveryTime}</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Active Happy Hours Banner */}
         {activeHappyHours.length > 0 && (
           <motion.div
@@ -575,7 +593,7 @@ export const Order = () => {
                       <span className="text-xl">🚚</span>
                       <div>
                         <p className="font-display text-sm">Kurye Ücreti: <span className="font-bold">{DELIVERY_FEE}₺</span></p>
-                        <p className="text-xs text-blue-600">Tahmini teslimat: 30-45 dakika</p>
+                        <p className="text-xs text-blue-600">Tahmini teslimat: {serviceSettings.estimatedDeliveryTime || '30-45 dk'}</p>
                       </div>
                     </div>
                   </div>

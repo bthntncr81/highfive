@@ -53,6 +53,9 @@ interface ServiceSettings {
   onlinePaymentEnabled: boolean;
   cartEnabled: boolean;
   deliveryFee: number;
+  busyMode: boolean;
+  busyMessage: string;
+  estimatedDeliveryTime: string;
   orderHoursEnabled: boolean;
   orderHoursStart: string;
   orderHoursEnd: string;
@@ -118,6 +121,9 @@ export default function Settings() {
     onlinePaymentEnabled: true,
     cartEnabled: true,
     deliveryFee: 29,
+    busyMode: false,
+    busyMessage: 'Şu anda yoğunuz, siparişler gecikmeli olabilir.',
+    estimatedDeliveryTime: '30-45 dk',
     orderHoursEnabled: false,
     orderHoursStart: '11:00',
     orderHoursEnd: '23:00',
@@ -472,6 +478,49 @@ export default function Settings() {
               />
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-red-600">Yoğun Modu</p>
+              <p className="text-sm text-gray-500">Açıkken müşterilere yoğunluk bildirimi gösterilir</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={services.busyMode}
+                onChange={(e) => setServices({ ...services, busyMode: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+            </label>
+          </div>
+
+          {services.busyMode && (
+            <div className="space-y-3 pl-4 border-l-2 border-red-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Yoğunluk Mesajı</label>
+                <input
+                  type="text"
+                  value={services.busyMessage}
+                  onChange={(e) => setServices({ ...services, busyMessage: e.target.value })}
+                  className="input"
+                  placeholder="Şu anda yoğunuz..."
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tahmini Getirme Süresi</label>
+            <input
+              type="text"
+              value={services.estimatedDeliveryTime}
+              onChange={(e) => setServices({ ...services, estimatedDeliveryTime: e.target.value })}
+              className="input w-48"
+              placeholder="30-45 dk"
+            />
+            <p className="text-xs text-gray-400 mt-1">Müşterilere sipariş öncesi gösterilir</p>
+          </div>
 
           <div className="flex items-center justify-between">
             <div>
