@@ -240,6 +240,7 @@ export const Order = () => {
         notes: orderNotes,
         tip: tipAmount > 0 ? tipAmount : undefined,
         deliveryFee: orderMode === 'delivery' ? DELIVERY_FEE : undefined,
+        paymentMethod: paymentMethod || undefined,
       });
 
       if (response.success && response.data?.order) {

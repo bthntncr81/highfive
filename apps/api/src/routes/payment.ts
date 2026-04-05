@@ -1,12 +1,22 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
-import { broadcastOrderUpdate } from '../websocket';
+import { broadcastOrderUpdate, broadcastNewOrder } from '../websocket';
 import crypto from 'crypto';
 
-// iyzico Configuration
-const IYZICO_API_KEY = process.env.IYZICO_API_KEY || 'sandbox-ifkcjkaPdtshoWkt36gjOwpZ9Z5XsUZM';
-const IYZICO_SECRET_KEY = process.env.IYZICO_SECRET_KEY || 'sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa';
-const IYZICO_BASE_URL = process.env.IYZICO_BASE_URL || 'https://sandbox-api.iyzipay.com';
+// iyzico Configuration - read from settings DB, fallback to env vars
+let IYZICO_API_KEY = process.env.IYZICO_API_KEY || '';
+let IYZICO_SECRET_KEY = process.env.IYZICO_SECRET_KEY || '';
+let IYZICO_BASE_URL = process.env.IYZICO_BASE_URL || 'https://api.iyzipay.com';
+
+async function loadIyzicoConfig(prisma: PrismaClient) {
+  try {
+    const setting = await prisma.settings.findUnique({ where: { key: 'services' } });
+    const services = setting?.value as any;
+    if (services?.iyzicoApiKey) IYZICO_API_KEY = services.iyzicoApiKey;
+    if (services?.iyzicoSecretKey) IYZICO_SECRET_KEY = services.iyzicoSecretKey;
+    if (services?.iyzicoBaseUrl) IYZICO_BASE_URL = services.iyzicoBaseUrl;
+  } catch (e) { /* fallback to env */ }
+}
 
 /**
  * iyzico HMACSHA256 Authentication
@@ -195,8 +205,13 @@ function generateConversationId(): string {
 export default async function paymentRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
 
+  // Load iyzico config from DB on first request
+  await loadIyzicoConfig(prisma);
+
   // Initialize 3DS Payment
   server.post('/initialize-3ds', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Reload config each time (in case settings changed)
+    await loadIyzicoConfig(prisma);
     const {
       orderId,
       cardHolderName,
@@ -517,7 +532,8 @@ export default async function paymentRoutes(server: FastifyInstance) {
               await awardLoyaltyPoints(prisma, order.customerPhone, orderId, Number(order.total));
             }
 
-            broadcastOrderUpdate(updatedOrder);
+            // Broadcast as NEW order (payment just completed, first time appearing)
+            broadcastNewOrder(updatedOrder);
 
             // Clean up payment session
             await prisma.settings.delete({

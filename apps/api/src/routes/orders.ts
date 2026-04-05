@@ -439,6 +439,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       notes,
       tip,
       deliveryFee,
+      paymentMethod,
     } = request.body as {
       tableId?: string;
       sessionToken?: string;
@@ -447,6 +448,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       customerEmail?: string;
       customerAddress?: string;
       type?: OrderType;
+      paymentMethod?: string;
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
       notes?: string;
       tip?: number;
@@ -583,12 +585,12 @@ export default async function orderRoutes(server: FastifyInstance) {
       broadcastTableUpdate(table);
     }
 
-    // Broadcast new order
-    broadcastNewOrder(order);
-
-    // Send notifications (async, don't wait)
-    sendOrderNotification(order).catch(() => {});
-    sendWhatsAppNotification(order).catch(() => {});
+    // Only broadcast + notify if NOT card payment (card orders wait for payment completion)
+    if (paymentMethod !== 'card') {
+      broadcastNewOrder(order);
+      sendOrderNotification(order).catch(() => {});
+      sendWhatsAppNotification(order).catch(() => {});
+    }
 
     return { order };
   });
