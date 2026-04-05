@@ -26,23 +26,37 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
-// Play alert sound
+// Play alert sound - with retry for background tabs
 function playAlertSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    [0, 0.25, 0.5].forEach((delay) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'square';
-      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
-      osc.start(ctx.currentTime + delay);
-      osc.stop(ctx.currentTime + delay + 0.18);
-    });
-  } catch (e) { /* silent */ }
+  const doPlay = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      [0, 0.25, 0.5].forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.7, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.2);
+      });
+      return true;
+    } catch (e) { return false; }
+  };
+
+  // Try immediately, then retry after 500ms if tab was backgrounded
+  if (!doPlay()) {
+    setTimeout(doPlay, 500);
+  }
+
+  // Also change document title to grab attention
+  const origTitle = document.title;
+  document.title = '🔔 YENİ SİPARİŞ!';
+  setTimeout(() => { document.title = origTitle; }, 5000);
 }
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
@@ -52,6 +66,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const addToast = (order: any) => {
     const toast: OrderToast = {
@@ -80,6 +95,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         listenersRef.current.forEach((_, channel) => {
           ws.send(JSON.stringify({ type: 'subscribe', channel }));
         });
+
+        // Keep-alive ping every 25 seconds
+        if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 25000);
       };
 
       ws.onmessage = (event) => {
@@ -104,14 +127,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       };
 
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('WebSocket disconnected - reconnecting...');
         setIsConnected(false);
+        if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
 
+        // Aggressive reconnect - 1 second
         reconnectTimeoutRef.current = setTimeout(() => {
           if (isAuthenticated) {
             connect();
           }
-        }, 3000);
+        }, 1000);
       };
 
       ws.onerror = (error) => {
@@ -133,9 +158,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       wsRef.current?.close();
     };
   }, [isAuthenticated, connect]);
