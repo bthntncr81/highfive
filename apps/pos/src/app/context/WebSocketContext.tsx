@@ -127,9 +127,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           const message: WSMessage = JSON.parse(event.data);
 
           if (message.type === 'message' && message.channel) {
-            // Global: new order → sound + toast on ANY page
+            // New order from external source (WEB/QR) → sound + toast
+            // POS-created orders don't trigger sound (garson already knows)
             if (message.channel === 'orders' && message.data?.action === 'new') {
-              playAlertSound();
+              const source = message.data.order?.source;
+              if (source !== 'POS') {
+                playAlertSound();
+              }
               if (message.data.order) {
                 addToast(message.data.order);
               }

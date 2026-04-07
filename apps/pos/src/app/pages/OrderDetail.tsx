@@ -560,7 +560,16 @@ export default function OrderDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
+          {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && order.table && (
+            <button
+              onClick={() => navigate(`/menu?table=${order.table!.id}`)}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Ek Sipariş
+            </button>
+          )}
+          <button
             onClick={() => handlePrintReceipt()}
             className="btn btn-secondary flex items-center gap-2"
           >
