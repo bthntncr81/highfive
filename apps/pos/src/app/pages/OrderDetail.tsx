@@ -560,9 +560,9 @@ export default function OrderDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && order.table && (
+          {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
             <button
-              onClick={() => navigate(`/menu?table=${order.table!.id}`)}
+              onClick={() => navigate(`/menu?${order.table ? `table=${order.table.id}&` : ''}orderId=${order.id}`)}
               className="btn btn-primary flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />

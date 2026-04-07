@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { api } from '../lib/api';
@@ -37,8 +37,18 @@ interface MenuItem {
 
 export default function Menu() {
   const { token } = useAuth();
-  const { items, tableId, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
+  const { items, tableId, setTableId, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlTableId = searchParams.get('table');
+  const urlOrderId = searchParams.get('orderId');
+
+  // Set tableId from URL if provided (from "Ek Sipariş" button)
+  useEffect(() => {
+    if (urlTableId && urlTableId !== tableId) {
+      setTableId(urlTableId);
+    }
+  }, [urlTableId]);
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -155,9 +165,9 @@ export default function Menu() {
         modifiers: item.modifiers,
       }));
 
-      // If table has an active order, add items to it instead of creating new
-      let existingOrderId: string | null = null;
-      if (tableId) {
+      // Check for existing order: URL orderId > table active order > new order
+      let existingOrderId: string | null = urlOrderId || null;
+      if (!existingOrderId && tableId) {
         try {
           const activeOrders = await api.get('/api/orders/active', token!);
           const tableOrder = activeOrders.orders?.find(
@@ -170,7 +180,7 @@ export default function Menu() {
       let orderId: string;
       if (existingOrderId) {
         // Add items to existing order
-        const response = await api.post(`/api/orders/${existingOrderId}/items`, {
+        await api.post(`/api/orders/${existingOrderId}/items`, {
           items: orderItems,
         }, token!);
         orderId = existingOrderId;
