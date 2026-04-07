@@ -99,10 +99,21 @@ export default function OrderDetail() {
     }
   };
 
-  const handleDeleteItem = async (itemId: string, itemName: string) => {
-    if (!confirm(`"${itemName}" siparişten silinecek. Emin misiniz?`)) return;
+  const handleDeleteItem = async (itemId: string, itemName: string, quantity: number) => {
+    let deleteQty = quantity;
+    if (quantity > 1) {
+      const input = prompt(`"${itemName}" (${quantity} adet) - Kaç adetini silmek istiyorsunuz?`, '1');
+      if (!input) return;
+      deleteQty = parseInt(input);
+      if (isNaN(deleteQty) || deleteQty < 1 || deleteQty > quantity) {
+        alert(`Geçerli bir sayı girin (1-${quantity})`);
+        return;
+      }
+    } else {
+      if (!confirm(`"${itemName}" siparişten silinecek. Emin misiniz?`)) return;
+    }
     try {
-      await api.delete(`/api/orders/${id}/items/${itemId}`, token!);
+      await api.delete(`/api/orders/${id}/items/${itemId}?qty=${deleteQty}`, token!);
       fetchOrder();
     } catch (error: any) {
       alert(error.message || 'Ürün silinemedi');
@@ -725,7 +736,7 @@ export default function OrderDetail() {
                         )}
                         {isAdmin && !isFullyPaid && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
                           <button
-                            onClick={() => handleDeleteItem(item.id, item.menuItem?.name || 'Ürün')}
+                            onClick={() => handleDeleteItem(item.id, item.menuItem?.name || 'Ürün', item.quantity)}
                             className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="Ürünü sil"
                           >

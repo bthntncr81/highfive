@@ -924,11 +924,25 @@ export default async function orderRoutes(server: FastifyInstance) {
     const item = order.items.find(i => i.id === itemId);
     if (!item) return reply.status(404).send({ error: 'Ürün bulunamadı' });
 
-    // Delete the item
-    await prisma.orderItem.delete({ where: { id: itemId } });
+    // Partial delete support: ?qty=N
+    const qtyToDelete = parseInt((request.query as any).qty) || item.quantity;
+
+    if (qtyToDelete >= item.quantity) {
+      // Delete entire item
+      await prisma.orderItem.delete({ where: { id: itemId } });
+    } else {
+      // Reduce quantity
+      const newQty = item.quantity - qtyToDelete;
+      const newTotal = Number(item.unitPrice) * newQty;
+      await prisma.orderItem.update({
+        where: { id: itemId },
+        data: { quantity: newQty, total: newTotal },
+      });
+    }
 
     // Recalculate order total
-    const remainingItems = order.items.filter(i => i.id !== itemId);
+    const freshItems = await prisma.orderItem.findMany({ where: { orderId: id } });
+    const remainingItems = freshItems;
     const newSubtotal = remainingItems.reduce((sum, i) => sum + Number(i.total), 0);
     const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 10;
