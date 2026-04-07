@@ -461,7 +461,7 @@ export default function Tables() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 justify-center group/name">
+                  <div className="flex items-center gap-1 justify-center">
                     <p className="text-sm text-gray-500 font-medium">{table.name}</p>
                     {!mergeMode && (
                       <button
@@ -470,9 +470,9 @@ export default function Tables() {
                           setEditingTableId(table.id);
                           setEditingName(table.name || `Masa ${table.number}`);
                         }}
-                        className="p-1 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                        className="p-1 rounded-lg text-gray-400 hover:text-[#bb1e10] hover:bg-gray-100 transition-colors"
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
