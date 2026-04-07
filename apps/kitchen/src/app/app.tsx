@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChefHat, Clock, Check, RefreshCw, Volume2, VolumeX, Flame, Bell, Utensils } from 'lucide-react';
 
 // API URL - empty string means relative paths, nginx will proxy to API container
@@ -144,10 +144,32 @@ export default function App() {
     };
   }, [fetchOrders, soundEnabled]);
 
+  // Global AudioContext for kitchen - persists across notifications
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Activate audio on first interaction
+  useEffect(() => {
+    const activate = () => {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    };
+    document.addEventListener('click', activate);
+    document.addEventListener('touchstart', activate);
+    return () => {
+      document.removeEventListener('click', activate);
+      document.removeEventListener('touchstart', activate);
+    };
+  }, []);
+
   const playNotificationSound = () => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      // 3 rapid alert beeps
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
       [0, 0.25, 0.5].forEach((delay) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -155,14 +177,16 @@ export default function App() {
         gain.connect(ctx.destination);
         osc.frequency.value = 880;
         osc.type = 'square';
-        gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.18);
+        gain.gain.setValueAtTime(0.7, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
         osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.18);
+        osc.stop(ctx.currentTime + delay + 0.2);
       });
     } catch (e) {
       console.warn('Notification sound failed:', e);
     }
+    document.title = '🔔 YENİ SİPARİŞ!';
+    setTimeout(() => { document.title = 'Kitchen'; }, 5000);
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {

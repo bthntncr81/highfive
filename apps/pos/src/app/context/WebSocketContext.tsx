@@ -26,34 +26,51 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
-// Play alert sound - with retry for background tabs
-function playAlertSound() {
-  const doPlay = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
-      [0, 0.25, 0.5].forEach((delay) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        osc.type = 'square';
-        gain.gain.setValueAtTime(0.7, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.2);
-      });
-      return true;
-    } catch (e) { return false; }
-  };
+// Global AudioContext - created once on first user interaction
+let audioCtx: AudioContext | null = null;
 
-  // Try immediately, then retry after 500ms if tab was backgrounded
-  if (!doPlay()) {
-    setTimeout(doPlay, 500);
+function ensureAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
 
-  // Also change document title to grab attention
+// Activate audio on ANY user interaction (click, keypress, touch)
+if (typeof window !== 'undefined') {
+  const activate = () => {
+    ensureAudioContext();
+    document.removeEventListener('click', activate);
+    document.removeEventListener('keydown', activate);
+    document.removeEventListener('touchstart', activate);
+  };
+  document.addEventListener('click', activate);
+  document.addEventListener('keydown', activate);
+  document.addEventListener('touchstart', activate);
+}
+
+// Play alert sound
+function playAlertSound() {
+  try {
+    const ctx = ensureAudioContext();
+    [0, 0.25, 0.5].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.7, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.2);
+    });
+  } catch (e) { /* silent */ }
+
+  // Flash document title
   const origTitle = document.title;
   document.title = '🔔 YENİ SİPARİŞ!';
   setTimeout(() => { document.title = origTitle; }, 5000);
