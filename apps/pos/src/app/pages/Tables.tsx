@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { api } from '../lib/api';
-import { Plus, Users, RefreshCw, Search, Sparkles, X, Link2, Unlink } from 'lucide-react';
+import { Plus, Users, RefreshCw, Search, Sparkles, X, Link2, Unlink, Pencil, Check } from 'lucide-react';
 
 interface Table {
   id: string;
@@ -31,6 +31,10 @@ export default function Tables() {
   const [newTable, setNewTable] = useState({ number: 0, name: '', capacity: 4 });
   const [isAdding, setIsAdding] = useState(false);
   
+  // Masa isim düzenleme state
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
   // Masa birleştirme state
   const [mergeMode, setMergeMode] = useState(false);
   const [selectedForMerge, setSelectedForMerge] = useState<string[]>([]);
@@ -119,6 +123,21 @@ export default function Tables() {
       fetchTables();
     } catch (error) {
       console.error('Status change error:', error);
+    }
+  };
+
+  const handleRenameTable = async (tableId: string) => {
+    if (!editingName.trim()) {
+      setEditingTableId(null);
+      return;
+    }
+    try {
+      await api.put(`/api/tables/${tableId}`, { name: editingName.trim() }, token!);
+      setEditingTableId(null);
+      setEditingName('');
+      fetchTables();
+    } catch (error: any) {
+      alert(error.message || 'Masa adı güncellenemedi');
     }
   };
 
@@ -421,7 +440,43 @@ export default function Tables() {
                     {table.number}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 font-medium">{table.name}</p>
+                {editingTableId === table.id ? (
+                  <div className="flex items-center gap-1 justify-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRenameTable(table.id);
+                        if (e.key === 'Escape') setEditingTableId(null);
+                      }}
+                      autoFocus
+                      className="w-24 text-sm text-center border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#bb1e10]"
+                    />
+                    <button
+                      onClick={() => handleRenameTable(table.id)}
+                      className="p-1 hover:bg-green-100 rounded-lg text-green-600"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 justify-center group/name">
+                    <p className="text-sm text-gray-500 font-medium">{table.name}</p>
+                    {!mergeMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTableId(table.id);
+                          setEditingName(table.name || `Masa ${table.number}`);
+                        }}
+                        className="p-1 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
                 {hasMergedTables && (
                   <p className="text-xs text-purple-600 mt-1">
                     + Masa {table.mergedTables?.map(t => t.number).join(', ')}
