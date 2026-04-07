@@ -901,6 +901,49 @@ export default async function orderRoutes(server: FastifyInstance) {
     return { order: updatedOrder };
   });
 
+  // Delete item from order (admin only)
+  server.delete('/:id/items/:itemId', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id, itemId } = request.params as { id: string; itemId: string };
+    const user = (request as any).user;
+
+    // Admin only
+    if (user.role !== 'ADMIN') {
+      return reply.status(403).send({ error: 'Bu işlem sadece admin tarafından yapılabilir' });
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
+    if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+      return reply.status(400).send({ error: 'Tamamlanan siparişten ürün silinemez' });
+    }
+
+    const item = order.items.find(i => i.id === itemId);
+    if (!item) return reply.status(404).send({ error: 'Ürün bulunamadı' });
+
+    // Delete the item
+    await prisma.orderItem.delete({ where: { id: itemId } });
+
+    // Recalculate order total
+    const remainingItems = order.items.filter(i => i.id !== itemId);
+    const newSubtotal = remainingItems.reduce((sum, i) => sum + Number(i.total), 0);
+    const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const taxRate = (settings?.value as any)?.taxRate ?? 10;
+    const newTax = newSubtotal * (taxRate / 100);
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { subtotal: newSubtotal, tax: newTax, total: newSubtotal + newTax + Number(order.tip || 0) + Number(order.deliveryFee || 0) },
+      include: { table: true, items: { include: { menuItem: true } } },
+    });
+
+    broadcastOrderUpdate(updatedOrder);
+    return { order: updatedOrder };
+  });
+
   // Process payment (with optional item-specific payment for split bills)
   server.post('/:id/payment', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };

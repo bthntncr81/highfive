@@ -99,6 +99,18 @@ export default function OrderDetail() {
     }
   };
 
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    if (!confirm(`"${itemName}" siparişten silinecek. Emin misiniz?`)) return;
+    try {
+      await api.delete(`/api/orders/${id}/items/${itemId}`, token!);
+      fetchOrder();
+    } catch (error: any) {
+      alert(error.message || 'Ürün silinemedi');
+    }
+  };
+
+  const isAdmin = user?.role === 'ADMIN';
+
   const handleStatusChange = async (newStatus: string) => {
     setIsProcessing(true);
     try {
@@ -705,11 +717,22 @@ export default function OrderDetail() {
                           `${item.total.toLocaleString('tr-TR')} ₺`
                         )}
                       </p>
-                      {!splitMode && (
-                        <span className={`badge text-xs ${isFullyPaid ? 'bg-green-100 text-green-700' : getStatusColor(item.status)}`}>
-                          {isFullyPaid ? 'Ödendi' : getStatusText(item.status)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {!splitMode && (
+                          <span className={`badge text-xs ${isFullyPaid ? 'bg-green-100 text-green-700' : getStatusColor(item.status)}`}>
+                            {isFullyPaid ? 'Ödendi' : getStatusText(item.status)}
+                          </span>
+                        )}
+                        {isAdmin && !isFullyPaid && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleDeleteItem(item.id, item.menuItem?.name || 'Ürün')}
+                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Ürünü sil"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
