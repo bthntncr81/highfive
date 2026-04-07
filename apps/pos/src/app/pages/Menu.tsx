@@ -155,14 +155,37 @@ export default function Menu() {
         modifiers: item.modifiers,
       }));
 
-      const response = await api.post('/api/orders', {
-        tableId: tableId || undefined,
-        items: orderItems,
-        type: tableId ? 'DINE_IN' : 'TAKEAWAY',
-      }, token!);
+      // If table has an active order, add items to it instead of creating new
+      let existingOrderId: string | null = null;
+      if (tableId) {
+        try {
+          const activeOrders = await api.get('/api/orders/active', token!);
+          const tableOrder = activeOrders.orders?.find(
+            (o: any) => o.tableId === tableId && ['PENDING', 'CONFIRMED', 'PREPARING'].includes(o.status)
+          );
+          if (tableOrder) existingOrderId = tableOrder.id;
+        } catch (e) { /* ignore */ }
+      }
+
+      let orderId: string;
+      if (existingOrderId) {
+        // Add items to existing order
+        const response = await api.post(`/api/orders/${existingOrderId}/items`, {
+          items: orderItems,
+        }, token!);
+        orderId = existingOrderId;
+      } else {
+        // Create new order
+        const response = await api.post('/api/orders', {
+          tableId: tableId || undefined,
+          items: orderItems,
+          type: tableId ? 'DINE_IN' : 'TAKEAWAY',
+        }, token!);
+        orderId = response.order.id;
+      }
 
       clearCart();
-      navigate(`/orders/${response.order.id}`);
+      navigate(`/orders/${orderId}`);
     } catch (error) {
       console.error('Order submit error:', error);
       alert('Sipariş oluşturulamadı');
