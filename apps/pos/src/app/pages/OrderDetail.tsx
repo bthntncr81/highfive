@@ -17,6 +17,9 @@ import {
   Plus,
   Split,
   Users,
+  UserPlus,
+  Tag,
+  Trash2,
 } from 'lucide-react';
 
 interface Order {
@@ -74,6 +77,12 @@ export default function OrderDetail() {
   const [splitMode, setSplitMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<{[itemId: string]: number}>({}); // itemId -> quantity
   const [splitPaymentType, setSplitPaymentType] = useState<'items' | 'equal' | 'custom'>('items');
+
+  // Kişi gruplama state
+  const [itemGroups, setItemGroups] = useState<{[itemId: string]: string}>({}); // itemId -> kişi adı
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupingItemId, setGroupingItemId] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState('');
 
   useEffect(() => {
     fetchOrder();
@@ -492,6 +501,62 @@ export default function OrderDetail() {
     return item.quantity - (item.paidQuantity || 0);
   };
 
+  // Kişi gruplama fonksiyonları
+  const existingGroupNames = [...new Set(Object.values(itemGroups))];
+
+  const assignGroup = (itemId: string, name: string) => {
+    setItemGroups(prev => ({ ...prev, [itemId]: name }));
+    setShowGroupModal(false);
+    setGroupingItemId(null);
+    setGroupName('');
+  };
+
+  const removeGroup = (itemId: string) => {
+    setItemGroups(prev => {
+      const { [itemId]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const getGroupedItems = () => {
+    if (!order) return {};
+    const groups: { [groupName: string]: OrderItem[] } = {};
+    order.items.forEach(item => {
+      const group = itemGroups[item.id] || 'Gruplanmamış';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(item);
+    });
+    return groups;
+  };
+
+  const getGroupTotal = (groupName: string) => {
+    const grouped = getGroupedItems();
+    const items = grouped[groupName] || [];
+    return items.reduce((sum, item) => sum + Number(item.total), 0);
+  };
+
+  const getGroupUnpaidTotal = (groupName: string) => {
+    const grouped = getGroupedItems();
+    const items = grouped[groupName] || [];
+    return items.reduce((sum, item) => {
+      const unpaid = getUnpaidQuantity(item);
+      return sum + (item.unitPrice * unpaid);
+    }, 0);
+  };
+
+  const selectGroupItems = (groupName: string) => {
+    if (!order) return;
+    const grouped = getGroupedItems();
+    const items = grouped[groupName] || [];
+    const newSelected: {[itemId: string]: number} = {};
+    items.forEach(item => {
+      const unpaid = getUnpaidQuantity(item);
+      if (unpaid > 0) newSelected[item.id] = unpaid;
+    });
+    setSelectedItems(newSelected);
+    setSplitMode(true);
+  };
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       PENDING: 'bg-yellow-100 text-yellow-800',
@@ -615,15 +680,19 @@ export default function OrderDetail() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Sipariş Detayları</h2>
-              {order.paymentStatus !== 'PAID' && (
-                <button
-                  onClick={toggleSplitMode}
-                  className={`btn ${splitMode ? 'btn-primary' : 'btn-secondary'} btn-sm flex items-center gap-2`}
-                >
-                  <Split className="w-4 h-4" />
-                  {splitMode ? 'Seçimi İptal' : 'Ayrı Öde'}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {order.paymentStatus !== 'PAID' && (
+                  <>
+                    <button
+                      onClick={toggleSplitMode}
+                      className={`btn ${splitMode ? 'btn-primary' : 'btn-secondary'} btn-sm flex items-center gap-2`}
+                    >
+                      <Split className="w-4 h-4" />
+                      {splitMode ? 'Seçimi İptal' : 'Ayrı Öde'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {splitMode && (
@@ -632,6 +701,52 @@ export default function OrderDetail() {
                   <Users className="w-4 h-4" />
                   Ayrı ödemek istediğiniz ürünleri seçin
                 </p>
+              </div>
+            )}
+
+            {/* Kişi Grupları Özeti */}
+            {existingGroupNames.length > 0 && !splitMode && (
+              <div className="mb-4 space-y-2">
+                {Object.entries(getGroupedItems())
+                  .filter(([name]) => name !== 'Gruplanmamış')
+                  .map(([name, items]) => {
+                    const groupUnpaid = getGroupUnpaidTotal(name);
+                    const groupTotal = getGroupTotal(name);
+                    const allPaid = groupUnpaid <= 0;
+                    return (
+                      <div key={name} className={`p-3 rounded-lg border ${allPaid ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-purple-600" />
+                            <span className="font-medium text-gray-900">{name}</span>
+                            <span className="text-xs text-gray-500">({items.length} ürün)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {allPaid ? (
+                              <span className="text-sm font-bold text-green-600 flex items-center gap-1">
+                                <Check className="w-4 h-4" /> Ödendi
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-sm font-bold text-purple-700">
+                                  {groupUnpaid.toLocaleString('tr-TR')} ₺
+                                </span>
+                                <button
+                                  onClick={() => selectGroupItems(name)}
+                                  className="btn btn-primary btn-sm text-xs"
+                                >
+                                  Öde
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ')}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
             
@@ -705,9 +820,38 @@ export default function OrderDetail() {
                         </span>
                       )}
                       <div>
-                        <p className={`font-medium ${isFullyPaid ? 'text-green-800' : 'text-gray-900'}`}>
-                          {item.menuItem.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-medium ${isFullyPaid ? 'text-green-800' : 'text-gray-900'}`}>
+                            {item.menuItem.name}
+                          </p>
+                          {/* Kişi grup etiketi */}
+                          {itemGroups[item.id] && !splitMode && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                              <User className="w-3 h-3" />
+                              {itemGroups[item.id]}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); removeGroup(item.id); }}
+                                className="ml-0.5 hover:text-purple-900"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          )}
+                          {/* Kişiye ata butonu */}
+                          {!itemGroups[item.id] && !splitMode && !isFullyPaid && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGroupingItemId(item.id);
+                                setShowGroupModal(true);
+                              }}
+                              className="p-0.5 text-gray-300 hover:text-purple-500 hover:bg-purple-50 rounded transition-colors"
+                              title="Kişiye ata"
+                            >
+                              <UserPlus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                         {item.notes && (
                           <p className="text-sm text-gray-500">Not: {item.notes}</p>
                         )}
@@ -948,15 +1092,32 @@ export default function OrderDetail() {
               </div>
             )}
 
-            {/* Payment button */}
+            {/* Payment buttons */}
             {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
-              <button
-                onClick={() => setShowPayment(true)}
-                className="btn btn-success w-full mt-4 flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-4 h-4" />
-                Ödeme Al
-              </button>
+              <div className="mt-4 space-y-2">
+                <button
+                  onClick={() => {
+                    setPaymentAmount(remainingAmount.toString());
+                    setSplitMode(false);
+                    setSelectedItems({});
+                    setShowPayment(true);
+                  }}
+                  className="btn btn-success w-full flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Tamamını Öde ({remainingAmount.toLocaleString('tr-TR')} ₺)
+                </button>
+                <button
+                  onClick={() => {
+                    setSplitMode(true);
+                    setSelectedItems({});
+                  }}
+                  className="btn btn-secondary w-full flex items-center justify-center gap-2 text-sm"
+                >
+                  <Split className="w-4 h-4" />
+                  Ürün Seçerek Öde
+                </button>
+              </div>
             )}
 
             {order.paymentStatus === 'PAID' && (
@@ -972,22 +1133,50 @@ export default function OrderDetail() {
       {/* Payment modal */}
       {showPayment && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Ödeme Al</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tutar
-                </label>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="input text-lg"
-                  placeholder="0.00"
-                />
+          <div className="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">
+              {splitMode && Object.keys(selectedItems).length > 0 ? 'Seçili Ürünlerin Ödemesi' : 'Ödeme Al'}
+            </h2>
+
+            {/* Seçili ürünler listesi */}
+            {splitMode && Object.keys(selectedItems).length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs font-medium text-blue-700 mb-2">Ödenecek ürünler:</p>
+                <div className="space-y-1">
+                  {Object.entries(selectedItems).map(([itemId, qty]) => {
+                    const item = order?.items.find(i => i.id === itemId);
+                    if (!item) return null;
+                    return (
+                      <div key={itemId} className="flex justify-between text-sm">
+                        <span className="text-blue-900">{qty}x {item.menuItem.name}</span>
+                        <span className="font-medium text-blue-900">{(item.unitPrice * qty).toLocaleString('tr-TR')} ₺</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t border-blue-200 font-bold text-blue-900">
+                  <span>Toplam</span>
+                  <span>{getSelectedTotal().toLocaleString('tr-TR')} ₺</span>
+                </div>
               </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Tutar - sadece split mode değilken göster */}
+              {!(splitMode && Object.keys(selectedItems).length > 0) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tutar
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="input text-lg"
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1025,13 +1214,77 @@ export default function OrderDetail() {
                 İptal
               </button>
               <button
-                onClick={handlePayment}
+                onClick={splitMode && Object.keys(selectedItems).length > 0 ? handleSplitPayment : handlePayment}
                 disabled={isProcessing}
                 className="btn btn-success flex-1"
               >
                 {isProcessing ? 'İşleniyor...' : 'Onayla'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kişi Gruplama Modalı */}
+      {showGroupModal && groupingItemId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowGroupModal(false)}>
+          <div className="bg-white rounded-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Tag className="w-5 h-5" />
+              Kişiye Ata
+            </h2>
+
+            {/* Mevcut gruplar */}
+            {existingGroupNames.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-500 mb-2">Mevcut kişiler:</p>
+                <div className="flex flex-wrap gap-2">
+                  {existingGroupNames.map(name => (
+                    <button
+                      key={name}
+                      onClick={() => assignGroup(groupingItemId, name)}
+                      className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Yeni kişi ekle */}
+            <div>
+              <p className="text-sm text-gray-500 mb-2">
+                {existingGroupNames.length > 0 ? 'Veya yeni kişi:' : 'Kişi adı:'}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && groupName.trim()) assignGroup(groupingItemId, groupName.trim());
+                  }}
+                  placeholder="Örn: Ahmet, Masa 1 Sol..."
+                  className="input flex-1"
+                  autoFocus
+                />
+                <button
+                  onClick={() => groupName.trim() && assignGroup(groupingItemId, groupName.trim())}
+                  disabled={!groupName.trim()}
+                  className="btn btn-primary"
+                >
+                  Ata
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => { setShowGroupModal(false); setGroupingItemId(null); }}
+              className="btn btn-secondary w-full mt-4"
+            >
+              İptal
+            </button>
           </div>
         </div>
       )}
