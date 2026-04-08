@@ -68,21 +68,24 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const reportResponse = await api.get('/api/reports/daily', token!);
-      const ordersResponse = await api.get('/api/orders/active', token!);
-      const tablesResponse = await api.get('/api/tables', token!);
-      
-      const availableTables = tablesResponse.tables?.filter(
-        (t: any) => t.status === 'FREE'
-      ).length || 0;
+      // Stats sadece admin için yüklenir
+      if (user?.role === 'ADMIN') {
+        const reportResponse = await api.get('/api/reports/daily', token!);
+        const ordersResponse = await api.get('/api/orders/active', token!);
+        const tablesResponse = await api.get('/api/tables', token!);
 
-      setStats({
-        todayOrders: reportResponse.summary?.totalOrders || 0,
-        todayRevenue: reportResponse.summary?.totalRevenue || 0,
-        activeOrders: ordersResponse.orders?.length || 0,
-        availableTables,
-        todayTips: reportResponse.summary?.totalTips || 0,
-      });
+        const availableTables = tablesResponse.tables?.filter(
+          (t: any) => t.status === 'FREE'
+        ).length || 0;
+
+        setStats({
+          todayOrders: reportResponse.summary?.totalOrders || 0,
+          todayRevenue: reportResponse.summary?.totalRevenue || 0,
+          activeOrders: ordersResponse.orders?.length || 0,
+          availableTables,
+          todayTips: reportResponse.summary?.totalTips || 0,
+        });
+      }
 
       const recentResponse = await api.get('/api/orders?limit=5', token!);
       setRecentOrders(recentResponse.orders || []);
@@ -173,78 +176,80 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Today Revenue */}
-        <div className="stat-card stagger-item">
-          <div className="flex items-start justify-between">
-            <div className="stat-icon bg-gradient-to-br from-green-400 to-green-600 text-white">
-              <TrendingUp className="w-6 h-6" />
+      {/* Stats Grid - Sadece Admin */}
+      {user?.role === 'ADMIN' && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Today Revenue */}
+          <div className="stat-card stagger-item">
+            <div className="flex items-start justify-between">
+              <div className="stat-icon bg-gradient-to-br from-green-400 to-green-600 text-white">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <span className="text-2xl">💰</span>
             </div>
-            <span className="text-2xl">💰</span>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 font-medium">Bugünkü Ciro</p>
+              <p className="stat-value mt-1">{formatCurrency(stats.todayRevenue)}</p>
+            </div>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 font-medium">Bugünkü Ciro</p>
-            <p className="stat-value mt-1">{formatCurrency(stats.todayRevenue)}</p>
-          </div>
-        </div>
 
-        {/* Today Orders */}
-        <div className="stat-card stagger-item">
-          <div className="flex items-start justify-between">
-            <div className="stat-icon bg-gradient-to-br from-blue-400 to-blue-600 text-white">
-              <ShoppingBag className="w-6 h-6" />
+          {/* Today Orders */}
+          <div className="stat-card stagger-item">
+            <div className="flex items-start justify-between">
+              <div className="stat-icon bg-gradient-to-br from-blue-400 to-blue-600 text-white">
+                <ShoppingBag className="w-6 h-6" />
+              </div>
+              <span className="text-2xl">📦</span>
             </div>
-            <span className="text-2xl">📦</span>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 font-medium">Bugünkü Sipariş</p>
+              <p className="stat-value mt-1">{stats.todayOrders}</p>
+            </div>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 font-medium">Bugünkü Sipariş</p>
-            <p className="stat-value mt-1">{stats.todayOrders}</p>
-          </div>
-        </div>
 
-        {/* Active Orders */}
-        <div className="stat-card stagger-item">
-          <div className="flex items-start justify-between">
-            <div className="stat-icon bg-gradient-to-br from-orange-400 to-orange-600 text-white">
-              <Flame className="w-6 h-6" />
+          {/* Active Orders */}
+          <div className="stat-card stagger-item">
+            <div className="flex items-start justify-between">
+              <div className="stat-icon bg-gradient-to-br from-orange-400 to-orange-600 text-white">
+                <Flame className="w-6 h-6" />
+              </div>
+              <span className="text-2xl">🔥</span>
             </div>
-            <span className="text-2xl">🔥</span>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 font-medium">Aktif Sipariş</p>
+              <p className="stat-value mt-1">{stats.activeOrders}</p>
+            </div>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 font-medium">Aktif Sipariş</p>
-            <p className="stat-value mt-1">{stats.activeOrders}</p>
-          </div>
-        </div>
 
-        {/* Available Tables */}
-        <div className="stat-card stagger-item">
-          <div className="flex items-start justify-between">
-            <div className="stat-icon bg-gradient-to-br from-purple-400 to-purple-600 text-white">
-              <Sparkles className="w-6 h-6" />
+          {/* Available Tables */}
+          <div className="stat-card stagger-item">
+            <div className="flex items-start justify-between">
+              <div className="stat-icon bg-gradient-to-br from-purple-400 to-purple-600 text-white">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <span className="text-2xl">🍽️</span>
             </div>
-            <span className="text-2xl">🍽️</span>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 font-medium">Boş Masa</p>
+              <p className="stat-value mt-1">{stats.availableTables}</p>
+            </div>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 font-medium">Boş Masa</p>
-            <p className="stat-value mt-1">{stats.availableTables}</p>
-          </div>
-        </div>
 
-        {/* Today Tips */}
-        <div className="stat-card stagger-item">
-          <div className="flex items-start justify-between">
-            <div className="stat-icon bg-gradient-to-br from-pink-400 to-pink-600 text-white">
-              <TrendingUp className="w-6 h-6" />
+          {/* Today Tips */}
+          <div className="stat-card stagger-item">
+            <div className="flex items-start justify-between">
+              <div className="stat-icon bg-gradient-to-br from-pink-400 to-pink-600 text-white">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <span className="text-2xl">💝</span>
             </div>
-            <span className="text-2xl">💝</span>
-          </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500 font-medium">Bugünkü Bahşiş</p>
-            <p className="stat-value mt-1">{formatCurrency(stats.todayTips)}</p>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 font-medium">Bugünkü Bahşiş</p>
+              <p className="stat-value mt-1">{formatCurrency(stats.todayTips)}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Actions & Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
