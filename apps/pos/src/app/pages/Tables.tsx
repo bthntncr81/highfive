@@ -18,7 +18,7 @@ interface Table {
 }
 
 export default function Tables() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { setTableId } = useCart();
   const { onMessage } = useWebSocket();
   const navigate = useNavigate();
@@ -496,6 +496,22 @@ export default function Tables() {
                     </span>
                   </div>
                 </div>
+              )}
+
+              {/* Admin: Masayı Boşalt */}
+              {table.status === 'OCCUPIED' && !mergeMode && user?.role === 'ADMIN' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`${table.name} masasını boşaltmak istiyor musunuz?`)) {
+                      handleStatusChange(table.id, 'FREE');
+                    }
+                  }}
+                  className="mt-3 w-full btn btn-danger text-sm py-2 flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Masayı Boşalt
+                </button>
               )}
 
               {/* Quick action for cleaning tables */}
