@@ -906,9 +906,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     const { id, itemId } = request.params as { id: string; itemId: string };
     const user = (request as any).user;
 
-    // Admin only
-    if (user.role !== 'ADMIN') {
-      return reply.status(403).send({ error: 'Bu işlem sadece admin tarafından yapılabilir' });
+    // Admin, Cashier, Waiter can delete items
+    if (!['ADMIN', 'CASHIER', 'WAITER'].includes(user.role)) {
+      return reply.status(403).send({ error: 'Bu işlem için yetkiniz yok' });
     }
 
     const order = await prisma.order.findUnique({

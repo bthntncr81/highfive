@@ -130,6 +130,7 @@ export default function OrderDetail() {
   };
 
   const isAdmin = user?.role === 'ADMIN';
+  const canDeleteItems = ['ADMIN', 'CASHIER', 'WAITER'].includes(user?.role || '');
 
   const handleStatusChange = async (newStatus: string) => {
     setIsProcessing(true);
@@ -878,7 +879,7 @@ export default function OrderDetail() {
                             {isFullyPaid ? 'Ödendi' : getStatusText(item.status)}
                           </span>
                         )}
-                        {isAdmin && !isFullyPaid && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                        {canDeleteItems && !isFullyPaid && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
                           <button
                             onClick={() => handleDeleteItem(item.id, item.menuItem?.name || 'Ürün', item.quantity)}
                             className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
