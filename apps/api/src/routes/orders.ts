@@ -1119,6 +1119,19 @@ export default async function orderRoutes(server: FastifyInstance) {
     });
     const totalPaid = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
     const order = await prisma.order.findUnique({ where: { id } });
+
+    // If there are no remaining payments, reset all items' paidQuantity
+    // (this handles full payments made without paidItems info)
+    if (totalPaid <= 0) {
+      for (const item of payment.order.items) {
+        if (item.paidQuantity > 0) {
+          await prisma.orderItem.update({
+            where: { id: item.id },
+            data: { paidQuantity: 0 },
+          });
+        }
+      }
+    }
     
     let newPaymentStatus: PaymentStatus;
     if (totalPaid <= 0) {
