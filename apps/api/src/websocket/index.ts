@@ -147,6 +147,10 @@ export function broadcastNewOrder(order: any) {
   broadcast(CHANNELS.NOTIFICATIONS, { action: 'new_order', message: `Yeni sipariş: #${order.orderNumber}`, order });
 }
 
+export function broadcastKitchenNewItems(order: any, newItems: any[]) {
+  broadcast(CHANNELS.KITCHEN, { action: 'new_items', order, newItems });
+}
+
 export function broadcastTableUpdate(table: any) {
   broadcast(CHANNELS.TABLES, { action: 'update', table });
 }

@@ -130,14 +130,15 @@ model Table {
 // ==================== MENU MANAGEMENT ====================
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String
-  icon      String?
-  image     String?
-  sortOrder Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  icon           String?
+  image          String?
+  sortOrder      Int      @default(0)
+  active         Boolean  @default(true)
+  printToKitchen Boolean  @default(true) // false = İçecek gibi mutfağa düşmeyecek kategoriler
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   items MenuItem[]
 }

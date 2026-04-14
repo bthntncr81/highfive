@@ -93,7 +93,7 @@ export default function App() {
             if (message.type === 'message' && message.channel === 'kitchen') {
               console.log('🍳 Mutfak güncellemesi:', message.data?.action);
               fetchOrders();
-              if (soundEnabled && message.data?.action === 'new') {
+              if (soundEnabled && (message.data?.action === 'new' || message.data?.action === 'new_items')) {
                 playNotificationSound();
               }
             }

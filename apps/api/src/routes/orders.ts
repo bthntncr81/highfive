@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
-import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate } from '../websocket';
+import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcastKitchenNewItems } from '../websocket';
 import { webhookService } from '../services/webhook.service';
 
 // Email notification - uses nodemailer if available
@@ -333,6 +333,7 @@ export default async function orderRoutes(server: FastifyInstance) {
           include: {
             menuItem: {
               include: {
+                category: { select: { printToKitchen: true } },
                 ingredients: {
                   include: { rawMaterial: true },
                   orderBy: { rawMaterial: { name: 'asc' } },
@@ -345,7 +346,15 @@ export default async function orderRoutes(server: FastifyInstance) {
       orderBy: { createdAt: 'asc' },
     });
 
-    return { orders };
+    // Mutfağa düşmeyecek ürünleri filtrele (İçecek gibi)
+    const filteredOrders = orders.map(order => ({
+      ...order,
+      items: order.items.filter(item =>
+        item.menuItem?.category?.printToKitchen !== false
+      ),
+    })).filter(order => order.items.length > 0); // Tüm ürünleri filtrelenen siparişleri çıkar
+
+    return { orders: filteredOrders };
   });
 
   // Get single order
@@ -837,10 +846,12 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     let additionalTotal = 0;
     const newItems = [];
+    const kitchenItems: { name: string; quantity: number; notes?: string }[] = [];
 
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
+        include: { category: true },
       });
 
       if (!menuItem || !menuItem.available) {
@@ -860,6 +871,15 @@ export default async function orderRoutes(server: FastifyInstance) {
         modifiers: item.modifiers || [],
         status: OrderStatus.PENDING,
       });
+
+      // Sadece mutfağa gitmesi gereken ürünleri topla
+      if (menuItem.category?.printToKitchen !== false) {
+        kitchenItems.push({
+          name: menuItem.name,
+          quantity: item.quantity,
+          notes: item.notes,
+        });
+      }
     }
 
     await prisma.orderItem.createMany({
@@ -897,6 +917,11 @@ export default async function orderRoutes(server: FastifyInstance) {
     });
 
     broadcastOrderUpdate(updatedOrder);
+
+    // Mutfağa yeni eklenen ürünleri bildir (içecek gibi mutfak dışı ürünler hariç)
+    if (kitchenItems.length > 0) {
+      broadcastKitchenNewItems(updatedOrder, kitchenItems);
+    }
 
     return { order: updatedOrder };
   });
