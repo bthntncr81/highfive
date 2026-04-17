@@ -22,6 +22,7 @@ interface OrderItem {
   notes?: string;
   status: string;
   menuItemName?: string;
+  createdAt?: string;
   menuItem?: {
     name: string;
     ingredients?: Ingredient[];
@@ -439,6 +440,52 @@ export default function App() {
   );
 }
 
+// Group an order's items into sequential "batches" so that items added later
+// (ek sipariş) render as their own ticket section in the kitchen. We group by
+// createdAt within a 90-second window — anything further apart is a new batch.
+function groupItemsIntoBatches(items: OrderItem[]): OrderItem[][] {
+  if (items.length === 0) return [];
+  const sorted = [...items].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return ta - tb;
+  });
+  const batches: OrderItem[][] = [];
+  const WINDOW_MS = 90 * 1000;
+  let current: OrderItem[] = [];
+  let batchAnchor = sorted[0].createdAt ? new Date(sorted[0].createdAt).getTime() : 0;
+  for (const item of sorted) {
+    const t = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    if (current.length === 0 || t - batchAnchor <= WINDOW_MS) {
+      current.push(item);
+      if (current.length === 1) batchAnchor = t;
+    } else {
+      batches.push(current);
+      current = [item];
+      batchAnchor = t;
+    }
+  }
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
+// Per-item action buttons: each kitchen ticket item gets its own HAZIR/SERVİS
+// buttons so staff can progress individual items independently of the overall
+// order status.
+const ITEM_NEXT_STATUS: Record<string, string> = {
+  PENDING: 'PREPARING',
+  CONFIRMED: 'PREPARING',
+  PREPARING: 'READY',
+  READY: 'SERVED',
+};
+
+const ITEM_ACTION_LABEL: Record<string, { text: string; emoji: string; className: string }> = {
+  PENDING: { text: 'HAZIRLA', emoji: '🔥', className: 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border-amber-500/40' },
+  CONFIRMED: { text: 'HAZIRLA', emoji: '🔥', className: 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border-amber-500/40' },
+  PREPARING: { text: 'HAZIR', emoji: '✅', className: 'bg-green-500/20 hover:bg-green-500/40 text-green-300 border-green-500/40' },
+  READY: { text: 'SERVİS', emoji: '🍽️', className: 'bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border-blue-500/40' },
+};
+
 // Order Card Component
 function OrderCard({
   order,
@@ -482,6 +529,8 @@ function OrderCard({
     ready: 'shadow-green-500/30 animate-pulse',
   }[type];
 
+  const batches = groupItemsIntoBatches(order.items);
+
   return (
     <div className={`bg-gray-800/80 backdrop-blur-sm rounded-2xl border-l-4 ${borderColor} overflow-hidden shadow-lg ${glowColor}`}>
       {/* Header */}
@@ -523,152 +572,175 @@ function OrderCard({
         </div>
       </div>
 
-      {/* Items */}
-      <div className="p-4 space-y-2">
-        {order.items.map((item) => {
-          const ingredients = item.menuItem?.ingredients || [];
-          const unitShort: Record<string, string> = {
-            GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
-          };
+      {/* Items — grouped into batches so "ek sipariş" added after the fact is visually separated */}
+      <div className="p-4 space-y-3">
+        {batches.map((batch, batchIndex) => (
+          <div key={batchIndex} className="space-y-2">
+            {batchIndex > 0 && (
+              <div className="flex items-center gap-2 mt-2 pt-2">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-300 bg-amber-500/20 border border-amber-500/40 rounded-full px-3 py-1">
+                  🔔 Ek Sipariş #{batchIndex + 1}
+                  {batch[0].createdAt && (
+                    <span className="ml-2 text-amber-200/70 font-mono">
+                      {new Date(batch[0].createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+              </div>
+            )}
+            {batch.map((item) => {
+              const ingredients = item.menuItem?.ingredients || [];
+              const unitShort: Record<string, string> = {
+                GRAM: 'g', KILOGRAM: 'kg', LITRE: 'L', MILLILITRE: 'mL', ADET: 'adet', PORSIYON: 'prs',
+              };
 
-          // Parse excluded ingredients from notes (format: "❌ NAME1, NAME2 OLMASIN")
-          const excludedNames: string[] = [];
-          let customerNote = '';
-          if (item.notes) {
-            const excludeMatch = item.notes.match(/❌\s*(.+?)\s*OLMASIN/i);
-            if (excludeMatch) {
-              excludedNames.push(...excludeMatch[1].split(',').map(s => s.trim().toLowerCase()));
-              customerNote = item.notes.replace(/\|?\s*❌\s*.+?OLMASIN/i, '').trim();
-            } else {
-              customerNote = item.notes;
-            }
-          }
+              // Parse excluded ingredients from notes (format: "❌ NAME1, NAME2 OLMASIN")
+              const excludedNames: string[] = [];
+              let customerNote = '';
+              if (item.notes) {
+                const excludeMatch = item.notes.match(/❌\s*(.+?)\s*OLMASIN/i);
+                if (excludeMatch) {
+                  excludedNames.push(...excludeMatch[1].split(',').map(s => s.trim().toLowerCase()));
+                  customerNote = item.notes.replace(/\|?\s*❌\s*.+?OLMASIN/i, '').trim();
+                } else {
+                  customerNote = item.notes;
+                }
+              }
 
-          const includedIngredients = ingredients.filter(
-            (ing) => !excludedNames.includes(ing.rawMaterial.name.toLowerCase())
-          );
-          const removedIngredients = ingredients.filter(
-            (ing) => excludedNames.includes(ing.rawMaterial.name.toLowerCase())
-          );
+              const includedIngredients = ingredients.filter(
+                (ing) => !excludedNames.includes(ing.rawMaterial.name.toLowerCase())
+              );
+              const removedIngredients = ingredients.filter(
+                (ing) => excludedNames.includes(ing.rawMaterial.name.toLowerCase())
+              );
 
-          return (
-            <div
-              key={item.id}
-              className={`rounded-xl transition-all ${
-                item.status === 'READY'
-                  ? 'bg-green-500/20 border border-green-500/30'
-                  : 'bg-white/5 border border-white/10'
-              }`}
-            >
-              {/* Item header */}
-              <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold shrink-0 ${
+              const itemNext = ITEM_NEXT_STATUS[item.status];
+              const itemAction = ITEM_ACTION_LABEL[item.status];
+
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-xl transition-all ${
                     item.status === 'READY'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {item.quantity}x
-                  </div>
-                  <div>
-                    <p className="font-semibold text-white text-lg">{item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün'}</p>
-                    {customerNote && (
-                      <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
-                        <span>📝</span>
-                        <span>{customerNote}</span>
-                      </p>
+                      ? 'bg-green-500/20 border border-green-500/30'
+                      : item.status === 'SERVED'
+                      ? 'bg-blue-500/10 border border-blue-500/20 opacity-70'
+                      : 'bg-white/5 border border-white/10'
+                  }`}
+                >
+                  {/* Item header */}
+                  <div className="flex items-center justify-between p-3 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold shrink-0 ${
+                        item.status === 'READY'
+                          ? 'bg-green-500 text-white'
+                          : item.status === 'SERVED'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {item.quantity}x
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white text-lg truncate">{item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün'}</p>
+                        {customerNote && (
+                          <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
+                            <span>📝</span>
+                            <span>{customerNote}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Per-item action button */}
+                    {itemNext && itemAction && (
+                      <button
+                        onClick={() => onItemStatusChange(order.id, item.id, itemNext)}
+                        className={`shrink-0 px-3 py-2 rounded-lg border text-sm font-bold transition-all hover:scale-105 flex items-center gap-1.5 ${itemAction.className}`}
+                      >
+                        <span>{itemAction.emoji}</span>
+                        <span>{itemAction.text}</span>
+                      </button>
+                    )}
+                    {!itemNext && (
+                      <div className="shrink-0 p-2 text-green-400">
+                        <Check className="w-5 h-5" />
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {item.status !== 'READY' && type === 'preparing' && (
-                  <button
-                    onClick={() => onItemStatusChange(order.id, item.id, 'READY')}
-                    className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 transition-all hover:scale-110"
-                  >
-                    <Check className="w-5 h-5" />
-                  </button>
-                )}
-                {item.status === 'READY' && (
-                  <div className="p-2 text-green-400">
-                    <Check className="w-5 h-5" />
-                  </div>
-                )}
-              </div>
+                  {/* Recipe - Ingredients with amounts */}
+                  {ingredients.length > 0 && (
+                    <div className="px-3 pb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {includedIngredients.map((ing) => {
+                          const totalAmount = Number(ing.amount) * item.quantity;
+                          const unit = unitShort[ing.rawMaterial.unit] || ing.rawMaterial.unit;
+                          return (
+                            <span
+                              key={ing.id}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/8 border border-white/15 text-sm"
+                            >
+                              <span className="text-gray-300 font-medium">{ing.rawMaterial.name}</span>
+                              <span className="text-cyan-400 font-mono font-bold">
+                                {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(1)}{unit}
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
 
-              {/* Recipe - Ingredients with amounts */}
-              {ingredients.length > 0 && (
-                <div className="px-3 pb-3">
-                  {/* Included ingredients */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {includedIngredients.map((ing) => {
-                      const totalAmount = Number(ing.amount) * item.quantity;
-                      const unit = unitShort[ing.rawMaterial.unit] || ing.rawMaterial.unit;
-                      return (
-                        <span
-                          key={ing.id}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/8 border border-white/15 text-sm"
-                        >
-                          <span className="text-gray-300 font-medium">{ing.rawMaterial.name}</span>
-                          <span className="text-cyan-400 font-mono font-bold">
-                            {totalAmount % 1 === 0 ? totalAmount : totalAmount.toFixed(1)}{unit}
+                      {removedIngredients.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
+                          <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                          {removedIngredients.map((ing) => (
+                            <span
+                              key={ing.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                            >
+                              <span className="text-red-400">{ing.rawMaterial.name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {excludedNames.length > 0 && removedIngredients.length === 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
+                          <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                          {excludedNames.map((name) => (
+                            <span
+                              key={name}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                            >
+                              <span className="text-red-400">{name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {ingredients.length === 0 && excludedNames.length > 0 && (
+                    <div className="px-3 pb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
+                        {excludedNames.map((name) => (
+                          <span
+                            key={name}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
+                          >
+                            <span className="text-red-400">{name}</span>
                           </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* Excluded ingredients */}
-                  {removedIngredients.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
-                      <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
-                      {removedIngredients.map((ing) => (
-                        <span
-                          key={ing.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
-                        >
-                          <span className="text-red-400">{ing.rawMaterial.name}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Excluded ingredients from notes that don't match recipe */}
-                  {excludedNames.length > 0 && removedIngredients.length === 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-red-500/20">
-                      <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
-                      {excludedNames.map((name) => (
-                        <span
-                          key={name}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
-                        >
-                          <span className="text-red-400">{name}</span>
-                        </span>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* If no recipe ingredients but has exclusions in notes */}
-              {ingredients.length === 0 && excludedNames.length > 0 && (
-                <div className="px-3 pb-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="text-red-400 text-xs font-bold uppercase tracking-wide self-center mr-1">Yok:</span>
-                    {excludedNames.map((name) => (
-                      <span
-                        key={name}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-sm line-through"
-                      >
-                        <span className="text-red-400">{name}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Action button */}

@@ -896,12 +896,20 @@ export default async function orderRoutes(server: FastifyInstance) {
     const newTax = newSubtotal * (taxRate / 100);
     const newTotal = newSubtotal + newTax;
 
+    // If kitchen-bound items were added and the order has already progressed beyond PREPARING,
+    // bounce the order back to PREPARING so the kitchen screen picks up the new items.
+    // Without this, items added to a READY/SERVED order would never reach the kitchen columns.
+    const shouldReopenForKitchen =
+      kitchenItems.length > 0 &&
+      (order.status === OrderStatus.READY || order.status === OrderStatus.SERVED);
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         subtotal: newSubtotal,
         tax: newTax,
         total: newTotal,
+        ...(shouldReopenForKitchen ? { status: OrderStatus.PREPARING } : {}),
       },
       include: {
         table: true,

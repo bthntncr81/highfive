@@ -18,8 +18,41 @@ interface Order {
   customerPhone?: string;
   customerAddress?: string;
   source?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
   items: any[];
 }
+
+// Visual theme for order cards based on the order source.
+// POS/walk-in orders use the default card; WhatsApp and online/QR use distinctive tints so
+// staff can spot externally-placed orders at a glance.
+const getSourceStyle = (source?: string) => {
+  const src = (source || 'POS').toUpperCase();
+  if (src === 'WHATSAPP') {
+    return 'bg-green-50 border-2 border-green-300 hover:border-green-400';
+  }
+  if (src === 'WEB' || src === 'ONLINE') {
+    return 'bg-indigo-50 border-2 border-indigo-300 hover:border-indigo-400';
+  }
+  if (src === 'QR') {
+    return 'bg-purple-50 border-2 border-purple-300 hover:border-purple-400';
+  }
+  return '';
+};
+
+const getSourceBadge = (source?: string) => {
+  const src = (source || 'POS').toUpperCase();
+  if (src === 'WHATSAPP') {
+    return { label: '💬 WhatsApp', className: 'bg-green-100 text-green-800 border-green-300' };
+  }
+  if (src === 'WEB' || src === 'ONLINE') {
+    return { label: '🌐 Web', className: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+  }
+  if (src === 'QR') {
+    return { label: '📱 QR', className: 'bg-purple-100 text-purple-800 border-purple-300' };
+  }
+  return null;
+};
 
 const STATUS_FILTERS = [
   { value: '', label: 'Tümü' },
@@ -217,11 +250,16 @@ export default function Orders() {
             <p className="text-gray-500">Sipariş bulunamadı</p>
           </div>
         ) : (
-          filteredOrders.map((order) => (
+          filteredOrders.map((order) => {
+            const sourceStyle = getSourceStyle(order.source);
+            const sourceBadge = getSourceBadge(order.source);
+            const isOnlinePaid =
+              order.paymentMethod === 'ONLINE' && order.paymentStatus === 'PAID';
+            return (
             <Link
               key={order.id}
               to={`/orders/${order.id}`}
-              className="card block hover:shadow-lg transition-shadow"
+              className={`card block hover:shadow-lg transition-shadow ${sourceStyle}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
@@ -244,6 +282,16 @@ export default function Orders() {
                       <span className={`badge ${getStatusColor(order.status)}`}>
                         {getStatusText(order.status)}
                       </span>
+                      {sourceBadge && (
+                        <span className={`badge border ${sourceBadge.className}`}>
+                          {sourceBadge.label}
+                        </span>
+                      )}
+                      {isOnlinePaid && (
+                        <span className="badge border bg-emerald-100 text-emerald-800 border-emerald-300">
+                          ✓ Online Ödendi
+                        </span>
+                      )}
                     </div>
                     
                     <p className="text-sm text-gray-500">
@@ -287,7 +335,8 @@ export default function Orders() {
                 </div>
               </div>
             </Link>
-          ))
+            );
+          })
         )}
       </div>
     </div>
