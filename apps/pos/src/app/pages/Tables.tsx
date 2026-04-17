@@ -484,19 +484,31 @@ export default function Tables() {
                 )}
               </div>
 
-              {/* Order info if occupied */}
-              {table.status === 'OCCUPIED' && table.orders?.length > 0 && !mergeMode && (
-                <div className="mt-2 pt-3 border-t-2 border-dashed border-gray-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      #{table.orders[0].orderNumber?.toString().padStart(4, '0')}
-                    </span>
-                    <span className="font-bold text-[#bb1e10]">
-                      {formatCurrency(table.orders[0].total || 0)}
-                    </span>
+              {/* Order info if occupied — sum totals across every active order for the table.
+                  Previously we only showed orders[0].total, which could be 0 when the first
+                  index happened to be an empty/just-opened tab (e.g. "Ön Cam" table). */}
+              {table.status === 'OCCUPIED' && (table.orders?.length ?? 0) > 0 && !mergeMode && (() => {
+                const activeOrders = table.orders ?? [];
+                const orderTotal = activeOrders.reduce(
+                  (sum: number, o: any) => sum + Number(o.total || 0),
+                  0
+                );
+                const primary = activeOrders[0];
+                return (
+                  <div className="mt-2 pt-3 border-t-2 border-dashed border-gray-200">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">
+                        {activeOrders.length > 1
+                          ? `${activeOrders.length} sipariş`
+                          : `#${primary.orderNumber?.toString().padStart(4, '0')}`}
+                      </span>
+                      <span className="font-bold text-[#bb1e10]">
+                        {formatCurrency(orderTotal)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Admin: Masayı Boşalt */}
               {table.status === 'OCCUPIED' && !mergeMode && user?.role === 'ADMIN' && (

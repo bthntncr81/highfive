@@ -984,6 +984,35 @@ export default function OrderDetail() {
                     Servis Edildi
                   </button>
                 )}
+
+                {order.status === 'SERVED' && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange('READY')}
+                      disabled={isProcessing}
+                      className="btn btn-secondary flex items-center gap-2"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                      Hazır'a Geri Al
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange('PREPARING')}
+                      disabled={isProcessing}
+                      className="btn btn-secondary flex items-center gap-2"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                      Hazırlanıyor'a Al
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange('COMPLETED')}
+                      disabled={isProcessing}
+                      className="btn btn-primary flex items-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Tamamla
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}

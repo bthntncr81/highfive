@@ -10,10 +10,22 @@ const generateSessionToken = () => crypto.randomBytes(16).toString('hex');
 export default async function tableRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
 
-  // Get all tables
+  // Get all tables.
+  // We also surface tables that were soft-deleted (active:false) but still carry open orders,
+  // so staff never loses visibility on a table with live work on it.
   server.get('/', { preHandler: verifyAuth }, async () => {
     const tables = await prisma.table.findMany({
-      where: { active: true },
+      where: {
+        OR: [
+          { active: true },
+          {
+            active: false,
+            orders: {
+              some: { status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+            },
+          },
+        ],
+      },
       include: {
         orders: {
           where: {
@@ -26,6 +38,7 @@ export default async function tableRoutes(server: FastifyInstance) {
               },
             },
           },
+          orderBy: { createdAt: 'desc' }, // newest open order first
         },
         mergedTables: true, // Birleştirilmiş masaları da getir
       },
