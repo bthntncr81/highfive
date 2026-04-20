@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
+interface DayHours {
+  open: boolean
+  start: string
+  end: string
+}
+
 interface ServiceSettings {
   takeawayEnabled: boolean
   deliveryEnabled: boolean
@@ -14,6 +20,7 @@ interface ServiceSettings {
   orderHoursEnabled: boolean
   orderHoursStart: string
   orderHoursEnd: string
+  orderHoursByDay?: Record<string, DayHours>
 }
 
 interface PublicSettings {
@@ -44,8 +51,22 @@ function checkOrderHours(services: ServiceSettings): boolean {
   if (!services.orderHoursEnabled) return true
   const now = new Date()
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
-  const [startH, startM] = (services.orderHoursStart || '11:00').split(':').map(Number)
-  const [endH, endM] = (services.orderHoursEnd || '23:00').split(':').map(Number)
+
+  // Per-day schedule overrides the single start/end when set. Day key matches
+  // JS Date.getDay(): 0=Sun, 1=Mon ... 6=Sat.
+  const todayKey = String(now.getDay())
+  const todayEntry = services.orderHoursByDay?.[todayKey]
+  const fallbackStart = services.orderHoursStart || '11:00'
+  const fallbackEnd = services.orderHoursEnd || '23:00'
+
+  if (todayEntry) {
+    if (!todayEntry.open) return false
+  }
+  const startStr = todayEntry?.start || fallbackStart
+  const endStr = todayEntry?.end || fallbackEnd
+
+  const [startH, startM] = startStr.split(':').map(Number)
+  const [endH, endM] = endStr.split(':').map(Number)
   const startMinutes = startH * 60 + startM
   const endMinutes = endH * 60 + endM
 

@@ -47,6 +47,16 @@ interface LoyaltySettings {
   minRedeemPoints: number; // Minimum kullanılabilir puan
 }
 
+interface DayHours {
+  open: boolean;
+  start: string;
+  end: string;
+}
+
+// JS Date.getDay(): 0=Pazar, 1=Pazartesi ... 6=Cumartesi.
+// We keep the same indexing so callers can read by `new Date().getDay()`.
+type WeeklyHours = Record<string, DayHours>;
+
 interface ServiceSettings {
   takeawayEnabled: boolean;
   deliveryEnabled: boolean;
@@ -59,10 +69,29 @@ interface ServiceSettings {
   orderHoursEnabled: boolean;
   orderHoursStart: string;
   orderHoursEnd: string;
+  orderHoursByDay?: WeeklyHours;
   iyzicoApiKey: string;
   iyzicoSecretKey: string;
   iyzicoBaseUrl: string;
 }
+
+const DAY_LABELS: { key: string; label: string }[] = [
+  { key: '1', label: 'Pazartesi' },
+  { key: '2', label: 'Salı' },
+  { key: '3', label: 'Çarşamba' },
+  { key: '4', label: 'Perşembe' },
+  { key: '5', label: 'Cuma' },
+  { key: '6', label: 'Cumartesi' },
+  { key: '0', label: 'Pazar' },
+];
+
+const defaultWeeklyHours = (start = '11:00', end = '23:00'): WeeklyHours => {
+  const out: WeeklyHours = {};
+  for (const { key } of DAY_LABELS) {
+    out[key] = { open: true, start, end };
+  }
+  return out;
+};
 
 interface IntegrationPartner {
   id: string;
@@ -553,28 +582,70 @@ export default function Settings() {
             </label>
           </div>
 
-          {services.orderHoursEnabled && (
-            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-orange-200">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Açılış Saati</label>
-                <input
-                  type="time"
-                  value={services.orderHoursStart}
-                  onChange={(e) => setServices({ ...services, orderHoursStart: e.target.value })}
-                  className="input"
-                />
+          {services.orderHoursEnabled && (() => {
+            const weekly =
+              services.orderHoursByDay ||
+              defaultWeeklyHours(services.orderHoursStart, services.orderHoursEnd);
+            const updateDay = (dayKey: string, patch: Partial<DayHours>) => {
+              const next: WeeklyHours = { ...weekly, [dayKey]: { ...weekly[dayKey], ...patch } };
+              setServices({ ...services, orderHoursByDay: next });
+            };
+            const applyToAll = () => {
+              const mon = weekly['1'];
+              if (!mon) return;
+              const next: WeeklyHours = {};
+              for (const { key } of DAY_LABELS) next[key] = { ...mon };
+              setServices({ ...services, orderHoursByDay: next });
+            };
+            return (
+              <div className="pl-4 border-l-2 border-orange-200 space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Gün bazında açılış / kapanış saati</p>
+                  <button
+                    type="button"
+                    onClick={applyToAll}
+                    className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                  >
+                    Pazartesi'yi tüm günlere uygula
+                  </button>
+                </div>
+                {DAY_LABELS.map(({ key, label }) => {
+                  const day = weekly[key] || { open: true, start: '11:00', end: '23:00' };
+                  return (
+                    <div key={key} className="grid grid-cols-12 gap-2 items-center">
+                      <label className="col-span-4 flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={day.open}
+                          onChange={(e) => updateDay(key, { open: e.target.checked })}
+                          className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400"
+                        />
+                        <span className={`text-sm font-medium ${day.open ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {label}
+                        </span>
+                      </label>
+                      <div className="col-span-8 grid grid-cols-2 gap-2">
+                        <input
+                          type="time"
+                          value={day.start}
+                          disabled={!day.open}
+                          onChange={(e) => updateDay(key, { start: e.target.value })}
+                          className="input text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                        <input
+                          type="time"
+                          value={day.end}
+                          disabled={!day.open}
+                          onChange={(e) => updateDay(key, { end: e.target.value })}
+                          className="input text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kapanış Saati</label>
-                <input
-                  type="time"
-                  value={services.orderHoursEnd}
-                  onChange={(e) => setServices({ ...services, orderHoursEnd: e.target.value })}
-                  className="input"
-                />
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
             <div>
