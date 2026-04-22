@@ -52,8 +52,8 @@ if (typeof window !== 'undefined') {
   document.addEventListener('touchstart', activate);
 }
 
-// Play alert sound
-function playAlertSound() {
+// Single beep-burst (3 quick square-wave pulses)
+function playBeepBurst() {
   try {
     const ctx = ensureAudioContext();
     [0, 0.25, 0.5].forEach((delay) => {
@@ -69,21 +69,99 @@ function playAlertSound() {
       osc.stop(ctx.currentTime + delay + 0.2);
     });
   } catch (e) { /* silent */ }
+}
 
-  // Flash document title
+// Global loop manager — a new order keeps the burst repeating until the user
+// acknowledges. We enforce a minimum playback window so the dismiss button
+// cannot silence the alert before staff have a chance to hear it.
+const ALERT_MIN_MS = 30_000;   // minimum play duration
+const ALERT_MAX_MS = 5 * 60_000; // hard safety cap
+const ALERT_PULSE_MS = 1_800;  // interval between bursts
+
+let alertInterval: number | null = null;
+let alertHardStop: number | null = null;
+
+function stopAlertLoop() {
+  if (alertInterval) {
+    clearInterval(alertInterval);
+    alertInterval = null;
+  }
+  if (alertHardStop) {
+    clearTimeout(alertHardStop);
+    alertHardStop = null;
+  }
+}
+
+function startAlertLoop() {
+  if (alertInterval) return; // already looping
+  playBeepBurst();
+  alertInterval = window.setInterval(playBeepBurst, ALERT_PULSE_MS);
+  alertHardStop = window.setTimeout(stopAlertLoop, ALERT_MAX_MS);
+
+  // Flash document title while alert is active
   const origTitle = document.title;
   document.title = '🔔 YENİ SİPARİŞ!';
-  setTimeout(() => { document.title = origTitle; }, 5000);
+  const restoreTitle = () => { document.title = origTitle; };
+  // Clean up title when loop stops
+  const checkTitle = window.setInterval(() => {
+    if (!alertInterval) {
+      restoreTitle();
+      clearInterval(checkTitle);
+    }
+  }, 1000);
+}
+
+interface ActiveAlert {
+  orderNumber: number;
+  type: string;
+  customerName?: string;
+  startedAt: number;
 }
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [toasts, setToasts] = useState<OrderToast[]>([]);
+  const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
+  const [now, setNow] = useState(Date.now());
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tick every second while an alert is active so the countdown re-renders
+  useEffect(() => {
+    if (!activeAlert) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activeAlert]);
+
+  // Keep alert auto-clearing in sync with the sound loop's safety cap
+  useEffect(() => {
+    if (!activeAlert) return;
+    const remaining = ALERT_MAX_MS - (Date.now() - activeAlert.startedAt);
+    if (remaining <= 0) {
+      setActiveAlert(null);
+      return;
+    }
+    const id = setTimeout(() => setActiveAlert(null), remaining);
+    return () => clearTimeout(id);
+  }, [activeAlert]);
+
+  const dismissAlert = () => {
+    stopAlertLoop();
+    setActiveAlert(null);
+  };
+
+  const triggerAlert = (order: any) => {
+    setActiveAlert({
+      orderNumber: order.orderNumber || 0,
+      type: order.type || 'TAKEAWAY',
+      customerName: order.customerName,
+      startedAt: Date.now(),
+    });
+    startAlertLoop();
+  };
 
   const addToast = (order: any) => {
     const toast: OrderToast = {
@@ -131,8 +209,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             // POS-created orders don't trigger sound (garson already knows)
             if (message.channel === 'orders' && message.data?.action === 'new') {
               const source = message.data.order?.source;
-              if (source !== 'POS') {
-                playAlertSound();
+              if (source !== 'POS' && message.data.order) {
+                triggerAlert(message.data.order);
               }
               if (message.data.order) {
                 addToast(message.data.order);
@@ -238,6 +316,43 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+
+      {/* Persistent alert banner — stays until dismissed. Dismiss button is
+          locked for the first 30 seconds so staff cannot silence the sound
+          instantly. */}
+      {activeAlert && (() => {
+        const elapsed = now - activeAlert.startedAt;
+        const remainingToUnlock = Math.max(0, Math.ceil((ALERT_MIN_MS - elapsed) / 1000));
+        const canDismiss = remainingToUnlock <= 0;
+        return (
+          <div className="fixed inset-x-0 top-0 z-[10000] bg-red-600 text-white shadow-2xl border-b-4 border-red-800 animate-pulse">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-3xl animate-bounce">🔔</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-lg">
+                    YENİ SİPARİŞ #{activeAlert.orderNumber} — {typeLabel(activeAlert.type)}
+                  </p>
+                  <p className="text-sm text-white/90 truncate">
+                    {activeAlert.customerName || 'Müşteri'} • Ses onaylanana kadar devam edecek
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={dismissAlert}
+                disabled={!canDismiss}
+                className={`shrink-0 px-6 py-3 rounded-xl font-bold transition-all ${
+                  canDismiss
+                    ? 'bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer'
+                    : 'bg-white/30 text-white cursor-not-allowed'
+                }`}
+              >
+                {canDismiss ? '✓ ONAYLA & SESSİZE AL' : `ONAYLA (${remainingToUnlock}s)`}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Global Toast Notifications - visible on ALL pages */}
       <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">

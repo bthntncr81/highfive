@@ -39,12 +39,30 @@ interface Order {
   items: OrderItem[];
 }
 
+// Sound loop constants — a new order keeps pulsing until acknowledged.
+// Dismiss is locked for the first MIN_MS so staff cannot silence instantly.
+const ALERT_MIN_MS = 30_000;
+const ALERT_MAX_MS = 5 * 60_000;
+const ALERT_PULSE_MS = 1_800;
+
+interface ActiveAlert {
+  orderNumber: number;
+  startedAt: number;
+}
+
 export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
+  const [alertNow, setAlertNow] = useState(Date.now());
+  const alertIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const alertMaxTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref so the WebSocket onmessage closure (created once in useEffect) always
+  // sees the latest triggerAlert without re-subscribing the socket
+  const triggerAlertRef = useRef<((order: Order) => void) | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -95,7 +113,7 @@ export default function App() {
               console.log('🍳 Mutfak güncellemesi:', message.data?.action);
               fetchOrders();
               if (soundEnabled && (message.data?.action === 'new' || message.data?.action === 'new_items')) {
-                playNotificationSound();
+                triggerAlertRef.current?.(message.data?.order || { orderNumber: 0 });
               }
             }
           } catch (error) {
@@ -164,7 +182,7 @@ export default function App() {
     };
   }, []);
 
-  const playNotificationSound = () => {
+  const playBeepBurst = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -186,9 +204,53 @@ export default function App() {
     } catch (e) {
       console.warn('Notification sound failed:', e);
     }
+  }, []);
+
+  const stopAlertLoop = useCallback(() => {
+    if (alertIntervalRef.current) {
+      clearInterval(alertIntervalRef.current);
+      alertIntervalRef.current = null;
+    }
+    if (alertMaxTimeoutRef.current) {
+      clearTimeout(alertMaxTimeoutRef.current);
+      alertMaxTimeoutRef.current = null;
+    }
+    document.title = 'Kitchen';
+  }, []);
+
+  const dismissAlert = useCallback(() => {
+    stopAlertLoop();
+    setActiveAlert(null);
+  }, [stopAlertLoop]);
+
+  const triggerAlert = useCallback((order: Order) => {
+    // Already looping — just update the visible order number to the newest
+    setActiveAlert({
+      orderNumber: order.orderNumber || 0,
+      startedAt: alertIntervalRef.current ? Date.now() : Date.now(),
+    });
+    if (alertIntervalRef.current) return;
+    playBeepBurst();
+    alertIntervalRef.current = setInterval(playBeepBurst, ALERT_PULSE_MS);
+    alertMaxTimeoutRef.current = setTimeout(() => {
+      stopAlertLoop();
+      setActiveAlert(null);
+    }, ALERT_MAX_MS);
     document.title = '🔔 YENİ SİPARİŞ!';
-    setTimeout(() => { document.title = 'Kitchen'; }, 5000);
-  };
+  }, [playBeepBurst, stopAlertLoop]);
+
+  // Tick so the countdown label on the dismiss button re-renders
+  useEffect(() => {
+    if (!activeAlert) return;
+    const id = setInterval(() => setAlertNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activeAlert]);
+
+  // Keep the ref pointing at the latest triggerAlert
+  useEffect(() => {
+    triggerAlertRef.current = triggerAlert;
+  }, [triggerAlert]);
+
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
@@ -256,10 +318,49 @@ export default function App() {
     );
   }
 
+  const alertElapsed = activeAlert ? alertNow - activeAlert.startedAt : 0;
+  const alertRemainingToUnlock = activeAlert
+    ? Math.max(0, Math.ceil((ALERT_MIN_MS - alertElapsed) / 1000))
+    : 0;
+  const canDismissAlert = activeAlert != null && alertRemainingToUnlock <= 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      {/* Persistent new-order alert — keeps pulsing until dismissed.
+          Dismiss button is locked for the first 30s. */}
+      {activeAlert && (
+        <div className="fixed inset-x-0 top-0 z-[10000] bg-red-600 text-white shadow-2xl border-b-4 border-red-800">
+          <div className="max-w-[2000px] mx-auto px-6 py-4 flex items-center justify-between gap-4 animate-pulse">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-4xl animate-bounce">🔔</span>
+              <div className="min-w-0">
+                <p className="font-bold text-xl">
+                  YENİ SİPARİŞ #{activeAlert.orderNumber}
+                </p>
+                <p className="text-sm text-white/90">
+                  Ses onaylanana kadar devam edecek
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={dismissAlert}
+              disabled={!canDismissAlert}
+              className={`shrink-0 px-6 py-4 rounded-xl font-bold text-lg transition-all ${
+                canDismissAlert
+                  ? 'bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer'
+                  : 'bg-white/30 text-white cursor-not-allowed'
+              }`}
+            >
+              {canDismissAlert
+                ? '✓ ONAYLA & SESSİZE AL'
+                : `ONAYLA (${alertRemainingToUnlock}s)`}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-black/40 backdrop-blur-sm border-b border-white/10 px-6 py-4 sticky top-0 z-50">
+      <header className={`bg-black/40 backdrop-blur-sm border-b border-white/10 px-6 py-4 sticky z-50 ${activeAlert ? 'top-[88px]' : 'top-0'}`}>
         <div className="flex items-center justify-between max-w-[2000px] mx-auto">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-gradient-to-br from-accent-500 to-accent-700 rounded-2xl flex items-center justify-center shadow-lg shadow-accent-500/30">
