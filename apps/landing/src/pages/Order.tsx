@@ -54,8 +54,14 @@ export const Order = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  // Geo capture is REQUIRED for delivery orders. We keep the coordinates and
+  // the human-readable label separate from the manual address textarea so the
+  // user types only the door/apartment/landmark details — the pin link is
+  // attached at submit time, not in the textarea.
   const [geoStatus, setGeoStatus] = useState<'idle' | 'asking' | 'resolving' | 'error' | 'ok'>('idle');
   const [geoError, setGeoError] = useState('');
+  const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLabel, setGeoLabel] = useState('');
 
   // Ask the browser for the customer's current location, reverse-geocode it
   // via OSM Nominatim (no API key, friendly to small-volume use), and
@@ -73,28 +79,25 @@ export const Order = () => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
+        setGeoCoords({ lat, lng });
         setGeoStatus('resolving');
         try {
           const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=tr`;
           const r = await fetch(url, { headers: { 'Accept-Language': 'tr' } });
           const data = await r.json();
-          const street = data.display_name || '';
-          const mapsLink = `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
-          // If the user already typed something, prepend their text and tag
-          // the auto-detected pin underneath. Otherwise just use the resolved
-          // address.
-          const autoBlock = `${street}\n📍 ${mapsLink}`;
-          setCustomerAddress((prev) => {
-            const trimmed = prev.trim();
-            if (!trimmed) return autoBlock;
-            // Avoid double-appending if user clicks twice
-            if (trimmed.includes(mapsLink)) return prev;
-            return `${trimmed}\n\n${autoBlock}`;
-          });
+          // Show only a short, friendly label (street + neighborhood) — not
+          // the entire reverse-geocoded line. The textarea stays clean for the
+          // user's own door/apartment input.
+          const a = data?.address ?? {};
+          const friendly = [a.road, a.neighbourhood || a.suburb, a.town || a.city]
+            .filter(Boolean).join(', ');
+          setGeoLabel(friendly || data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
           setGeoStatus('ok');
         } catch (e: any) {
-          setGeoStatus('error');
-          setGeoError('Adres çözümlenemedi, manuel olarak yazabilirsin');
+          // Even if reverse geocoding fails, we still have the coords —
+          // accept the location and let the user proceed.
+          setGeoLabel(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          setGeoStatus('ok');
         }
       },
       (err) => {
@@ -240,8 +243,12 @@ export const Order = () => {
       }
     }
     if (orderMode === 'delivery') {
-      if (!customerAddress.trim() || customerAddress.trim().length < 10) {
-        setError('Lütfen açık adres girin (en az 10 karakter)');
+      if (!geoCoords) {
+        setError('📍 Konumumu Kullan butonuyla konumunu paylaş');
+        return;
+      }
+      if (!customerAddress.trim() || customerAddress.trim().length < 5) {
+        setError('Lütfen açık adresi yaz (daire / kat / kapı no)');
         return;
       }
       if (customerAddress.includes('@')) {
@@ -292,7 +299,14 @@ export const Order = () => {
         customerName: orderMode !== 'table' ? customerName : undefined,
         customerPhone: orderMode !== 'table' ? customerPhone : undefined,
         customerEmail: customerEmail || undefined,
-        customerAddress: orderMode === 'delivery' ? customerAddress : undefined,
+        // For delivery orders, attach the precise pin link so kitchen/POS can
+        // navigate to the exact spot. Manual text + auto-link, separated by
+        // a newline.
+        customerAddress: orderMode === 'delivery'
+          ? (geoCoords
+              ? `${customerAddress.trim()}\n📍 https://maps.google.com/?q=${geoCoords.lat.toFixed(6)},${geoCoords.lng.toFixed(6)}`
+              : customerAddress)
+          : undefined,
         items: orderItems,
         type: orderType,
         notes: orderNotes,
@@ -638,34 +652,74 @@ export const Order = () => {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-medium text-foreground-muted">Teslimat Adresi *</label>
-                    <button
-                      type="button"
-                      onClick={useMyLocation}
-                      disabled={geoStatus === 'asking' || geoStatus === 'resolving'}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {geoStatus === 'asking' && '⏳ İzin bekleniyor…'}
-                      {geoStatus === 'resolving' && '⏳ Adres bulunuyor…'}
-                      {geoStatus === 'ok' && '✓ Konum eklendi'}
-                      {(geoStatus === 'idle' || geoStatus === 'error') && '📍 Konumumu Kullan'}
-                    </button>
-                  </div>
+                  {/* Step 1: location is mandatory before manual address. */}
+                  <label className="block text-sm font-medium text-foreground-muted mb-1">
+                    Konum *
+                  </label>
+                  {!geoCoords ? (
+                    <div className="rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-4 text-center">
+                      <p className="text-sm text-blue-900 mb-3">
+                        Doğru kuryeyi yönlendirebilmemiz için önce konumunu paylaş
+                      </p>
+                      <button
+                        type="button"
+                        onClick={useMyLocation}
+                        disabled={geoStatus === 'asking' || geoStatus === 'resolving'}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {geoStatus === 'asking' && '⏳ İzin bekleniyor…'}
+                        {geoStatus === 'resolving' && '⏳ Konum alınıyor…'}
+                        {(geoStatus === 'idle' || geoStatus === 'error') && '📍 Konumumu Kullan'}
+                      </button>
+                      {geoStatus === 'error' && geoError && (
+                        <p className="mt-2 text-xs text-red-600">⚠️ {geoError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border-2 border-green-300 bg-green-50 p-3 flex items-start gap-3">
+                      <span className="text-2xl">✅</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-green-900">Konum eklendi</p>
+                        {geoLabel && (
+                          <p className="text-xs text-green-800 truncate" title={geoLabel}>
+                            {geoLabel}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGeoCoords(null);
+                          setGeoLabel('');
+                          setGeoStatus('idle');
+                        }}
+                        className="text-xs text-green-700 hover:text-green-900 underline shrink-0"
+                      >
+                        değiştir
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 2: manual address — apartment / door / floor / landmarks */}
+                  <label className="block text-sm font-medium text-foreground-muted mb-1 mt-3">
+                    Açık Adres *
+                  </label>
                   <textarea
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none"
-                    rows={4}
-                    placeholder="Örn: Cumhuriyet Mah. İstanbul Cad. No:5 Daire:3 — veya 📍 Konumumu Kullan butonuyla otomatik doldur"
-                    maxLength={500}
+                    disabled={!geoCoords}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    rows={3}
+                    placeholder={
+                      geoCoords
+                        ? 'Daire / kat / kapı no / kuryeye tarif (örn: 3. kat sol daire, kırmızı kapı)'
+                        : 'Önce konumunu ekle'
+                    }
+                    maxLength={300}
                   />
-                  {geoStatus === 'error' && geoError && (
-                    <p className="mt-1 text-xs text-red-600">⚠️ {geoError}</p>
-                  )}
-                  {geoStatus === 'ok' && (
-                    <p className="mt-1 text-xs text-green-700">
-                      Adres ve konum bağlantısı eklendi — kapı/daire bilgisini eklemeyi unutma
+                  {geoCoords && (
+                    <p className="mt-1 text-xs text-foreground-muted">
+                      Daire numarası, kat ve kuryeye yardımcı olacak detayları yaz
                     </p>
                   )}
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -1045,7 +1099,7 @@ export const Order = () => {
               disabled={
                 isSubmitting ||
                 ((orderMode === 'takeaway' || orderMode === 'delivery') && (!customerName || !customerPhone)) ||
-                (orderMode === 'delivery' && !customerAddress.trim()) ||
+                (orderMode === 'delivery' && (!customerAddress.trim() || !geoCoords)) ||
                 !paymentMethod ||
                 (paymentMethod === 'card' && !customerEmail)
               }
