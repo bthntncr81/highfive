@@ -291,6 +291,17 @@ export default function Orders() {
             const paymentStatusBadge = getPaymentStatusBadge(order.paymentStatus);
             const isOnlinePaid =
               order.paymentMethod === 'ONLINE' && order.paymentStatus === 'PAID';
+            // "Kapıda Ödeme" / "Kasada Ödeme" — orders coming from outside POS
+            // that the customer will pay in person on receipt.
+            const isUnpaidExternal =
+              order.source && order.source !== 'POS' &&
+              order.paymentStatus !== 'PAID' &&
+              order.paymentStatus !== 'PARTIAL' &&
+              order.paymentMethod !== 'ONLINE';
+            const payOnDeliveryLabel =
+              order.type === 'DELIVERY' ? '💵 Kapıda Ödeme'
+              : order.type === 'TAKEAWAY' ? '💵 Kasada Ödeme'
+              : '💵 Yerinde Ödeme';
             return (
             <Link
               key={order.id}
@@ -323,11 +334,17 @@ export default function Orders() {
                           {sourceBadge.label}
                         </span>
                       )}
-                      {/* Show explicit "Online Ödendi" pill when paid via online card.
-                          Otherwise show the generic payment method + status pair. */}
+                      {/* Two prominent "intent" pills cover the most common cases:
+                          - paid online → ✓ Online Ödendi (emerald)
+                          - external order, not paid → 💵 Kapıda/Kasada/Yerinde Ödeme (orange)
+                          Anything else falls back to the generic method+status pair. */}
                       {isOnlinePaid ? (
-                        <span className="badge border bg-emerald-100 text-emerald-800 border-emerald-300">
+                        <span className="badge border bg-emerald-100 text-emerald-800 border-emerald-300 font-bold">
                           ✓ Online Ödendi
+                        </span>
+                      ) : isUnpaidExternal ? (
+                        <span className="badge border bg-orange-100 text-orange-800 border-orange-300 font-bold">
+                          {payOnDeliveryLabel}
                         </span>
                       ) : (
                         <>
