@@ -26,13 +26,15 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
-// Global AudioContext - created once and aggressively kept alive.
-// Browsers (Chrome especially) suspend the context when there's no recent
-// user gesture; we keep the unlock listener attached forever so EVERY click
-// has a chance to revive it. Without this, alerts that arrive while the
-// page is idle play silently — until the user clicks Onayla, and only then
-// the next scheduled burst plays (which is exactly the bug we hit).
-let audioCtx: AudioContext | null = null;
+// HTMLAudioElement-based beep playback.
+//
+// Web Audio's AudioContext starts suspended on Chrome and only the FIRST
+// burst inside a user-gesture handler reliably unlocks it. Subsequent
+// setInterval-driven bursts hit a still-suspended context and produce
+// silence. HTMLAudioElement is permissive: once the user has clicked
+// anywhere on the page, .play() works for the rest of the page lifetime,
+// even from setInterval. We generate a small in-memory WAV beep at module
+// load and reuse the same <audio> element on every burst.
 const VOLUME_KEY = 'rm_alert_volume';
 
 function getVolume(): number {
@@ -43,90 +45,73 @@ function getVolume(): number {
   } catch { return 0.7; }
 }
 
-function ensureAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+function buildBeepWavUrl(freq = 880, durationMs = 700, sampleRate = 22050): string {
+  // 3 short pulses (similar profile to the old 3-osc burst) inside one WAV.
+  const samples = Math.floor((sampleRate * durationMs) / 1000);
+  const buffer = new ArrayBuffer(44 + samples * 2);
+  const view = new DataView(buffer);
+  // RIFF/WAVE header
+  view.setUint32(0, 0x52494646, false);
+  view.setUint32(4, 36 + samples * 2, true);
+  view.setUint32(8, 0x57415645, false);
+  view.setUint32(12, 0x666d7420, false);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  view.setUint32(36, 0x64617461, false);
+  view.setUint32(40, samples * 2, true);
+
+  // Three pulses with attack/decay envelopes at offsets 0, 0.25, 0.5 sec
+  const pulseStarts = [0, 0.25 * sampleRate, 0.5 * sampleRate];
+  const pulseLen = 0.18 * sampleRate;
+  for (let i = 0; i < samples; i++) {
+    let v = 0;
+    for (const start of pulseStarts) {
+      if (i < start || i >= start + pulseLen) continue;
+      const into = (i - start) / pulseLen;
+      // simple AD envelope: 5% attack, exponential decay
+      const env = into < 0.05 ? into / 0.05 : Math.pow(1 - into, 2);
+      const sq = Math.sin(2 * Math.PI * freq * (i / sampleRate)) > 0 ? 1 : -1;
+      v += sq * env * 0.7;
+    }
+    // clamp and convert to int16
+    const sample = Math.max(-1, Math.min(1, v)) * 0x7fff;
+    view.setInt16(44 + i * 2, sample, true);
   }
-  if (audioCtx.state === 'suspended') {
-    // Resume returns a promise but we don't await it — by the time the next
-    // burst fires, it'll be running. If still suspended, the burst is a no-op.
-    audioCtx.resume().catch(() => { /* ignore */ });
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+
+let beepEl: HTMLAudioElement | null = null;
+function ensureBeep(): HTMLAudioElement {
+  if (!beepEl) {
+    beepEl = new Audio(buildBeepWavUrl());
+    beepEl.preload = 'auto';
   }
-  return audioCtx;
-}
-
-// Subscribers that want to know when the audio lock state changes.
-type AudioLockListener = (locked: boolean) => void;
-const audioLockListeners = new Set<AudioLockListener>();
-
-function notifyAudioLock() {
-  const locked = !audioCtx || audioCtx.state !== 'running';
-  audioLockListeners.forEach((cb) => cb(locked));
-}
-
-export function subscribeAudioLock(cb: AudioLockListener) {
-  audioLockListeners.add(cb);
-  // Immediate report so subscribers render with the correct initial value
-  cb(!audioCtx || audioCtx.state !== 'running');
-  return () => audioLockListeners.delete(cb);
-}
-
-// Prime audio output by playing a silent buffer through the context. This
-// forces the browser to "commit" to audio output for the rest of the page
-// lifecycle. Without this, ctx.resume() succeeds but the very first real
-// burst can still ship silently on Chrome.
-function primeAudio() {
-  try {
-    const ctx = ensureAudioContext();
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(ctx.destination);
-    src.start(0);
-  } catch { /* ignore */ }
-}
-
-export function unlockAudio() {
-  // Called from a user gesture (click handler) to forcibly open the audio
-  // pipe. Combines context creation + resume + silent priming.
-  ensureAudioContext();
-  primeAudio();
-  // Run state probe shortly after — resume() returns a promise and the
-  // state flips asynchronously.
-  setTimeout(notifyAudioLock, 50);
-  setTimeout(notifyAudioLock, 250);
+  return beepEl;
 }
 
 if (typeof window !== 'undefined') {
-  const activate = () => unlockAudio();
-  document.addEventListener('click', activate, { capture: true });
-  document.addEventListener('keydown', activate, { capture: true });
-  document.addEventListener('touchstart', activate, { capture: true });
-  try { ensureAudioContext(); notifyAudioLock(); } catch { /* ignore */ }
-  // Periodically re-check lock state so any background tab that gets the
-  // context suspended by the browser wakes the UI hint back up.
-  setInterval(notifyAudioLock, 2000);
+  // Prime on page load so the first call to .play() doesn't have to wait
+  // for the WAV to fetch/decode.
+  try { ensureBeep().load(); } catch { /* ignore */ }
 }
 
-// Single beep-burst (3 quick square-wave pulses). Gain reads the persisted
-// volume on every call so a slider change takes effect immediately.
 function playBeepBurst() {
   try {
-    const ctx = ensureAudioContext();
-    const vol = getVolume();
-    [0, 0.25, 0.5].forEach((delay) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'square';
-      gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
-      osc.start(ctx.currentTime + delay);
-      osc.stop(ctx.currentTime + delay + 0.2);
-    });
-  } catch (e) { /* silent */ }
+    const el = ensureBeep();
+    el.volume = getVolume();
+    // Rewind in case a previous burst hasn't finished yet
+    el.currentTime = 0;
+    const p = el.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => { /* autoplay-blocked, will work after first click */ });
+    }
+  } catch { /* silent */ }
 }
 
 // Global loop manager — a new order keeps the burst repeating until the user
