@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { api } from '../lib/api';
-import { Search, Filter, RefreshCw, Clock, ChefHat, Check, X } from 'lucide-react';
+import { Search, Filter, RefreshCw, Clock, ChefHat, Check, X, MapPin, Copy, ExternalLink } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -53,6 +53,40 @@ const getSourceBadge = (source?: string) => {
   }
   return null;
 };
+
+// Payment method icon + label. Mirrors the PaymentMethod enum in Prisma.
+const getPaymentMethodBadge = (method?: string) => {
+  if (!method) return null;
+  const map: Record<string, { label: string; className: string }> = {
+    CASH:        { label: '💵 Nakit',        className: 'bg-gray-100 text-gray-800 border-gray-300' },
+    CREDIT_CARD: { label: '💳 Kredi Kartı',  className: 'bg-blue-100 text-blue-800 border-blue-300' },
+    DEBIT_CARD:  { label: '💳 Banka Kartı',  className: 'bg-blue-100 text-blue-800 border-blue-300' },
+    ONLINE:      { label: '🌐 Online Ödeme', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+    MULTINET:    { label: '🍽️ Multinet',     className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    SODEXO:      { label: '🍽️ Sodexo',       className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    TICKET:      { label: '🎫 Ticket',       className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    TAB:         { label: '📒 Hesap Açık',   className: 'bg-orange-100 text-orange-800 border-orange-300' },
+    DIGITAL_COIN:{ label: '🪙 Dijital',      className: 'bg-purple-100 text-purple-800 border-purple-300' },
+    OTHER:       { label: '❓ Diğer',         className: 'bg-gray-100 text-gray-800 border-gray-300' },
+  };
+  return map[method] || null;
+};
+
+const getPaymentStatusBadge = (status?: string) => {
+  const map: Record<string, { label: string; className: string }> = {
+    PAID:     { label: '✓ Ödendi',     className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+    PENDING:  { label: '⏳ Bekliyor',   className: 'bg-amber-100 text-amber-800 border-amber-300' },
+    PARTIAL:  { label: '½ Kısmi',      className: 'bg-amber-100 text-amber-800 border-amber-300' },
+    REFUNDED: { label: '↩️ İade',       className: 'bg-red-100 text-red-800 border-red-300' },
+    ON_TAB:   { label: '📒 Hesap Açık', className: 'bg-orange-100 text-orange-800 border-orange-300' },
+  };
+  return status ? map[status] || null : null;
+};
+
+// Build a Google Maps URL — the `q` parameter accepts free-text addresses
+// or a lat,lng pair, so the same helper works for both.
+const mapsUrl = (address: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
 const STATUS_FILTERS = [
   { value: '', label: 'Tümü' },
@@ -253,6 +287,8 @@ export default function Orders() {
           filteredOrders.map((order) => {
             const sourceStyle = getSourceStyle(order.source);
             const sourceBadge = getSourceBadge(order.source);
+            const paymentMethodBadge = getPaymentMethodBadge(order.paymentMethod);
+            const paymentStatusBadge = getPaymentStatusBadge(order.paymentStatus);
             const isOnlinePaid =
               order.paymentMethod === 'ONLINE' && order.paymentStatus === 'PAID';
             return (
@@ -273,7 +309,7 @@ export default function Orders() {
 
                   {/* Order details */}
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {order.table && (
                         <span className="text-gray-900 font-medium">
                           {order.table.name}
@@ -287,21 +323,66 @@ export default function Orders() {
                           {sourceBadge.label}
                         </span>
                       )}
-                      {isOnlinePaid && (
+                      {/* Show explicit "Online Ödendi" pill when paid via online card.
+                          Otherwise show the generic payment method + status pair. */}
+                      {isOnlinePaid ? (
                         <span className="badge border bg-emerald-100 text-emerald-800 border-emerald-300">
                           ✓ Online Ödendi
                         </span>
+                      ) : (
+                        <>
+                          {paymentMethodBadge && (
+                            <span className={`badge border ${paymentMethodBadge.className}`}>
+                              {paymentMethodBadge.label}
+                            </span>
+                          )}
+                          {paymentStatusBadge && (
+                            <span className={`badge border ${paymentStatusBadge.className}`}>
+                              {paymentStatusBadge.label}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
-                    
+
                     <p className="text-sm text-gray-500">
                       {order.items.length} ürün • {order.customerName || order.user?.name || 'Sistem'}
                       {order.customerPhone && <span> • {order.customerPhone}</span>}
                     </p>
                     {order.customerAddress && (
-                      <p className="text-sm text-blue-600 mt-0.5">
-                        📍 {order.customerAddress}
-                      </p>
+                      <div
+                        className="flex items-center gap-2 mt-1 text-sm"
+                        // The card itself is a Link — keep the inner buttons from
+                        // navigating into the order detail when clicked.
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span className="text-blue-600 truncate" title={order.customerAddress}>
+                          {order.customerAddress}
+                        </span>
+                        <a
+                          href={mapsUrl(order.customerAddress)}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium border border-blue-200"
+                          title="Google Maps'te aç"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Haritada
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigator.clipboard?.writeText(order.customerAddress!).catch(() => {});
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200"
+                          title="Adresi kopyala"
+                        >
+                          <Copy className="w-3 h-3" /> Kopyala
+                        </button>
+                      </div>
                     )}
 
                     <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
