@@ -54,6 +54,64 @@ export const Order = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'asking' | 'resolving' | 'error' | 'ok'>('idle');
+  const [geoError, setGeoError] = useState('');
+
+  // Ask the browser for the customer's current location, reverse-geocode it
+  // via OSM Nominatim (no API key, friendly to small-volume use), and
+  // pre-fill the delivery address. We append a Google Maps pin link to the
+  // resolved address so the courier can navigate to the exact spot even if
+  // the street label is fuzzy.
+  const useMyLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setGeoStatus('error');
+      setGeoError('Tarayıcın konum servisini desteklemiyor');
+      return;
+    }
+    setGeoStatus('asking');
+    setGeoError('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setGeoStatus('resolving');
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=tr`;
+          const r = await fetch(url, { headers: { 'Accept-Language': 'tr' } });
+          const data = await r.json();
+          const street = data.display_name || '';
+          const mapsLink = `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+          // If the user already typed something, prepend their text and tag
+          // the auto-detected pin underneath. Otherwise just use the resolved
+          // address.
+          const autoBlock = `${street}\n📍 ${mapsLink}`;
+          setCustomerAddress((prev) => {
+            const trimmed = prev.trim();
+            if (!trimmed) return autoBlock;
+            // Avoid double-appending if user clicks twice
+            if (trimmed.includes(mapsLink)) return prev;
+            return `${trimmed}\n\n${autoBlock}`;
+          });
+          setGeoStatus('ok');
+        } catch (e: any) {
+          setGeoStatus('error');
+          setGeoError('Adres çözümlenemedi, manuel olarak yazabilirsin');
+        }
+      },
+      (err) => {
+        setGeoStatus('error');
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError('Konum izni verilmedi. Tarayıcı ayarlarından izin verebilirsin.');
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setGeoError('Konum alınamadı, tekrar dene');
+        } else if (err.code === err.TIMEOUT) {
+          setGeoError('Konum sorgusu zaman aşımına uğradı');
+        } else {
+          setGeoError('Konum alınamadı: ' + err.message);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
+  };
   const [apiMenuItems, setApiMenuItems] = useState<any[]>([]);
 
   // Tip state
@@ -580,15 +638,36 @@ export const Order = () => {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                 >
-                  <label className="block text-sm font-medium text-foreground-muted mb-1">Teslimat Adresi *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-foreground-muted">Teslimat Adresi *</label>
+                    <button
+                      type="button"
+                      onClick={useMyLocation}
+                      disabled={geoStatus === 'asking' || geoStatus === 'resolving'}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {geoStatus === 'asking' && '⏳ İzin bekleniyor…'}
+                      {geoStatus === 'resolving' && '⏳ Adres bulunuyor…'}
+                      {geoStatus === 'ok' && '✓ Konum eklendi'}
+                      {(geoStatus === 'idle' || geoStatus === 'error') && '📍 Konumumu Kullan'}
+                    </button>
+                  </div>
                   <textarea
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-primary focus:outline-none resize-none"
-                    rows={3}
-                    placeholder="Örn: Cumhuriyet Mah. İstanbul Cad. No:5 Daire:3"
-                    maxLength={200}
+                    rows={4}
+                    placeholder="Örn: Cumhuriyet Mah. İstanbul Cad. No:5 Daire:3 — veya 📍 Konumumu Kullan butonuyla otomatik doldur"
+                    maxLength={500}
                   />
+                  {geoStatus === 'error' && geoError && (
+                    <p className="mt-1 text-xs text-red-600">⚠️ {geoError}</p>
+                  )}
+                  {geoStatus === 'ok' && (
+                    <p className="mt-1 text-xs text-green-700">
+                      Adres ve konum bağlantısı eklendi — kapı/daire bilgisini eklemeyi unutma
+                    </p>
+                  )}
                   <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2 text-blue-700">
                       <span className="text-xl">🚚</span>
