@@ -55,17 +55,57 @@ function ensureAudioContext() {
   return audioCtx;
 }
 
+// Subscribers that want to know when the audio lock state changes.
+type AudioLockListener = (locked: boolean) => void;
+const audioLockListeners = new Set<AudioLockListener>();
+
+function notifyAudioLock() {
+  const locked = !audioCtx || audioCtx.state !== 'running';
+  audioLockListeners.forEach((cb) => cb(locked));
+}
+
+export function subscribeAudioLock(cb: AudioLockListener) {
+  audioLockListeners.add(cb);
+  // Immediate report so subscribers render with the correct initial value
+  cb(!audioCtx || audioCtx.state !== 'running');
+  return () => audioLockListeners.delete(cb);
+}
+
+// Prime audio output by playing a silent buffer through the context. This
+// forces the browser to "commit" to audio output for the rest of the page
+// lifecycle. Without this, ctx.resume() succeeds but the very first real
+// burst can still ship silently on Chrome.
+function primeAudio() {
+  try {
+    const ctx = ensureAudioContext();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch { /* ignore */ }
+}
+
+export function unlockAudio() {
+  // Called from a user gesture (click handler) to forcibly open the audio
+  // pipe. Combines context creation + resume + silent priming.
+  ensureAudioContext();
+  primeAudio();
+  // Run state probe shortly after — resume() returns a promise and the
+  // state flips asynchronously.
+  setTimeout(notifyAudioLock, 50);
+  setTimeout(notifyAudioLock, 250);
+}
+
 if (typeof window !== 'undefined') {
-  // NOTE: listeners are NOT removed after first click. Each subsequent
-  // interaction renews the audio context permission window, which protects
-  // against long-running tabs whose audio policy expires.
-  const activate = () => { ensureAudioContext(); };
+  const activate = () => unlockAudio();
   document.addEventListener('click', activate, { capture: true });
   document.addEventListener('keydown', activate, { capture: true });
   document.addEventListener('touchstart', activate, { capture: true });
-  // Also try once at module load — if the user already gestured before the
-  // bundle parsed (rare but possible during HMR), the context starts running.
-  try { ensureAudioContext(); } catch { /* ignore */ }
+  try { ensureAudioContext(); notifyAudioLock(); } catch { /* ignore */ }
+  // Periodically re-check lock state so any background tab that gets the
+  // context suspended by the browser wakes the UI hint back up.
+  setInterval(notifyAudioLock, 2000);
 }
 
 // Single beep-burst (3 quick square-wave pulses). Gain reads the persisted
@@ -142,10 +182,18 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<OrderToast[]>([]);
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [audioLocked, setAudioLocked] = useState<boolean>(true);
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track audio lock state so we can show a banner when sound is silenced
+  // by the browser's autoplay policy.
+  useEffect(() => {
+    const unsub = subscribeAudioLock((locked) => setAudioLocked(locked));
+    return () => { unsub(); };
+  }, []);
 
   // Tick every second while an alert is active so the countdown re-renders
   useEffect(() => {
@@ -400,6 +448,26 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+
+      {/* Audio-lock banner — shown when the browser has the audio context
+          suspended (no user gesture yet, or it expired in the background).
+          A single click anywhere unlocks it for the rest of the session. */}
+      {audioLocked && isAuthenticated && (
+        <div className="fixed inset-x-0 top-0 z-[10001] bg-amber-500 text-amber-950 shadow-lg border-b-2 border-amber-700">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <span className="text-xl">🔊</span>
+              <span>Bildirim sesini etkinleştirmek için sağdaki butona bas — bir kere tıklamak yeterli</span>
+            </div>
+            <button
+              onClick={() => { unlockAudio(); }}
+              className="shrink-0 px-4 py-1.5 rounded-lg bg-amber-900 text-white text-sm font-bold hover:bg-amber-950 transition-colors"
+            >
+              Sesi Etkinleştir
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Persistent alert banner — stays until dismissed. The button accepts
           clicks immediately; the 30 second window is shown as countdown info
