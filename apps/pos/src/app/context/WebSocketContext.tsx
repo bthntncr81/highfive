@@ -254,6 +254,20 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             triggerAlert(o);
             addToast(o);
           }
+          // Synthesize a WS-style notification so subscribed components
+          // (Orders page, Tables page, etc.) refetch and the new order
+          // appears in their lists. Without this, polling fires the alert
+          // but the order doesn't visibly land on screen until a manual
+          // refresh.
+          const ordersListeners = listenersRef.current.get('orders');
+          ordersListeners?.forEach((cb) =>
+            cb({ action: 'new', order: o })
+          );
+        }
+        if (unseen.length > 0) {
+          // Also nudge tables in case the new order is dine-in
+          const tablesListeners = listenersRef.current.get('tables');
+          tablesListeners?.forEach((cb) => cb({ action: 'update' }));
         }
       }
       firstRunRef.current = false;
