@@ -96,9 +96,33 @@ function ensureBeep(): HTMLAudioElement {
 }
 
 if (typeof window !== 'undefined') {
-  // Prime on page load so the first call to .play() doesn't have to wait
-  // for the WAV to fetch/decode.
   try { ensureBeep().load(); } catch { /* ignore */ }
+  // Aggressive unlock: every user gesture tries to play+pause the beep
+  // element silently. Once .play() succeeds inside a gesture, the element
+  // is "warm" and subsequent setInterval-driven plays work without needing
+  // another gesture. Keeping the listener attached forever ensures we
+  // re-prime every interaction in case the browser ever drops the warm state.
+  const primeOnGesture = () => {
+    try {
+      const el = ensureBeep();
+      const oldVolume = el.volume;
+      el.volume = 0;
+      const p = el.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          el.pause();
+          el.currentTime = 0;
+          el.volume = oldVolume;
+        }).catch(() => {
+          // Some browsers reject silent autoplay too; ignore.
+          el.volume = oldVolume;
+        });
+      }
+    } catch { /* ignore */ }
+  };
+  document.addEventListener('click', primeOnGesture, { capture: true });
+  document.addEventListener('keydown', primeOnGesture, { capture: true });
+  document.addEventListener('touchstart', primeOnGesture, { capture: true });
 }
 
 function playBeepBurst() {
