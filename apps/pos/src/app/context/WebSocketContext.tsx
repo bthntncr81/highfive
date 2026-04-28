@@ -182,18 +182,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<OrderToast[]>([]);
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [audioLocked, setAudioLocked] = useState<boolean>(true);
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Track audio lock state so we can show a banner when sound is silenced
-  // by the browser's autoplay policy.
-  useEffect(() => {
-    const unsub = subscribeAudioLock((locked) => setAudioLocked(locked));
-    return () => { unsub(); };
-  }, []);
 
   // Tick every second while an alert is active so the countdown re-renders
   useEffect(() => {
@@ -448,26 +440,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-
-      {/* Audio-lock banner — shown when the browser has the audio context
-          suspended (no user gesture yet, or it expired in the background).
-          A single click anywhere unlocks it for the rest of the session. */}
-      {audioLocked && isAuthenticated && (
-        <div className="fixed inset-x-0 top-0 z-[10001] bg-amber-500 text-amber-950 shadow-lg border-b-2 border-amber-700">
-          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <span className="text-xl">🔊</span>
-              <span>Bildirim sesini etkinleştirmek için sağdaki butona bas — bir kere tıklamak yeterli</span>
-            </div>
-            <button
-              onClick={() => { unlockAudio(); }}
-              className="shrink-0 px-4 py-1.5 rounded-lg bg-amber-900 text-white text-sm font-bold hover:bg-amber-950 transition-colors"
-            >
-              Sesi Etkinleştir
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Persistent alert banner — stays until dismissed. The button accepts
           clicks immediately; the 30 second window is shown as countdown info
