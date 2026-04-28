@@ -83,10 +83,18 @@ const getPaymentStatusBadge = (status?: string) => {
   return status ? map[status] || null : null;
 };
 
-// Build a Google Maps URL — the `q` parameter accepts free-text addresses
-// or a lat,lng pair, so the same helper works for both.
-const mapsUrl = (address: string) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+// Build a Google Maps URL. If the address contains an embedded
+// `https://maps.google.com/?q=lat,lng` pin (added by the landing
+// geolocation flow), prefer that exact pin — Google Maps's own URL
+// parser will land the user on the pin instead of trying to fuzzy-match
+// the surrounding apartment / door details against street names.
+const mapsUrl = (address: string) => {
+  const m = address.match(/https?:\/\/maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) {
+    return `https://www.google.com/maps/search/?api=1&query=${m[1]},${m[2]}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+};
 
 const STATUS_FILTERS = [
   { value: '', label: 'Tümü' },

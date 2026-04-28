@@ -26,36 +26,54 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
-// Global AudioContext - created once on first user interaction
+// Global AudioContext - created once and aggressively kept alive.
+// Browsers (Chrome especially) suspend the context when there's no recent
+// user gesture; we keep the unlock listener attached forever so EVERY click
+// has a chance to revive it. Without this, alerts that arrive while the
+// page is idle play silently — until the user clicks Onayla, and only then
+// the next scheduled burst plays (which is exactly the bug we hit).
 let audioCtx: AudioContext | null = null;
+const VOLUME_KEY = 'rm_alert_volume';
+
+function getVolume(): number {
+  try {
+    const v = Number(localStorage.getItem(VOLUME_KEY));
+    if (!Number.isFinite(v) || v < 0 || v > 1) return 0.7;
+    return v;
+  } catch { return 0.7; }
+}
 
 function ensureAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    // Resume returns a promise but we don't await it — by the time the next
+    // burst fires, it'll be running. If still suspended, the burst is a no-op.
+    audioCtx.resume().catch(() => { /* ignore */ });
   }
   return audioCtx;
 }
 
-// Activate audio on ANY user interaction (click, keypress, touch)
 if (typeof window !== 'undefined') {
-  const activate = () => {
-    ensureAudioContext();
-    document.removeEventListener('click', activate);
-    document.removeEventListener('keydown', activate);
-    document.removeEventListener('touchstart', activate);
-  };
-  document.addEventListener('click', activate);
-  document.addEventListener('keydown', activate);
-  document.addEventListener('touchstart', activate);
+  // NOTE: listeners are NOT removed after first click. Each subsequent
+  // interaction renews the audio context permission window, which protects
+  // against long-running tabs whose audio policy expires.
+  const activate = () => { ensureAudioContext(); };
+  document.addEventListener('click', activate, { capture: true });
+  document.addEventListener('keydown', activate, { capture: true });
+  document.addEventListener('touchstart', activate, { capture: true });
+  // Also try once at module load — if the user already gestured before the
+  // bundle parsed (rare but possible during HMR), the context starts running.
+  try { ensureAudioContext(); } catch { /* ignore */ }
 }
 
-// Single beep-burst (3 quick square-wave pulses)
+// Single beep-burst (3 quick square-wave pulses). Gain reads the persisted
+// volume on every call so a slider change takes effect immediately.
 function playBeepBurst() {
   try {
     const ctx = ensureAudioContext();
+    const vol = getVolume();
     [0, 0.25, 0.5].forEach((delay) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -63,7 +81,7 @@ function playBeepBurst() {
       gain.connect(ctx.destination);
       osc.frequency.value = 880;
       osc.type = 'square';
-      gain.gain.setValueAtTime(0.7, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
       osc.start(ctx.currentTime + delay);
       osc.stop(ctx.currentTime + delay + 0.2);

@@ -16,8 +16,10 @@ import {
   ChevronRight,
   Menu,
   X,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -26,6 +28,19 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Alert volume — read from localStorage so the audio code in WebSocketContext
+  // picks it up on every beep without prop drilling.
+  const VOLUME_KEY = 'rm_alert_volume';
+  const [alertVolume, setAlertVolume] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem(VOLUME_KEY));
+      return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 0.7;
+    } catch { return 0.7; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(VOLUME_KEY, String(alertVolume)); } catch { /* ignore */ }
+  }, [alertVolume]);
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
@@ -189,6 +204,57 @@ export default function Layout() {
                   )}
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Alert volume control — drives the beep gain in WebSocketContext.
+              0 mutes the alert, 1 is full volume. Persisted to localStorage. */}
+          <div className="mb-3 px-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                {alertVolume > 0 ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                Bildirim Sesi
+              </span>
+              <span className="text-xs font-mono text-gray-500">{Math.round(alertVolume * 100)}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAlertVolume(0)}
+                className="text-xs text-gray-500 hover:text-gray-800 px-1"
+                title="Sustur"
+              >
+                🔇
+              </button>
+              <input
+                type="range"
+                min={0} max={1} step={0.05}
+                value={alertVolume}
+                onChange={(e) => setAlertVolume(Number(e.target.value))}
+                className="flex-1 accent-[#bb1e10]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  // Quick test: play one burst at the current volume
+                  try {
+                    const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+                    const ctx = new Ctx();
+                    [0, 0.2].forEach((d) => {
+                      const o = ctx.createOscillator(), g = ctx.createGain();
+                      o.connect(g); g.connect(ctx.destination);
+                      o.frequency.value = 880; o.type = 'square';
+                      g.gain.setValueAtTime(alertVolume, ctx.currentTime + d);
+                      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + d + 0.18);
+                      o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.18);
+                    });
+                  } catch { /* ignore */ }
+                }}
+                className="text-xs text-gray-500 hover:text-gray-800 px-1"
+                title="Test et"
+              >
+                ▶
+              </button>
             </div>
           </div>
 
