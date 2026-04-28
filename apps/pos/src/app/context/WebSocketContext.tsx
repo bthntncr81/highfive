@@ -230,10 +230,22 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const lastSeenRef = useRef<number>(
     Number(typeof window !== 'undefined' ? localStorage.getItem(POLL_KEY) : 0) || 0,
   );
+  // First run after a fresh login (no watermark stored): set the high-water
+  // mark to whatever's already in the DB without firing alerts. Otherwise
+  // logging in would spam an alert for every existing external order.
+  const firstRunRef = useRef<boolean>(lastSeenRef.current === 0);
 
   const catchupOrders = useCallback(async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      // AuthContext stores the token via lib/storage which JSON.stringify-wraps
+      // every value, so the raw localStorage entry looks like `"<jwt>"`.
+      let token: string | null = null;
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('token');
+        if (raw) {
+          try { token = JSON.parse(raw); } catch { token = raw; }
+        }
+      }
       if (!token) return;
       const res = await fetch(`/api/orders?limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -243,25 +255,23 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       const orders: any[] = data.orders || [];
       if (orders.length === 0) return;
 
-      // Newest first by default. Process oldest-first among the unseen
-      // ones so that the alert ends up showing the latest order number.
-      const unseen = orders
-        .filter((o) => Number(o.orderNumber) > lastSeenRef.current)
-        .sort((a, b) => Number(a.orderNumber) - Number(b.orderNumber));
+      const maxSeen = Math.max(lastSeenRef.current, ...orders.map((o) => Number(o.orderNumber)));
 
-      for (const o of unseen) {
-        if (o.source && o.source !== 'POS') {
-          triggerAlert(o);
-          addToast(o);
-        }
-        if (Number(o.orderNumber) > lastSeenRef.current) {
-          lastSeenRef.current = Number(o.orderNumber);
+      // First run: silently set the watermark, no alerts. Otherwise alert on
+      // any new external (source != POS) order above the current watermark.
+      if (!firstRunRef.current) {
+        const unseen = orders
+          .filter((o) => Number(o.orderNumber) > lastSeenRef.current)
+          // oldest unseen first → latest one ends up shown in the banner
+          .sort((a, b) => Number(a.orderNumber) - Number(b.orderNumber));
+        for (const o of unseen) {
+          if (o.source && o.source !== 'POS') {
+            triggerAlert(o);
+            addToast(o);
+          }
         }
       }
-      // Also bump the watermark even when no external orders were missed
-      // (so non-POS pages that haven't loaded the order list don't replay
-      // back-history when next opened).
-      const maxSeen = Math.max(lastSeenRef.current, ...orders.map((o) => Number(o.orderNumber)));
+      firstRunRef.current = false;
       lastSeenRef.current = maxSeen;
       try { localStorage.setItem(POLL_KEY, String(maxSeen)); } catch { /* ignore */ }
     } catch { /* ignore */ }
