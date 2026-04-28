@@ -163,6 +163,52 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     startAlertLoop();
   };
 
+  // Polling safety net for missed WS events. WS reconnect (after a deploy or
+  // network blip) does not replay messages, so an order that arrived during
+  // the gap silently disappears from the live feed. We periodically check the
+  // orders endpoint, compare against the last-seen orderNumber kept in
+  // localStorage, and fire alerts for any new external orders we missed.
+  const POLL_KEY = 'rm_last_seen_order_number';
+  const lastSeenRef = useRef<number>(
+    Number(typeof window !== 'undefined' ? localStorage.getItem(POLL_KEY) : 0) || 0,
+  );
+
+  const catchupOrders = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (!token) return;
+      const res = await fetch(`/api/orders?limit=10`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const orders: any[] = data.orders || [];
+      if (orders.length === 0) return;
+
+      // Newest first by default. Process oldest-first among the unseen
+      // ones so that the alert ends up showing the latest order number.
+      const unseen = orders
+        .filter((o) => Number(o.orderNumber) > lastSeenRef.current)
+        .sort((a, b) => Number(a.orderNumber) - Number(b.orderNumber));
+
+      for (const o of unseen) {
+        if (o.source && o.source !== 'POS') {
+          triggerAlert(o);
+          addToast(o);
+        }
+        if (Number(o.orderNumber) > lastSeenRef.current) {
+          lastSeenRef.current = Number(o.orderNumber);
+        }
+      }
+      // Also bump the watermark even when no external orders were missed
+      // (so non-POS pages that haven't loaded the order list don't replay
+      // back-history when next opened).
+      const maxSeen = Math.max(lastSeenRef.current, ...orders.map((o) => Number(o.orderNumber)));
+      lastSeenRef.current = maxSeen;
+      try { localStorage.setItem(POLL_KEY, String(maxSeen)); } catch { /* ignore */ }
+    } catch { /* ignore */ }
+  }, []);
+
   const addToast = (order: any) => {
     const toast: OrderToast = {
       id: order.id || Math.random().toString(36),
@@ -191,6 +237,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           ws.send(JSON.stringify({ type: 'subscribe', channel }));
         });
 
+        // Catch any orders we missed while disconnected. WS messages are not
+        // replayed on reconnect, so without this an order that arrived during
+        // a deploy or network blip would never trigger the alert.
+        catchupOrders();
+
         // Keep-alive ping every 25 seconds
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = setInterval(() => {
@@ -214,6 +265,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
               }
               if (message.data.order) {
                 addToast(message.data.order);
+                // Bump watermark so the polling safety net doesn't replay
+                // this order on its next tick.
+                const num = Number(message.data.order.orderNumber || 0);
+                if (num > lastSeenRef.current) {
+                  lastSeenRef.current = num;
+                  try { localStorage.setItem(POLL_KEY, String(num)); } catch { /* ignore */ }
+                }
               }
             }
 
@@ -262,6 +320,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       wsRef.current?.close();
     };
   }, [isAuthenticated, connect]);
+
+  // 60s polling safety net while logged in. Cheap (~1 small request/min) and
+  // closes the gap when the WS feed silently drops messages.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const id = setInterval(catchupOrders, 60_000);
+    return () => clearInterval(id);
+  }, [isAuthenticated, catchupOrders]);
 
   const subscribe = (channel: string) => {
     if (!listenersRef.current.has(channel)) {
