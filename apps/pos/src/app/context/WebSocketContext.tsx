@@ -317,13 +317,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     >
       {children}
 
-      {/* Persistent alert banner — stays until dismissed. Dismiss button is
-          locked for the first 30 seconds so staff cannot silence the sound
-          instantly. */}
+      {/* Persistent alert banner — stays until dismissed. The button accepts
+          clicks immediately; the 30 second window is shown as countdown info
+          (next to the button) so staff knows the alert is still "fresh" but
+          they can silence whenever they want. */}
       {activeAlert && (() => {
         const elapsed = now - activeAlert.startedAt;
         const remainingToUnlock = Math.max(0, Math.ceil((ALERT_MIN_MS - elapsed) / 1000));
-        const canDismiss = remainingToUnlock <= 0;
         return (
           <div className="fixed inset-x-0 top-0 z-[10000] bg-red-600 text-white shadow-2xl border-b-4 border-red-800 animate-pulse">
             <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
@@ -334,20 +334,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                     YENİ SİPARİŞ #{activeAlert.orderNumber} — {typeLabel(activeAlert.type)}
                   </p>
                   <p className="text-sm text-white/90 truncate">
-                    {activeAlert.customerName || 'Müşteri'} • Ses onaylanana kadar devam edecek
+                    {activeAlert.customerName || 'Müşteri'}
+                    {remainingToUnlock > 0 && ` • Otomatik kapanma: ${remainingToUnlock}s`}
                   </p>
                 </div>
               </div>
               <button
                 onClick={dismissAlert}
-                disabled={!canDismiss}
-                className={`shrink-0 px-6 py-3 rounded-xl font-bold transition-all ${
-                  canDismiss
-                    ? 'bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer'
-                    : 'bg-white/30 text-white cursor-not-allowed'
-                }`}
+                className="shrink-0 px-6 py-3 rounded-xl font-bold transition-all bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer"
               >
-                {canDismiss ? '✓ ONAYLA & SESSİZE AL' : `ONAYLA (${remainingToUnlock}s)`}
+                ✓ ONAYLA & SESSİZE AL
               </button>
             </div>
           </div>

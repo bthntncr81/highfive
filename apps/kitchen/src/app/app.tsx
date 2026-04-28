@@ -322,12 +322,13 @@ export default function App() {
   const alertRemainingToUnlock = activeAlert
     ? Math.max(0, Math.ceil((ALERT_MIN_MS - alertElapsed) / 1000))
     : 0;
-  const canDismissAlert = activeAlert != null && alertRemainingToUnlock <= 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      {/* Persistent new-order alert — keeps pulsing until dismissed.
-          Dismiss button is locked for the first 30s. */}
+      {/* Persistent new-order alert — keeps pulsing until dismissed. The
+          dismiss button accepts clicks immediately; the 30 second window is
+          surfaced as a countdown next to the order info, not as a button
+          lock, so kitchen staff can silence whenever they need to. */}
       {activeAlert && (
         <div className="fixed inset-x-0 top-0 z-[10000] bg-red-600 text-white shadow-2xl border-b-4 border-red-800">
           <div className="max-w-[2000px] mx-auto px-6 py-4 flex items-center justify-between gap-4 animate-pulse">
@@ -338,22 +339,17 @@ export default function App() {
                   YENİ SİPARİŞ #{activeAlert.orderNumber}
                 </p>
                 <p className="text-sm text-white/90">
-                  Ses onaylanana kadar devam edecek
+                  {alertRemainingToUnlock > 0
+                    ? `Otomatik kapanma: ${alertRemainingToUnlock}s`
+                    : 'Onayla butonu ile sustur'}
                 </p>
               </div>
             </div>
             <button
               onClick={dismissAlert}
-              disabled={!canDismissAlert}
-              className={`shrink-0 px-6 py-4 rounded-xl font-bold text-lg transition-all ${
-                canDismissAlert
-                  ? 'bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer'
-                  : 'bg-white/30 text-white cursor-not-allowed'
-              }`}
+              className="shrink-0 px-6 py-4 rounded-xl font-bold text-lg transition-all bg-white text-red-700 hover:bg-red-50 shadow-lg cursor-pointer"
             >
-              {canDismissAlert
-                ? '✓ ONAYLA & SESSİZE AL'
-                : `ONAYLA (${alertRemainingToUnlock}s)`}
+              ✓ ONAYLA &amp; SESSİZE AL
             </button>
           </div>
         </div>

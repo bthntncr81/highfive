@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "highfive": {
+      "command": "npx",
+      "args": ["tsx", "packages/mcp/src/index.ts"],
+      "cwd": "/Users/straitcore/Documents/GitHub/highfive",
+      "env": {
+        "DATABASE_URL": "postgresql://highfive:highfive123@localhost:5432/highfive_suite"
+      }
+    }
+  }
+}
