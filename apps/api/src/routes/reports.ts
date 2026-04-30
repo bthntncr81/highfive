@@ -179,8 +179,10 @@ export default async function reportRoutes(server: FastifyInstance) {
 
   // Get monthly summary
   server.get('/monthly', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
-    const { year, month } = request.query as { year?: string; month?: string };
-    
+    const { year, month, detailed } = request.query as {
+      year?: string; month?: string; detailed?: string;
+    };
+
     const now = new Date();
     const targetYear = year ? parseInt(year, 10) : now.getFullYear();
     const targetMonth = month ? parseInt(month, 10) - 1 : now.getMonth();
@@ -190,28 +192,21 @@ export default async function reportRoutes(server: FastifyInstance) {
 
     const orders = await prisma.order.findMany({
       where: {
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
+        createdAt: { gte: start, lte: end },
         status: OrderStatus.COMPLETED,
       },
       include: {
         items: {
           include: {
-            menuItem: {
-              include: {
-                category: true,
-              },
-            },
+            menuItem: { include: { category: true } },
           },
         },
+        payments: { where: { refunded: false } },
       },
     });
 
     // Category breakdown
     const categoryBreakdown: Record<string, { name: string; orders: number; revenue: number }> = {};
-    
     for (const order of orders) {
       for (const item of order.items) {
         if (!item.menuItem) continue;
@@ -234,18 +229,98 @@ export default async function reportRoutes(server: FastifyInstance) {
     const avgDailyOrders = Math.round(totalOrders / daysInMonth);
     const avgDailyRevenue = Math.round(totalRevenue / daysInMonth);
 
-    return {
+    const result: any = {
       year: targetYear,
       month: targetMonth + 1,
-      summary: {
-        totalOrders,
-        totalRevenue,
-        avgDailyOrders,
-        avgDailyRevenue,
-        daysInMonth,
-      },
+      summary: { totalOrders, totalRevenue, avgDailyOrders, avgDailyRevenue, daysInMonth },
       categoryBreakdown: Object.values(categoryBreakdown).sort((a, b) => b.revenue - a.revenue),
     };
+
+    // Detailed breakdown — adds per-day stats with hourly distribution and
+    // top items per day. Used by the AI-prompt generator on the Reports page.
+    if (detailed === 'true' || detailed === '1') {
+      const days: Record<string, {
+        date: string;
+        orders: number;
+        revenue: number;
+        cancelled: number;
+        cashAmount: number;
+        cardAmount: number;
+        otherAmount: number;
+        hourly: Record<number, { orders: number; revenue: number }>;
+        topItems: Record<string, { name: string; count: number; revenue: number }>;
+      }> = {};
+
+      // Seed every day in the month so empty days still appear in the prompt.
+      for (let d = 1; d <= daysInMonth; d++) {
+        const day = new Date(targetYear, targetMonth, d);
+        const key = day.toISOString().split('T')[0];
+        days[key] = {
+          date: key, orders: 0, revenue: 0, cancelled: 0,
+          cashAmount: 0, cardAmount: 0, otherAmount: 0,
+          hourly: {}, topItems: {},
+        };
+      }
+
+      // Also pull cancelled orders for the cancellation column
+      const cancelled = await prisma.order.findMany({
+        where: { createdAt: { gte: start, lte: end }, status: OrderStatus.CANCELLED },
+        select: { createdAt: true },
+      });
+      for (const c of cancelled) {
+        const key = c.createdAt.toISOString().split('T')[0];
+        if (days[key]) days[key].cancelled += 1;
+      }
+
+      for (const o of orders) {
+        const key = o.createdAt.toISOString().split('T')[0];
+        const day = days[key];
+        if (!day) continue;
+        day.orders += 1;
+        day.revenue += Number(o.total);
+        const hour = o.createdAt.getHours();
+        if (!day.hourly[hour]) day.hourly[hour] = { orders: 0, revenue: 0 };
+        day.hourly[hour].orders += 1;
+        day.hourly[hour].revenue += Number(o.total);
+
+        for (const item of o.items) {
+          if (!item.menuItem) continue;
+          const id = item.menuItem.id;
+          if (!day.topItems[id]) {
+            day.topItems[id] = { name: item.menuItem.name, count: 0, revenue: 0 };
+          }
+          day.topItems[id].count += item.quantity;
+          day.topItems[id].revenue += Number(item.total);
+        }
+
+        // Payment breakdown per day (cash / card / other)
+        for (const p of o.payments || []) {
+          const amt = Number(p.amount);
+          if (p.method === 'CASH') day.cashAmount += amt;
+          else if (p.method === 'CREDIT_CARD' || p.method === 'DEBIT_CARD' || p.method === 'ONLINE') day.cardAmount += amt;
+          else day.otherAmount += amt;
+        }
+      }
+
+      // Reduce topItems per day to a sorted top-5 list (smaller payload)
+      result.dailyBreakdown = Object.values(days)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((d) => ({
+          date: d.date,
+          orders: d.orders,
+          revenue: d.revenue,
+          cancelled: d.cancelled,
+          cashAmount: d.cashAmount,
+          cardAmount: d.cardAmount,
+          otherAmount: d.otherAmount,
+          hourly: d.hourly,
+          topItems: Object.values(d.topItems)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5),
+        }));
+    }
+
+    return result;
   });
 
   // Get staff performance

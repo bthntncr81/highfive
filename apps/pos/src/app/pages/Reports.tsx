@@ -55,8 +55,10 @@ export default function Reports() {
     setAiError('');
     setAiCopied(false);
     try {
-      const monthly = await api.get(`/api/reports/monthly?year=${aiYear}&month=${aiMonth}`, token!);
-      const weekly = await api.get(`/api/reports/weekly`, token!).catch(() => null);
+      const monthly = await api.get(
+        `/api/reports/monthly?year=${aiYear}&month=${aiMonth}&detailed=true`,
+        token!,
+      );
       const tl = (n: number) => `${Math.round(Number(n || 0)).toLocaleString('tr-TR')} ₺`;
 
       const monthLabel = new Date(aiYear, aiMonth - 1, 1).toLocaleDateString('tr-TR', {
@@ -64,9 +66,10 @@ export default function Reports() {
       });
 
       const lines: string[] = [];
-      lines.push(`Sen deneyimli bir restoran/F&B operasyon danışmanısın. Aşağıda ${monthLabel} ayına ait POS verileri var. Bu verilere bakarak özet bir analiz çıkar ve uygulanabilir, somut öneriler ver.`);
+      lines.push(`Sen deneyimli bir restoran/F&B operasyon danışmanısın. Aşağıda ${monthLabel} ayına ait POS verileri var (gün gün, saatlik kırılımlı). Bu verilere bakarak özet bir analiz çıkar ve uygulanabilir, somut öneriler ver.`);
       lines.push('');
-      lines.push(`## ${monthLabel} Aylık Özet`);
+
+      lines.push(`## ${monthLabel} — Aylık Özet`);
       lines.push(`- Toplam tamamlanmış sipariş: ${monthly?.summary?.totalOrders ?? 0}`);
       lines.push(`- Toplam ciro: ${tl(monthly?.summary?.totalRevenue)}`);
       lines.push(`- Günlük ortalama sipariş: ${monthly?.summary?.avgDailyOrders ?? 0}`);
@@ -83,42 +86,34 @@ export default function Reports() {
         lines.push('');
       }
 
-      if (weekly) {
-        lines.push('## Son 7 Gün Bağlamı');
-        lines.push(`- Toplam sipariş: ${weekly?.summary?.totalOrders ?? 0}`);
-        lines.push(`- Toplam ciro: ${tl(weekly?.summary?.totalRevenue)}`);
-        if (Array.isArray(weekly?.dailyBreakdown)) {
-          lines.push('### Günlük detay:');
-          for (const d of weekly.dailyBreakdown) {
-            lines.push(`  - ${d.date}: ${d.orders} sipariş, ${tl(d.revenue)}`);
+      const daily: any[] = Array.isArray(monthly?.dailyBreakdown) ? monthly.dailyBreakdown : [];
+      if (daily.length > 0) {
+        lines.push('## Günlük Detay (her gün ayrı blok)');
+        for (const d of daily) {
+          const dateLabel = new Date(d.date).toLocaleDateString('tr-TR', {
+            day: '2-digit', month: 'short', weekday: 'short',
+          });
+          lines.push('');
+          lines.push(`### ${dateLabel} — ${d.date}`);
+          if (d.orders === 0) {
+            lines.push('- Bu gün sipariş yok.');
+            continue;
           }
-        }
-        lines.push('');
-      }
-
-      // Today's daily snapshot if loaded
-      if (report) {
-        lines.push(`## Son İncelenen Gün — ${report.date}`);
-        lines.push(`- Sipariş: ${report.summary.totalOrders}`);
-        lines.push(`- Ciro: ${tl(report.summary.totalRevenue)}`);
-        lines.push(`- Nakit: ${tl(report.summary.cashAmount)} • Kart: ${tl(report.summary.cardAmount)} • Diğer: ${tl(report.summary.otherAmount)}`);
-        lines.push(`- İptal: ${report.summary.cancelledOrders}`);
-        if (report.summary.avgOrderTime != null) {
-          lines.push(`- Ort. hazırlama süresi: ${report.summary.avgOrderTime} dk`);
-        }
-        if (report.topItems?.length) {
-          lines.push('### En çok satanlar (gün):');
-          for (const t of report.topItems.slice(0, 5)) {
-            lines.push(`  - ${t.name}: ${t.count} adet • ${tl(t.revenue)}`);
+          lines.push(`- Sipariş: ${d.orders} • Ciro: ${tl(d.revenue)} • İptal: ${d.cancelled || 0}`);
+          lines.push(`- Ödeme: nakit ${tl(d.cashAmount)} • kart ${tl(d.cardAmount)} • diğer ${tl(d.otherAmount)}`);
+          if (d.topItems?.length) {
+            lines.push(`- En çok satan ürünler:`);
+            for (const t of d.topItems) {
+              lines.push(`  · ${t.name} → ${t.count} adet, ${tl(t.revenue)}`);
+            }
           }
-        }
-        if (report.hourlyBreakdown && Object.keys(report.hourlyBreakdown).length) {
-          lines.push('### Saatlik dağılım (gün):');
-          const entries = Object.entries(report.hourlyBreakdown)
-            .map(([h, v]) => ({ hour: Number(h), ...(v as any) }))
-            .sort((a, b) => a.hour - b.hour);
-          for (const e of entries) {
-            lines.push(`  - ${String(e.hour).padStart(2, '0')}:00 → ${e.orders} sipariş, ${tl(e.revenue)}`);
+          const hours = d.hourly ? Object.entries(d.hourly).map(([h, v]) => ({ hour: Number(h), ...(v as any) })) : [];
+          if (hours.length) {
+            hours.sort((a: any, b: any) => a.hour - b.hour);
+            lines.push(`- Saatlik dağılım:`);
+            for (const e of hours as any[]) {
+              lines.push(`  · ${String(e.hour).padStart(2, '0')}:00 → ${e.orders} sipariş, ${tl(e.revenue)}`);
+            }
           }
         }
         lines.push('');
@@ -127,11 +122,12 @@ export default function Reports() {
       lines.push('## Senden Beklenen Çıktı');
       lines.push('1. **Kısa Yönetici Özeti** (3-4 cümle): Bu ay genel performans nasıl?');
       lines.push('2. **Güçlü Yönler**: Verilerin gösterdiği 3 olumlu nokta.');
-      lines.push('3. **Zayıf / Riskli Alanlar**: Müdahale gerektiren 3 nokta (ör. düşük ciro saatleri, çok satılmayan kategoriler, iptal oranı).');
-      lines.push('4. **Aksiyon Önerileri**: 5 somut öneri — her biri için *neden* + *uygulama yolu* + *beklenen etki*. Genel tavsiye değil, bu restorana özel.');
-      lines.push('5. **KPI Hedefi**: Gelecek ay için 3 ölçülebilir hedef (ör. günlük ortalama ciroda %X artış, peak hour\'da Y sipariş).');
+      lines.push('3. **Zayıf / Riskli Alanlar**: Müdahale gerektiren 3 nokta (ör. düşük ciro saatleri, çok satılmayan kategoriler, iptal oranı, yavaş günler).');
+      lines.push('4. **Gün/Saat Bazlı İçgörüler**: En yoğun ve en sönük gün/saat dilimleri; haftanın günlerinde örüntüler. Hangi günü hangi saatte hangi aksiyon?');
+      lines.push('5. **Aksiyon Önerileri**: 5 somut öneri — her biri için *neden* + *uygulama yolu* + *beklenen etki*. Genel tavsiye değil, bu restorana özel ve veriye dayalı.');
+      lines.push('6. **KPI Hedefi**: Gelecek ay için 3 ölçülebilir hedef (ör. günlük ortalama ciroda %X artış, peak hour\'da Y sipariş, iptal oranı %Z altı).');
       lines.push('');
-      lines.push('Türkçe yaz. Madde madde, net ve uygulanabilir ol. Belirsiz "iletişim güçlendirilebilir" gibi cümlelerden kaçın — somut rakam ve aksiyon ver.');
+      lines.push('Türkçe yaz. Madde madde, net ve uygulanabilir ol. Belirsiz "iletişim güçlendirilebilir" gibi cümlelerden kaçın — somut rakam, gün adı, saat dilimi ve aksiyon ver.');
 
       setAiPrompt(lines.join('\n'));
     } catch (e: any) {
