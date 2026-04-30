@@ -10,6 +10,10 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
+  Copy,
+  ExternalLink,
+  X,
 } from 'lucide-react';
 
 interface DailyReport {
@@ -33,6 +37,125 @@ export default function Reports() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // AI-prompt modal state. The prompt assembles month + daily-context numbers
+  // into a Turkish-language brief tailored for Gemini/ChatGPT to return
+  // restaurant-specific recommendations.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiBuilding, setAiBuilding] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiCopied, setAiCopied] = useState(false);
+  const today = new Date();
+  const [aiYear, setAiYear] = useState(today.getFullYear());
+  const [aiMonth, setAiMonth] = useState(today.getMonth() + 1);
+
+  const buildAiPrompt = async () => {
+    setAiBuilding(true);
+    setAiError('');
+    setAiCopied(false);
+    try {
+      const monthly = await api.get(`/api/reports/monthly?year=${aiYear}&month=${aiMonth}`, token!);
+      const weekly = await api.get(`/api/reports/weekly`, token!).catch(() => null);
+      const tl = (n: number) => `${Math.round(Number(n || 0)).toLocaleString('tr-TR')} ₺`;
+
+      const monthLabel = new Date(aiYear, aiMonth - 1, 1).toLocaleDateString('tr-TR', {
+        year: 'numeric', month: 'long',
+      });
+
+      const lines: string[] = [];
+      lines.push(`Sen deneyimli bir restoran/F&B operasyon danışmanısın. Aşağıda ${monthLabel} ayına ait POS verileri var. Bu verilere bakarak özet bir analiz çıkar ve uygulanabilir, somut öneriler ver.`);
+      lines.push('');
+      lines.push(`## ${monthLabel} Aylık Özet`);
+      lines.push(`- Toplam tamamlanmış sipariş: ${monthly?.summary?.totalOrders ?? 0}`);
+      lines.push(`- Toplam ciro: ${tl(monthly?.summary?.totalRevenue)}`);
+      lines.push(`- Günlük ortalama sipariş: ${monthly?.summary?.avgDailyOrders ?? 0}`);
+      lines.push(`- Günlük ortalama ciro: ${tl(monthly?.summary?.avgDailyRevenue)}`);
+      lines.push(`- Aydaki gün sayısı: ${monthly?.summary?.daysInMonth ?? '-'}`);
+      lines.push('');
+
+      const cats = Array.isArray(monthly?.categoryBreakdown) ? monthly.categoryBreakdown : [];
+      if (cats.length > 0) {
+        lines.push('## Kategori Dağılımı (ciroya göre azalan)');
+        for (const c of cats) {
+          lines.push(`- ${c.name}: ${c.orders} adet • ${tl(c.revenue)}`);
+        }
+        lines.push('');
+      }
+
+      if (weekly) {
+        lines.push('## Son 7 Gün Bağlamı');
+        lines.push(`- Toplam sipariş: ${weekly?.summary?.totalOrders ?? 0}`);
+        lines.push(`- Toplam ciro: ${tl(weekly?.summary?.totalRevenue)}`);
+        if (Array.isArray(weekly?.dailyBreakdown)) {
+          lines.push('### Günlük detay:');
+          for (const d of weekly.dailyBreakdown) {
+            lines.push(`  - ${d.date}: ${d.orders} sipariş, ${tl(d.revenue)}`);
+          }
+        }
+        lines.push('');
+      }
+
+      // Today's daily snapshot if loaded
+      if (report) {
+        lines.push(`## Son İncelenen Gün — ${report.date}`);
+        lines.push(`- Sipariş: ${report.summary.totalOrders}`);
+        lines.push(`- Ciro: ${tl(report.summary.totalRevenue)}`);
+        lines.push(`- Nakit: ${tl(report.summary.cashAmount)} • Kart: ${tl(report.summary.cardAmount)} • Diğer: ${tl(report.summary.otherAmount)}`);
+        lines.push(`- İptal: ${report.summary.cancelledOrders}`);
+        if (report.summary.avgOrderTime != null) {
+          lines.push(`- Ort. hazırlama süresi: ${report.summary.avgOrderTime} dk`);
+        }
+        if (report.topItems?.length) {
+          lines.push('### En çok satanlar (gün):');
+          for (const t of report.topItems.slice(0, 5)) {
+            lines.push(`  - ${t.name}: ${t.count} adet • ${tl(t.revenue)}`);
+          }
+        }
+        if (report.hourlyBreakdown && Object.keys(report.hourlyBreakdown).length) {
+          lines.push('### Saatlik dağılım (gün):');
+          const entries = Object.entries(report.hourlyBreakdown)
+            .map(([h, v]) => ({ hour: Number(h), ...(v as any) }))
+            .sort((a, b) => a.hour - b.hour);
+          for (const e of entries) {
+            lines.push(`  - ${String(e.hour).padStart(2, '0')}:00 → ${e.orders} sipariş, ${tl(e.revenue)}`);
+          }
+        }
+        lines.push('');
+      }
+
+      lines.push('## Senden Beklenen Çıktı');
+      lines.push('1. **Kısa Yönetici Özeti** (3-4 cümle): Bu ay genel performans nasıl?');
+      lines.push('2. **Güçlü Yönler**: Verilerin gösterdiği 3 olumlu nokta.');
+      lines.push('3. **Zayıf / Riskli Alanlar**: Müdahale gerektiren 3 nokta (ör. düşük ciro saatleri, çok satılmayan kategoriler, iptal oranı).');
+      lines.push('4. **Aksiyon Önerileri**: 5 somut öneri — her biri için *neden* + *uygulama yolu* + *beklenen etki*. Genel tavsiye değil, bu restorana özel.');
+      lines.push('5. **KPI Hedefi**: Gelecek ay için 3 ölçülebilir hedef (ör. günlük ortalama ciroda %X artış, peak hour\'da Y sipariş).');
+      lines.push('');
+      lines.push('Türkçe yaz. Madde madde, net ve uygulanabilir ol. Belirsiz "iletişim güçlendirilebilir" gibi cümlelerden kaçın — somut rakam ve aksiyon ver.');
+
+      setAiPrompt(lines.join('\n'));
+    } catch (e: any) {
+      setAiError(e?.message || 'Veri çekilemedi');
+    } finally {
+      setAiBuilding(false);
+    }
+  };
+
+  const copyAiPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(aiPrompt);
+      setAiCopied(true);
+      setTimeout(() => setAiCopied(false), 2500);
+    } catch { /* ignore */ }
+  };
+
+  const openInGemini = () => {
+    // Gemini's web UI accepts a URL-encoded prompt query (best-effort).
+    // Some browsers truncate very long URLs; if it fails the user can still
+    // copy the prompt manually via the Kopyala button.
+    const u = `https://gemini.google.com/app?q=${encodeURIComponent(aiPrompt)}`;
+    window.open(u, '_blank', 'noopener');
+  };
 
   const downloadReport = () => {
     if (!report) return;
@@ -110,15 +233,121 @@ export default function Reports() {
           <h1 className="text-2xl font-bold text-gray-900">Raporlar</h1>
           <p className="text-gray-500">Günlük satış ve performans verileri</p>
         </div>
-        <button 
-          onClick={downloadReport}
-          disabled={!report}
-          className="btn btn-secondary flex items-center gap-2 disabled:opacity-50"
-        >
-          <Download className="w-4 h-4" />
-          Rapor İndir
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setAiOpen(true); setAiPrompt(''); setAiError(''); }}
+            className="btn flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md"
+          >
+            <Sparkles className="w-4 h-4" />
+            Yapay Zeka Önerisi
+          </button>
+          <button
+            onClick={downloadReport}
+            disabled={!report}
+            className="btn btn-secondary flex items-center gap-2 disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            Rapor İndir
+          </button>
+        </div>
       </div>
+
+      {/* AI prompt modal */}
+      {aiOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h2 className="text-lg font-semibold">Yapay Zeka Önerisi için Prompt</h2>
+              </div>
+              <button onClick={() => setAiOpen(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+              <p className="text-sm text-gray-600">
+                Aylık satış verileri + son haftanın özeti + bugünün detayı bir araya getirilip Gemini/ChatGPT'ye verilebilecek hazır bir prompt'a dönüşür. Prompt'u <b>Kopyala</b>'ya basıp herhangi bir AI'a yapıştırabilirsin.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Yıl</label>
+                  <input
+                    type="number" min={2024} max={today.getFullYear()}
+                    value={aiYear}
+                    onChange={(e) => setAiYear(Number(e.target.value))}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ay</label>
+                  <select
+                    value={aiMonth}
+                    onChange={(e) => setAiMonth(Number(e.target.value))}
+                    className="input"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(2024, m - 1, 1).toLocaleDateString('tr-TR', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={buildAiPrompt}
+                  disabled={aiBuilding}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {aiBuilding ? 'Hazırlanıyor…' : 'Prompt Oluştur'}
+                </button>
+                {aiPrompt && (
+                  <>
+                    <button
+                      onClick={copyAiPrompt}
+                      className="btn btn-secondary flex items-center gap-2"
+                    >
+                      <Copy className="w-4 h-4" />
+                      {aiCopied ? '✓ Kopyalandı' : 'Kopyala'}
+                    </button>
+                    <button
+                      onClick={openInGemini}
+                      className="btn btn-secondary flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Gemini'de Aç
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {aiError && (
+                <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                  ⚠️ {aiError}
+                </div>
+              )}
+
+              {aiPrompt && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Oluşturulan prompt</label>
+                  <textarea
+                    value={aiPrompt}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg font-mono text-xs bg-gray-50"
+                    rows={18}
+                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Date selector */}
       <div className="card">
