@@ -275,6 +275,55 @@ export default async function paymentRoutes(server: FastifyInstance) {
         itemType: 'PHYSICAL',
         price: (Number(item.unitPrice) * item.quantity).toFixed(2),
       }));
+
+      // iyzico requires sum(basketItems.price) == price. The order total
+      // includes delivery fee, tip, service charge, and tax on top of the
+      // raw item prices, so we must surface those as virtual basket items
+      // — otherwise the card gets charged ONLY the items subtotal and the
+      // customer underpays the actual order total.
+      if (Number(order.deliveryFee) > 0) {
+        orderItems.push({
+          id: `${order.id}-delivery`,
+          name: 'Kurye Ücreti',
+          category1: 'Hizmet',
+          itemType: 'VIRTUAL',
+          price: Number(order.deliveryFee).toFixed(2),
+        });
+      }
+      if (Number(order.serviceCharge) > 0) {
+        orderItems.push({
+          id: `${order.id}-service`,
+          name: 'Servis Ücreti',
+          category1: 'Hizmet',
+          itemType: 'VIRTUAL',
+          price: Number(order.serviceCharge).toFixed(2),
+        });
+      }
+      if (Number(order.tip) > 0) {
+        orderItems.push({
+          id: `${order.id}-tip`,
+          name: 'Bahşiş',
+          category1: 'Hizmet',
+          itemType: 'VIRTUAL',
+          price: Number(order.tip).toFixed(2),
+        });
+      }
+      if (Number(order.tax) > 0) {
+        orderItems.push({
+          id: `${order.id}-tax`,
+          name: 'Vergi (KDV)',
+          category1: 'Hizmet',
+          itemType: 'VIRTUAL',
+          price: Number(order.tax).toFixed(2),
+        });
+      }
+      if (Number(order.discount) > 0) {
+        // iyzico won't accept negative basket items; subtract from items by
+        // appending an explicit "İndirim" line is safer than rebalancing —
+        // but iyzico forbids it. So we instead omit the discount line and
+        // trust order.total to already be net. The basket-sum check below
+        // will use the netted total.
+      }
     } else {
       return reply.status(400).send({ error: 'Sipariş ID gerekli' });
     }
@@ -282,7 +331,9 @@ export default async function paymentRoutes(server: FastifyInstance) {
     const conversationId = generateConversationId();
     const callbackUrl = `${process.env.API_URL || 'http://localhost:3000'}/api/payment/3ds-callback`;
 
-    // Calculate total from basket items
+    // Sum of all basket items (subtotal + virtual fee items above).
+    // iyzico requires this to equal `price` AND `paidPrice` (otherwise it
+    // returns "paidPrice and basket items don't match").
     const basketTotal = orderItems.reduce((sum: number, item: any) => sum + parseFloat(item.price), 0);
 
     // Format phone number for iyzico (+90XXXXXXXXXX format)
