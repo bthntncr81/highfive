@@ -29,9 +29,15 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Bir hata oluştu');
+      // Preserve the full response body on the thrown Error so callers can
+      // surface structured backend hints (ör. unpaidOrders + canForce on
+      // table status conflicts).
+      const err: any = new Error(data.error || 'Bir hata oluştu');
+      err.data = data;
+      err.status = response.status;
+      throw err;
     }
-    
+
     return data;
   } catch (error) {
     if (error instanceof Error) {

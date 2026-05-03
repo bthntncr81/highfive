@@ -117,12 +117,35 @@ export default function Tables() {
     }
   };
 
-  const handleStatusChange = async (tableId: string, newStatus: string) => {
+  const handleStatusChange = async (tableId: string, newStatus: string, force = false) => {
     try {
-      await api.patch(`/api/tables/${tableId}/status`, { status: newStatus }, token!);
+      await api.patch(`/api/tables/${tableId}/status`, { status: newStatus, force }, token!);
       fetchTables();
-    } catch (error) {
-      console.error('Status change error:', error);
+    } catch (error: any) {
+      // Backend rejects free/clean when there are unpaid orders. Surface
+      // the message and offer the admin a force-override.
+      const data = error?.data || error?.response?.data;
+      const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+      const msg = error?.message || data?.error || 'Durum güncellenemedi';
+      if (data?.unpaidOrders?.length && isAdmin) {
+        const total = data.unpaidTotal ?? 0;
+        if (confirm(`${msg}\n\nÖdenmemiş tutar: ${total.toLocaleString('tr-TR')} ₺\n\nYine de zorla boşaltmak istiyor musun?`)) {
+          await handleStatusChange(tableId, newStatus, true);
+        }
+      } else {
+        alert(msg);
+      }
+    }
+  };
+
+  const handleEndOfDay = async () => {
+    if (!confirm('Günü kapatmak üzeresin.\n\n• Ödenmemiş tüm açık siparişler NAKİT olarak kapatılacak.\n• Ödenmiş ama açık kalmış siparişler tamamlanacak.\n• Boşalan masalar serbest bırakılacak.\n\nDevam edelim mi?')) return;
+    try {
+      const res: any = await api.post('/api/orders/end-of-day', { paymentMethod: 'CASH', forcePayUnpaid: true }, token!);
+      alert(`✓ Gün kapatıldı\n\n• ${res.completed ?? 0} sipariş tamamlandı\n• ${res.forcedPaid ?? 0} tanesi nakit olarak işaretlendi\n• ${res.freedTables ?? 0} masa serbest bırakıldı`);
+      fetchTables();
+    } catch (e: any) {
+      alert(e?.message || 'Gün kapatılamadı');
     }
   };
 
@@ -298,6 +321,15 @@ export default function Tables() {
                 <Link2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Birleştir</span>
               </button>
+              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                <button
+                  onClick={handleEndOfDay}
+                  className="btn flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-700"
+                  title="Tüm açık siparişleri kapat ve masaları serbest bırak"
+                >
+                  🌙 <span className="hidden sm:inline">Günü Kapat</span>
+                </button>
+              )}
               <button onClick={openAddModal} className="btn btn-primary flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Masa Ekle

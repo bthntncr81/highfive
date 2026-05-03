@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
-import { verifyAuth } from '../middleware/auth';
+import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcastKitchenNewItems } from '../websocket';
 import { webhookService } from '../services/webhook.service';
 
@@ -1427,6 +1427,110 @@ export default async function orderRoutes(server: FastifyInstance) {
     );
 
     return { couriers: couriersWithStats };
+  });
+
+  // End-of-day cleanup. Admin button on POS triggers this to:
+  //   1. Force-pay every still-unpaid open order with the requested method
+  //      (default CASH) — anything that should have been paid in person.
+  //   2. Move every paid-but-non-COMPLETED order (e.g. SERVED+PAID lingering
+  //      on a table) to COMPLETED.
+  //   3. Free up any tables that no longer have outstanding orders.
+  //
+  // Returns counts so the UI can show a summary to the operator.
+  server.post('/end-of-day', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = (request.body || {}) as {
+      paymentMethod?: PaymentMethod;
+      forcePayUnpaid?: boolean;
+    };
+    const method = body.paymentMethod ?? PaymentMethod.CASH;
+    const forcePay = body.forcePayUnpaid ?? true;
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const openOrders = await prisma.order.findMany({
+      where: {
+        status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+        createdAt: { gte: start, lte: end },
+      },
+      include: { items: true },
+    });
+
+    let forcedPaid = 0;
+    let completed = 0;
+    const touchedTableIds = new Set<string>();
+
+    for (const o of openOrders) {
+      if (o.tableId) touchedTableIds.add(o.tableId);
+
+      // 1. Force-pay if unpaid (and admin asked us to)
+      if (o.paymentStatus !== PaymentStatus.PAID && forcePay) {
+        const remaining = Number(o.total) - 0; // we just charge full total
+        await prisma.payment.create({
+          data: {
+            orderId: o.id,
+            amount: remaining,
+            method,
+            paidItems: undefined,
+          },
+        });
+        // Mark every line as fully paid
+        await prisma.orderItem.updateMany({
+          where: { orderId: o.id },
+          data: { paidQuantity: { set: undefined } as any },
+        });
+        // Above is a no-op for the set; do per-item updates with correct quantity
+        for (const item of o.items) {
+          await prisma.orderItem.update({
+            where: { id: item.id },
+            data: { paidQuantity: item.quantity },
+          });
+        }
+        await prisma.order.update({
+          where: { id: o.id },
+          data: {
+            paymentStatus: PaymentStatus.PAID,
+            paymentMethod: method,
+            status: OrderStatus.COMPLETED,
+            completedAt: new Date(),
+          },
+        });
+        forcedPaid++;
+        completed++;
+      } else if (o.paymentStatus === PaymentStatus.PAID) {
+        // 2. Already paid — just transition to COMPLETED
+        await prisma.order.update({
+          where: { id: o.id },
+          data: { status: OrderStatus.COMPLETED, completedAt: new Date() },
+        });
+        completed++;
+      }
+    }
+
+    // 3. Free any tables that no longer have outstanding orders
+    let freedTables = 0;
+    for (const tableId of touchedTableIds) {
+      const stillOpen = await prisma.order.count({
+        where: { tableId, status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] } },
+      });
+      if (stillOpen === 0) {
+        await prisma.table.update({
+          where: { id: tableId },
+          data: { status: 'FREE', sessionToken: null, sessionStartedAt: null },
+        });
+        freedTables++;
+      }
+    }
+
+    return {
+      message: 'Gün kapatıldı',
+      forcedPaid,
+      completed,
+      freedTables,
+      totalProcessed: openOrders.length,
+    };
   });
 }
 

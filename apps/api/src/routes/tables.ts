@@ -214,7 +214,8 @@ export default async function tableRoutes(server: FastifyInstance) {
   // Update table status
   server.patch('/:id/status', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const { status } = request.body as { status: TableStatus };
+    const { status, force } = request.body as { status: TableStatus; force?: boolean };
+    const user = (request as any).user;
 
     if (!status) {
       return reply.status(400).send({ error: 'Durum gerekli' });
@@ -225,7 +226,34 @@ export default async function tableRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Masa bulunamadı' });
     }
 
-    // If setting to FREE, clear the session token (invalidate old sessions)
+    // Refuse to free / clean a table that still has unpaid orders. Admins
+    // can override with `force: true` (e.g. when the customer paid in cash
+    // but the entry was missed) — that path leaves the orders behind so
+    // they can still be reconciled later.
+    if (status === 'FREE' || status === 'CLEANING') {
+      const unpaid = await prisma.order.findMany({
+        where: {
+          tableId: id,
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          paymentStatus: { not: 'PAID' },
+        },
+        select: { id: true, orderNumber: true, total: true, paymentStatus: true },
+      });
+      if (unpaid.length > 0 && !force) {
+        const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+        return reply.status(400).send({
+          error: 'Bu masada ödenmemiş sipariş var. Önce ödemeyi al.',
+          unpaidOrders: unpaid,
+          unpaidTotal: unpaid.reduce((sum, o) => sum + Number(o.total || 0), 0),
+          // Tell the UI whether the current user is allowed to override
+          canForce: isAdmin,
+        });
+      }
+      if (unpaid.length > 0 && force && user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+        return reply.status(403).send({ error: 'Yalnızca yönetici zorla boşaltabilir' });
+      }
+    }
+
     const updateData: any = { status };
     if (status === 'FREE') {
       updateData.sessionToken = null;
