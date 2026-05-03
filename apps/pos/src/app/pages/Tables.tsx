@@ -484,22 +484,34 @@ export default function Tables() {
                 )}
               </div>
 
-              {/* Order info if occupied — sum totals across every active order for the table.
-                  Previously we only showed orders[0].total, which could be 0 when the first
-                  index happened to be an empty/just-opened tab (e.g. "Ön Cam" table). */}
+              {/* Order info if occupied — only sum orders that still have an
+                  outstanding balance. The /api/tables endpoint excludes
+                  COMPLETED/CANCELLED orders, but PAID orders that linger in
+                  SERVED status (customer ate, paid, left, but the status
+                  hasn't transitioned to COMPLETED) were inflating table
+                  totals (e.g. "Ön Cam" showing 4000 TL when only 1900 was
+                  actually owed). Filter those out client-side. */}
               {table.status === 'OCCUPIED' && (table.orders?.length ?? 0) > 0 && !mergeMode && (() => {
-                const activeOrders = table.orders ?? [];
-                const orderTotal = activeOrders.reduce(
+                const allActive = table.orders ?? [];
+                const unpaid = allActive.filter(
+                  (o: any) => o.paymentStatus !== 'PAID'
+                );
+                const orderTotal = unpaid.reduce(
                   (sum: number, o: any) => sum + Number(o.total || 0),
                   0
                 );
-                const primary = activeOrders[0];
+                const primary = unpaid[0] ?? allActive[0];
+                if (orderTotal === 0 && unpaid.length === 0) return null;
                 return (
                   <div className="mt-2 pt-3 border-t-2 border-dashed border-gray-200">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">
-                        {activeOrders.length > 1
-                          ? `${activeOrders.length} sipariş`
+                        {unpaid.length > 1
+                          ? `${unpaid.length} sipariş${
+                              allActive.length > unpaid.length
+                                ? ` (+${allActive.length - unpaid.length} ödenmiş)`
+                                : ''
+                            }`
                           : `#${primary.orderNumber?.toString().padStart(4, '0')}`}
                       </span>
                       <span className="font-bold text-[#bb1e10]">
