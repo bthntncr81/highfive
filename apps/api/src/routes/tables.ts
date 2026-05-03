@@ -32,19 +32,35 @@ export default async function tableRoutes(server: FastifyInstance) {
             status: { notIn: ['COMPLETED', 'CANCELLED'] },
           },
           include: {
-            items: {
-              include: {
-                menuItem: true,
-              },
-            },
+            items: { include: { menuItem: true } },
+            // Pull payments so the frontend can compute outstanding balance
+            // when paymentStatus on the order is stale (recorded payment
+            // didn't update the order row — happens occasionally).
+            payments: { where: { refunded: false } },
           },
-          orderBy: { createdAt: 'desc' }, // newest open order first
+          orderBy: { createdAt: 'desc' },
         },
-        mergedTables: true, // Birleştirilmiş masaları da getir
+        mergedTables: true,
       },
       orderBy: { number: 'asc' },
     });
-    return { tables };
+
+    // Annotate each order with `paidAmount` and `outstanding` so the UI
+    // doesn't have to redo the math AND can fall back to it when
+    // paymentStatus is stuck on PENDING despite full payment.
+    const enriched = tables.map((t) => ({
+      ...t,
+      orders: t.orders.map((o: any) => {
+        const paidAmount = (o.payments || []).reduce(
+          (s: number, p: any) => s + Number(p.amount),
+          0,
+        );
+        const outstanding = Math.max(0, Number(o.total) - paidAmount);
+        return { ...o, paidAmount, outstanding };
+      }),
+    }));
+
+    return { tables: enriched };
   });
 
   // Get all tables (public - for QR code generator)
@@ -226,31 +242,54 @@ export default async function tableRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Masa bulunamadı' });
     }
 
-    // Refuse to free / clean a table that still has unpaid orders. Admins
-    // can override with `force: true` (e.g. when the customer paid in cash
-    // but the entry was missed) — that path leaves the orders behind so
-    // they can still be reconciled later.
+    // Refuse to free / clean a table that still owes money. We compute
+    // outstanding balance from Payment records instead of trusting
+    // paymentStatus on the order, since that flag occasionally falls out
+    // of sync after a payment is recorded.
     if (status === 'FREE' || status === 'CLEANING') {
-      const unpaid = await prisma.order.findMany({
+      const openOrders = await prisma.order.findMany({
         where: {
           tableId: id,
           status: { notIn: ['COMPLETED', 'CANCELLED'] },
-          paymentStatus: { not: 'PAID' },
         },
-        select: { id: true, orderNumber: true, total: true, paymentStatus: true },
+        include: { payments: { where: { refunded: false } } },
       });
+      const unpaid = openOrders
+        .map((o) => {
+          const paid = o.payments.reduce((s, p) => s + Number(p.amount), 0);
+          const outstanding = Number(o.total) - paid;
+          return { id: o.id, orderNumber: o.orderNumber, total: o.total, outstanding };
+        })
+        .filter((o) => o.outstanding > 0.005); // sub-cent rounding tolerance
+
       if (unpaid.length > 0 && !force) {
         const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
         return reply.status(400).send({
           error: 'Bu masada ödenmemiş sipariş var. Önce ödemeyi al.',
           unpaidOrders: unpaid,
-          unpaidTotal: unpaid.reduce((sum, o) => sum + Number(o.total || 0), 0),
-          // Tell the UI whether the current user is allowed to override
+          unpaidTotal: unpaid.reduce((sum, o) => sum + Number(o.outstanding), 0),
           canForce: isAdmin,
         });
       }
       if (unpaid.length > 0 && force && user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
         return reply.status(403).send({ error: 'Yalnızca yönetici zorla boşaltabilir' });
+      }
+
+      // Bonus: if every order is fully paid but stuck in non-COMPLETED
+      // status, complete them while we're freeing the table — saves staff
+      // from chasing zombie orders.
+      for (const o of openOrders) {
+        const paid = o.payments.reduce((s, p) => s + Number(p.amount), 0);
+        if (paid >= Number(o.total) && o.status !== 'COMPLETED') {
+          await prisma.order.update({
+            where: { id: o.id },
+            data: {
+              status: 'COMPLETED',
+              paymentStatus: 'PAID',
+              completedAt: new Date(),
+            },
+          });
+        }
       }
     }
 

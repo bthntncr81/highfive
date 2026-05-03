@@ -516,32 +516,34 @@ export default function Tables() {
                 )}
               </div>
 
-              {/* Order info if occupied — only sum orders that still have an
-                  outstanding balance. The /api/tables endpoint excludes
-                  COMPLETED/CANCELLED orders, but PAID orders that linger in
-                  SERVED status (customer ate, paid, left, but the status
-                  hasn't transitioned to COMPLETED) were inflating table
-                  totals (e.g. "Ön Cam" showing 4000 TL when only 1900 was
-                  actually owed). Filter those out client-side. */}
+              {/* Outstanding balance per table — sums the `outstanding` field
+                  the API now computes per order (order.total - non-refunded
+                  payments). This survives the case where paymentStatus on
+                  the order is stale despite a full payment record. */}
               {table.status === 'OCCUPIED' && (table.orders?.length ?? 0) > 0 && !mergeMode && (() => {
                 const allActive = table.orders ?? [];
-                const unpaid = allActive.filter(
-                  (o: any) => o.paymentStatus !== 'PAID'
+                const orders = allActive.map((o: any) => ({
+                  ...o,
+                  outstanding:
+                    typeof o.outstanding === 'number'
+                      ? Number(o.outstanding)
+                      : Math.max(0, Number(o.total || 0) - Number(o.paidAmount || 0)),
+                }));
+                const withBalance = orders.filter((o: any) => o.outstanding > 0);
+                const orderTotal = withBalance.reduce(
+                  (sum: number, o: any) => sum + Number(o.outstanding),
+                  0,
                 );
-                const orderTotal = unpaid.reduce(
-                  (sum: number, o: any) => sum + Number(o.total || 0),
-                  0
-                );
-                const primary = unpaid[0] ?? allActive[0];
-                if (orderTotal === 0 && unpaid.length === 0) return null;
+                const primary = withBalance[0] ?? orders[0];
+                if (orderTotal === 0) return null;
                 return (
                   <div className="mt-2 pt-3 border-t-2 border-dashed border-gray-200">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">
-                        {unpaid.length > 1
-                          ? `${unpaid.length} sipariş${
-                              allActive.length > unpaid.length
-                                ? ` (+${allActive.length - unpaid.length} ödenmiş)`
+                        {withBalance.length > 1
+                          ? `${withBalance.length} sipariş${
+                              orders.length > withBalance.length
+                                ? ` (+${orders.length - withBalance.length} ödenmiş)`
                                 : ''
                             }`
                           : `#${primary.orderNumber?.toString().padStart(4, '0')}`}

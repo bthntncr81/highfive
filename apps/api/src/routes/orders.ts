@@ -1465,23 +1465,38 @@ export default async function orderRoutes(server: FastifyInstance) {
     for (const o of openOrders) {
       if (o.tableId) touchedTableIds.add(o.tableId);
 
-      // 1. Force-pay if unpaid (and admin asked us to)
-      if (o.paymentStatus !== PaymentStatus.PAID && forcePay) {
-        const remaining = Number(o.total) - 0; // we just charge full total
-        await prisma.payment.create({
+      // Sum non-refunded payments to know what's actually been paid
+      const payments = await prisma.payment.findMany({
+        where: { orderId: o.id, refunded: false },
+      });
+      const paidSoFar = payments.reduce((s, p) => s + Number(p.amount), 0);
+      const remaining = Math.max(0, Number(o.total) - paidSoFar);
+
+      if (paidSoFar >= Number(o.total)) {
+        // Effectively paid (Payment records cover the total) — just complete
+        await prisma.order.update({
+          where: { id: o.id },
           data: {
-            orderId: o.id,
-            amount: remaining,
-            method,
-            paidItems: undefined,
+            paymentStatus: PaymentStatus.PAID,
+            paymentMethod: o.paymentMethod ?? method,
+            status: OrderStatus.COMPLETED,
+            completedAt: new Date(),
           },
         });
-        // Mark every line as fully paid
-        await prisma.orderItem.updateMany({
-          where: { orderId: o.id },
-          data: { paidQuantity: { set: undefined } as any },
+        for (const item of o.items) {
+          if (item.paidQuantity < item.quantity) {
+            await prisma.orderItem.update({
+              where: { id: item.id },
+              data: { paidQuantity: item.quantity },
+            });
+          }
+        }
+        completed++;
+      } else if (forcePay) {
+        // Genuinely unpaid → force a CASH payment for the remaining amount
+        await prisma.payment.create({
+          data: { orderId: o.id, amount: remaining, method },
         });
-        // Above is a no-op for the set; do per-item updates with correct quantity
         for (const item of o.items) {
           await prisma.orderItem.update({
             where: { id: item.id },
@@ -1498,13 +1513,6 @@ export default async function orderRoutes(server: FastifyInstance) {
           },
         });
         forcedPaid++;
-        completed++;
-      } else if (o.paymentStatus === PaymentStatus.PAID) {
-        // 2. Already paid — just transition to COMPLETED
-        await prisma.order.update({
-          where: { id: o.id },
-          data: { status: OrderStatus.COMPLETED, completedAt: new Date() },
-        });
         completed++;
       }
     }
