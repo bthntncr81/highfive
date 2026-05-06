@@ -13,8 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 import { endpoints } from "@/lib/api";
+import { getCurrentLocation } from "@/lib/location";
 
 const PRESET_LABELS = ["Ev", "İş", "Yazlık", "Diğer"];
 
@@ -26,6 +28,29 @@ export default function NewAddress() {
   const [notes, setNotes] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+
+  const handleUseLocation = async () => {
+    setLocating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const res = await getCurrentLocation();
+      if (res.ok) {
+        setLatitude(res.point.latitude);
+        setLongitude(res.point.longitude);
+        if (res.addressGuess) {
+          if (!fullAddress.trim()) setFullAddress(res.addressGuess);
+        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert("Konum", res.error);
+      }
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!fullAddress.trim()) {
@@ -40,6 +65,8 @@ export default function NewAddress() {
         district: district.trim() || undefined,
         city: city.trim() || undefined,
         notes: notes.trim() || undefined,
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
         isDefault,
       });
       router.back();
@@ -100,6 +127,51 @@ export default function NewAddress() {
               className="mt-2 rounded-2xl border border-border-light px-4 py-3 text-base text-foreground"
             />
           </Field>
+
+          {/* Konumumu kullan */}
+          <Pressable
+            onPress={handleUseLocation}
+            disabled={locating}
+            className={`mb-4 flex-row items-center justify-center rounded-2xl border-2 ${
+              latitude
+                ? "border-green-300 bg-green-50"
+                : "border-primary-300 bg-primary-50"
+            } py-3.5`}
+          >
+            {locating ? (
+              <ActivityIndicator color="#bb1e10" />
+            ) : (
+              <>
+                <Ionicons
+                  name={latitude ? "checkmark-circle" : "navigate"}
+                  size={20}
+                  color={latitude ? "#10b981" : "#bb1e10"}
+                />
+                <Text
+                  className={`ml-2 text-sm font-bold ${
+                    latitude ? "text-green-700" : "text-primary-700"
+                  }`}
+                >
+                  {latitude
+                    ? `📍 Konum alındı (${latitude.toFixed(5)}, ${longitude?.toFixed(5)})`
+                    : "📍 Şu anki konumumu kullan"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+          {latitude && (
+            <Pressable
+              onPress={() => {
+                setLatitude(null);
+                setLongitude(null);
+              }}
+              className="-mt-2 mb-3 self-end"
+            >
+              <Text className="text-xs font-semibold text-foreground-muted">
+                Konumu temizle
+              </Text>
+            </Pressable>
+          )}
 
           <Field label="Açık adres">
             <TextInput

@@ -18,7 +18,6 @@ export default function RootLayout() {
   const loadFavorites = useFavorites((s) => s.load);
 
   useEffect(() => {
-    // Push notifications: boot zamanı izin iste + token register
     initPushNotifications().catch((e) =>
       console.log("[push] init failed", e),
     );
@@ -26,7 +25,6 @@ export default function RootLayout() {
     return () => detachNotificationListeners();
   }, []);
 
-  // User login olunca favorileri çek
   useEffect(() => {
     if (user) loadFavorites();
   }, [user]);
@@ -41,98 +39,32 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: "#FFFFFF" },
           }}
         >
-          <Stack.Screen name="(tabs)" />
+          {/* Tablar otomatik yükleniyor; sadece presentation/animation ezmek istediklerimizi
+              burada listeliyoruz. Diğer tüm ekranlar dosya keşfi ile çalışır. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
-            name="product/[id]"
-            options={{
-              presentation: "modal",
-              animation: "slide_from_bottom",
-            }}
-          />
-          <Stack.Screen
-            name="campaign/[id]"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
+            name="auth/welcome"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
             name="auth/login"
-            options={{
-              presentation: "modal",
-              animation: "slide_from_bottom",
-            }}
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
-            name="checkout/index"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
+            name="auth/signup"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
-            name="checkout/payment"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-              gestureEnabled: false,
-            }}
-          />
-          <Stack.Screen
-            name="orders/[id]"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
-          />
-          <Stack.Screen
-            name="loyalty/index"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
-          />
-          <Stack.Screen
-            name="addresses/index"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
+            name="product/[id]"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
             name="addresses/new"
-            options={{
-              presentation: "modal",
-              animation: "slide_from_bottom",
-            }}
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
-            name="addresses/[id]"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
-          />
-          <Stack.Screen
-            name="favorites/index"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
-          />
-          <Stack.Screen
-            name="settings/notifications"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
-          />
-          <Stack.Screen
-            name="profile/edit"
-            options={{
-              presentation: "card",
-              animation: "slide_from_right",
-            }}
+            name="checkout/payment"
+            options={{ gestureEnabled: false }}
           />
         </Stack>
       </SafeAreaProvider>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,11 +16,15 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { useAuth } from "@/lib/auth";
+import { endpoints } from "@/lib/api";
 import { Logo } from "@/components/ui/Logo";
 
-export default function LoginScreen() {
+type Step = "info" | "otp";
+
+export default function Signup() {
+  const [step, setStep] = useState<Step>("info");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -34,7 +39,14 @@ export default function LoginScreen() {
   }, [resendIn]);
 
   const handleRequest = async () => {
-    if (phone.replace(/\D/g, "").length < 10) return;
+    if (!name.trim()) {
+      Alert.alert("Hata", "Ad Soyad gerekli");
+      return;
+    }
+    if (phone.replace(/\D/g, "").length < 10) {
+      Alert.alert("Hata", "Geçerli telefon numarası gir");
+      return;
+    }
     setLoading(true);
     try {
       const res = await requestOtp(phone);
@@ -55,8 +67,13 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await verifyOtp(phone, code);
+      // Adı backend'e yaz (Customer.name)
+      try {
+        await endpoints.updateMe({ name: name.trim() });
+      } catch {}
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.back();
+      // Welcome'a yönlendir veya direkt anasayfa
+      router.replace("/(tabs)");
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Hata", e?.message ?? "Kod doğrulanamadı");
@@ -71,7 +88,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <View className="px-5 pt-2">
+        <View className="flex-row items-center px-5 pt-2">
           <Pressable
             onPress={() => router.back()}
             className="h-10 w-10 items-center justify-center rounded-full bg-surface"
@@ -80,63 +97,79 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
-        <View className="flex-1 px-6 pt-8">
+        <ScrollView
+          contentContainerStyle={{ padding: 24, paddingTop: 12, flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View className="mb-6 items-start">
             <Logo height={32} />
           </View>
-          {step === "phone" ? (
+
+          {step === "info" ? (
             <>
               <Text className="text-3xl font-extrabold text-foreground">
-                Telefon numaran
+                Üye ol
               </Text>
               <Text className="mt-2 text-sm text-foreground-muted">
-                SMS ile gelen 6 haneli kodu girerek hızlıca giriş yap.
+                Birkaç saniyede hesabını aç, puan kazanmaya başla.
               </Text>
 
-              <View className="mt-8 flex-row items-center rounded-2xl border border-border px-4 py-1">
-                <Text className="mr-2 text-base font-semibold text-foreground">
-                  +90
-                </Text>
+              <Field label="Ad Soyad">
                 <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholder="555 555 55 55"
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ahmet Yılmaz"
                   placeholderTextColor="#9a9a9a"
-                  className="flex-1 py-3 text-base text-foreground"
-                  maxLength={11}
+                  autoCapitalize="words"
+                  className="rounded-2xl border border-border px-4 py-3 text-base text-foreground"
                   editable={!loading}
                 />
-              </View>
+              </Field>
+
+              <Field label="Telefon numaran">
+                <View className="flex-row items-center rounded-2xl border border-border px-4">
+                  <Text className="mr-2 text-base font-semibold text-foreground">
+                    +90
+                  </Text>
+                  <TextInput
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    placeholder="555 555 55 55"
+                    placeholderTextColor="#9a9a9a"
+                    className="flex-1 py-3 text-base text-foreground"
+                    maxLength={11}
+                    editable={!loading}
+                  />
+                </View>
+              </Field>
 
               <Pressable
-                disabled={phone.replace(/\D/g, "").length < 10 || loading}
+                disabled={loading}
                 onPress={handleRequest}
                 className={`mt-6 flex-row items-center justify-center rounded-2xl py-4 ${
-                  phone.replace(/\D/g, "").length < 10 || loading
-                    ? "bg-border"
-                    : "bg-primary-500"
+                  loading ? "bg-border" : "bg-primary-500"
                 }`}
               >
                 {loading && (
                   <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 )}
                 <Text className="text-base font-bold text-white">
-                  {loading ? "Gönderiliyor…" : "Kod gönder"}
+                  {loading ? "Gönderiliyor…" : "Doğrulama kodu gönder"}
                 </Text>
               </Pressable>
 
               <Text className="mt-4 text-center text-[11px] leading-4 text-foreground-muted">
-                Devam ederek HighFive Kullanım Şartlarını ve Gizlilik Politikasını
-                kabul etmiş olursun.
+                Devam ederek HighFive Kullanım Şartlarını ve Gizlilik
+                Politikasını kabul etmiş olursun.
               </Text>
 
               <Pressable
-                onPress={() => router.replace("/auth/signup")}
+                onPress={() => router.replace("/auth/login")}
                 className="mt-4 items-center"
               >
                 <Text className="text-sm font-semibold text-primary-500">
-                  Hesabın yok mu? Üye ol →
+                  Hesabım var, giriş yap →
                 </Text>
               </Pressable>
             </>
@@ -180,7 +213,7 @@ export default function LoginScreen() {
                   <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 )}
                 <Text className="text-base font-bold text-white">
-                  {loading ? "Doğrulanıyor…" : "Doğrula ve giriş yap"}
+                  {loading ? "Doğrulanıyor…" : "Hesabımı oluştur"}
                 </Text>
               </Pressable>
 
@@ -200,7 +233,7 @@ export default function LoginScreen() {
 
               <Pressable
                 onPress={() => {
-                  setStep("phone");
+                  setStep("info");
                   setCode("");
                   setDevCode(null);
                 }}
@@ -208,13 +241,30 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <Text className="text-sm text-foreground-muted">
-                  Numarayı değiştir
+                  Bilgileri değiştir
                 </Text>
               </Pressable>
             </>
           )}
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View className="mt-5">
+      <Text className="mb-1.5 text-xs font-semibold text-foreground-muted">
+        {label}
+      </Text>
+      {children}
+    </View>
   );
 }

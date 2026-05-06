@@ -13,8 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 import { endpoints } from "@/lib/api";
+import { getCurrentLocation } from "@/lib/location";
 
 const PRESET_LABELS = ["Ev", "İş", "Yazlık", "Diğer"];
 
@@ -22,6 +24,7 @@ export default function EditAddress() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const [label, setLabel] = useState("Ev");
   const [fullAddress, setFullAddress] = useState("");
@@ -29,6 +32,8 @@ export default function EditAddress() {
   const [city, setCity] = useState("");
   const [notes, setNotes] = useState("");
   const [isDefault, setIsDefault] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -47,11 +52,33 @@ export default function EditAddress() {
         setCity(addr.city ?? "");
         setNotes(addr.notes ?? "");
         setIsDefault(addr.isDefault);
+        setLatitude(addr.latitude);
+        setLongitude(addr.longitude);
       } finally {
         setLoading(false);
       }
     })();
   }, [id]);
+
+  const handleUseLocation = async () => {
+    setLocating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const res = await getCurrentLocation();
+      if (res.ok) {
+        setLatitude(res.point.latitude);
+        setLongitude(res.point.longitude);
+        if (res.addressGuess && !fullAddress.trim()) {
+          setFullAddress(res.addressGuess);
+        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert("Konum", res.error);
+      }
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!fullAddress.trim()) {
@@ -66,6 +93,8 @@ export default function EditAddress() {
         district: district.trim() || null,
         city: city.trim() || null,
         notes: notes.trim() || null,
+        latitude,
+        longitude,
         isDefault,
       });
       router.back();
@@ -135,6 +164,38 @@ export default function EditAddress() {
             placeholderTextColor="#9a9a9a"
             className="mb-4 rounded-2xl border border-border-light px-4 py-3 text-base text-foreground"
           />
+
+          {/* Konumumu kullan */}
+          <Pressable
+            onPress={handleUseLocation}
+            disabled={locating}
+            className={`mb-4 flex-row items-center justify-center rounded-2xl border-2 ${
+              latitude
+                ? "border-green-300 bg-green-50"
+                : "border-primary-300 bg-primary-50"
+            } py-3.5`}
+          >
+            {locating ? (
+              <ActivityIndicator color="#bb1e10" />
+            ) : (
+              <>
+                <Ionicons
+                  name={latitude ? "checkmark-circle" : "navigate"}
+                  size={20}
+                  color={latitude ? "#10b981" : "#bb1e10"}
+                />
+                <Text
+                  className={`ml-2 text-sm font-bold ${
+                    latitude ? "text-green-700" : "text-primary-700"
+                  }`}
+                >
+                  {latitude
+                    ? `📍 GPS: ${latitude.toFixed(5)}, ${longitude?.toFixed(5)}`
+                    : "📍 Şu anki konumumu kullan"}
+                </Text>
+              </>
+            )}
+          </Pressable>
 
           <Text className="mb-1.5 text-xs font-semibold text-foreground-muted">
             Açık adres

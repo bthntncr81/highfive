@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.highfive.mobile"
+      "bundleIdentifier": "com.highfive.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Teslimat adresinizi belirlemek için konumunuza erişmemiz gerekiyor."
+      }
     },
     "android": {
       "package": "com.highfive.mobile",
@@ -24,7 +27,11 @@
         "backgroundColor": "#bb1e10"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -39,10 +46,17 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Teslimat adresi için konumunuzu kullanırız.",
+          "locationWhenInUsePermission": "Teslimat adresi için konumunuzu kullanırız."
+        }
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     },
     "extra": {
       "apiUrl": "https://api.highfivepps.com",

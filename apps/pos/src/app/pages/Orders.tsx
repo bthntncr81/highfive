@@ -17,6 +17,8 @@ interface Order {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  customerLatitude?: number | null;
+  customerLongitude?: number | null;
   source?: string;
   paymentStatus?: string;
   paymentMethod?: string;
@@ -83,12 +85,18 @@ const getPaymentStatusBadge = (status?: string) => {
   return status ? map[status] || null : null;
 };
 
-// Build a Google Maps URL. If the address contains an embedded
-// `https://maps.google.com/?q=lat,lng` pin (added by the landing
-// geolocation flow), prefer that exact pin — Google Maps's own URL
-// parser will land the user on the pin instead of trying to fuzzy-match
-// the surrounding apartment / door details against street names.
-const mapsUrl = (address: string) => {
+// Build a Google Maps URL. Order'da customerLatitude/Longitude varsa onları kullan
+// (mobile app'ten gelen GPS pin'i — en doğru). Yoksa adres metnine embed
+// `https://maps.google.com/?q=lat,lng` pattern'ı (landing geolocation flow), yoksa
+// metni fuzzy-match'e bırak.
+const mapsUrl = (
+  address: string,
+  lat?: number | null,
+  lng?: number | null,
+) => {
+  if (typeof lat === 'number' && typeof lng === 'number') {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
   const m = address.match(/https?:\/\/maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (m) {
     return `https://www.google.com/maps/search/?api=1&query=${m[1]},${m[2]}`;
@@ -386,14 +394,30 @@ export default function Orders() {
                           {order.customerAddress}
                         </span>
                         <a
-                          href={mapsUrl(order.customerAddress)}
+                          href={mapsUrl(
+                            order.customerAddress,
+                            order.customerLatitude,
+                            order.customerLongitude,
+                          )}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium border border-blue-200"
-                          title="Google Maps'te aç"
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
+                            typeof order.customerLatitude === 'number' &&
+                            typeof order.customerLongitude === 'number'
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                          }`}
+                          title={
+                            typeof order.customerLatitude === 'number'
+                              ? 'GPS pin ile aç'
+                              : "Google Maps'te aç"
+                          }
                         >
-                          <ExternalLink className="w-3 h-3" /> Haritada
+                          <ExternalLink className="w-3 h-3" />
+                          {typeof order.customerLatitude === 'number'
+                            ? '📍 GPS'
+                            : 'Haritada'}
                         </a>
                         <button
                           type="button"

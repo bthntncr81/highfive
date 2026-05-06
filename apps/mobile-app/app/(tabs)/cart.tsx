@@ -17,17 +17,7 @@ export default function CartScreen() {
 
   const handleCheckout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!user) {
-      Alert.alert(
-        "Giriş gerekli",
-        "Sipariş vermek için önce giriş yap.",
-        [
-          { text: "Vazgeç", style: "cancel" },
-          { text: "Giriş yap", onPress: () => router.push("/auth/login") },
-        ],
-      );
-      return;
-    }
+    // Misafir de devam edebilsin — checkout ekranı kendisi misafir formu gösterir
     router.push("/checkout");
   };
 

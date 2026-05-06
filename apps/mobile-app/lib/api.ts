@@ -312,6 +312,8 @@ export const endpoints = {
     items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
     addressId?: string;
     customerAddress?: string;
+    customerLatitude?: number;
+    customerLongitude?: number;
     customerName?: string;
     customerPhone?: string;
     notes?: string;
@@ -320,6 +322,26 @@ export const endpoints = {
     couponCode?: string;
     paymentMethod?: "CASH" | "ONLINE" | "CREDIT_CARD";
   }) => api.post<{ order: ApiOrder & { discountBreakdown: any } }>("/api/mobile/orders", data),
+
+  // GUEST ORDER (auth opsiyonel — ad+telefon ile)
+  createGuestOrder: (data: {
+    type: OrderType;
+    customerName: string;
+    customerPhone: string;
+    customerEmail?: string;
+    customerAddress?: string;
+    customerLatitude?: number;
+    customerLongitude?: number;
+    items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+    notes?: string;
+    tip?: number;
+    paymentMethod?: "CASH" | "ONLINE" | "CREDIT_CARD";
+  }) =>
+    api.post<{
+      order: ApiOrder;
+      token: string;
+      customer: { id: string; phone: string; name: string | null; isVerified: boolean };
+    }>("/api/mobile/orders/guest", data),
   myOrders: (params?: { limit?: number; status?: string; before?: string }) => {
     const q = new URLSearchParams();
     if (params?.limit) q.set("limit", String(params.limit));

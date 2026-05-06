@@ -93,23 +93,34 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
         ) : (
-          <View className="mx-5 mb-4 flex-row items-center rounded-3xl bg-primary-50 p-4">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-primary-500">
-              <Ionicons name="person" size={28} color="#fff" />
+          <View className="mx-5 mb-4 rounded-3xl bg-primary-50 p-4">
+            <View className="flex-row items-center">
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-primary-500">
+                <Ionicons name="person" size={28} color="#fff" />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-base font-bold text-foreground">
+                  Hoş geldin!
+                </Text>
+                <Text className="text-xs text-foreground-muted">
+                  Üye ol, puan kazan ve kampanyaları kaçırma
+                </Text>
+              </View>
             </View>
-            <View className="ml-3 flex-1">
-              <Text className="text-base font-bold text-foreground">
-                Misafir
-              </Text>
-              <Text className="text-xs text-foreground-muted">
-                Giriş yap, kampanyaları kaçırma
-              </Text>
+            <View className="mt-3 flex-row gap-2">
+              <Link href="/auth/signup" asChild>
+                <Pressable className="flex-1 items-center rounded-full bg-primary-500 py-2.5">
+                  <Text className="text-xs font-bold text-white">🆕 Üye ol</Text>
+                </Pressable>
+              </Link>
+              <Link href="/auth/login" asChild>
+                <Pressable className="flex-1 items-center rounded-full border border-primary-500 bg-white py-2.5">
+                  <Text className="text-xs font-bold text-primary-600">
+                    Giriş yap
+                  </Text>
+                </Pressable>
+              </Link>
             </View>
-            <Link href="/auth/login" asChild>
-              <Pressable className="rounded-full bg-primary-500 px-4 py-2">
-                <Text className="text-xs font-bold text-white">Giriş yap</Text>
-              </Pressable>
-            </Link>
           </View>
         )}
 
