@@ -632,7 +632,11 @@ model Customer {
   orders          CustomerOrder[]
   pointsHistory   PointsTransaction[]
   usedCoupons     CouponUsage[]
-  
+  devices         DeviceToken[]
+  addresses       Address[]
+  favorites       FavoriteItem[]
+  notificationPrefs NotificationPreference?
+
   @@index([phone])
   @@index([email])
 }
@@ -723,6 +727,7 @@ model Campaign {
   updatedAt       DateTime @updatedAt
 
   happyHours      HappyHour[] // Bu kampanyayı kullanan happy hour'lar
+  pushNotifications PushNotification[]
 }
 
 // Paket Menüler / Combo'lar
@@ -851,4 +856,108 @@ model WebhookLog {
   createdAt   DateTime @default(now())
 
   partner     IntegrationPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+}
+
+// ==================== MOBILE PUSH NOTIFICATIONS ====================
+
+model DeviceToken {
+  id          String   @id @default(cuid())
+  token       String   @unique          // ExponentPushToken[xxx]
+  platform    String                    // ios | android
+  customerId  String?                   // Anonim cihazlar için null olabilir
+  deviceId    String?                   // App'in kendi ürettiği UUID
+  appVersion  String?
+  locale      String?
+  isActive    Boolean  @default(true)
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([token])
+  @@index([isActive])
+}
+
+model PushNotification {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  data        Json?                     // { campaignId, productId, route, ... }
+  imageUrl    String?
+  campaignId  String?
+  targetType  String   @default("ALL")  // ALL, SEGMENT, CUSTOMER, DEVICE
+  targetIds   String[] @default([])     // hedef listesi
+  
+  // Stats
+  sentCount   Int      @default(0)
+  deliveredCount Int   @default(0)
+  failedCount Int      @default(0)
+  openCount   Int      @default(0)
+  
+  status      String   @default("DRAFT") // DRAFT, SENDING, SENT, FAILED
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([campaignId])
+  @@index([scheduledAt])
+}
+
+// ==================== MOBILE: ADDRESSES, FAVORITES, PREFERENCES ====================
+
+model Address {
+  id          String   @id @default(cuid())
+  customerId  String
+  label       String                       // "Ev", "İş", "Yazlık"
+  fullAddress String                       // Tam adres metni
+  district    String?                      // İlçe
+  city        String?                      // Şehir
+  zipCode     String?
+  latitude    Float?                       // Geo
+  longitude   Float?
+  notes       String?                      // Kapı kodu, kat vs.
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model FavoriteItem {
+  id          String   @id @default(cuid())
+  customerId  String
+  menuItemId  String
+  createdAt   DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // MenuItem'a soft-bağ: ürün silinirse favori de silinir
+  // (MenuItem schema'da relation tanımlı değil, customer kaybolduğunda onDelete cascade ile temizlenir)
+
+  @@unique([customerId, menuItemId])
+  @@index([customerId])
+  @@index([menuItemId])
+}
+
+model NotificationPreference {
+  id            String   @id @default(cuid())
+  customerId    String   @unique
+  pushEnabled   Boolean  @default(true)
+  orderStatus   Boolean  @default(true)    // Sipariş durumu push'ları
+  campaigns     Boolean  @default(true)    // Kampanya / happy hour
+  loyalty       Boolean  @default(true)    // Puan kazanım
+  marketing     Boolean  @default(true)    // Genel pazarlama
+  quietHoursStart String?                  // "22:00" — bu saatlerde marketing push gelmesin
+  quietHoursEnd   String?                  // "08:00"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }
