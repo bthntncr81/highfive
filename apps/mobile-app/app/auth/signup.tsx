@@ -72,8 +72,29 @@ export default function Signup() {
         await endpoints.updateMe({ name: name.trim() });
       } catch {}
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Welcome'a yönlendir veya direkt anasayfa
-      router.replace("/(tabs)");
+
+      // Yeni üye → ilk adresini eklemeye yönlendir
+      Alert.alert(
+        "🎉 Hoş geldin!",
+        "Şimdi ilk teslimat adresini ekleyelim — sipariş vermek 30 saniyede biter.",
+        [
+          {
+            text: "Sonra",
+            style: "cancel",
+            onPress: () => router.replace("/(tabs)"),
+          },
+          {
+            text: "Adres ekle",
+            onPress: () => {
+              router.replace("/(tabs)");
+              // Tab geçişi sonrası adres ekleme modal'ı
+              setTimeout(() => {
+                router.push("/addresses/new");
+              }, 100);
+            },
+          },
+        ],
+      );
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Hata", e?.message ?? "Kod doğrulanamadı");

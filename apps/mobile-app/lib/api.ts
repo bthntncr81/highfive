@@ -47,15 +47,29 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await getToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (e: any) {
+    // Network failure — anlamlı mesaj
+    throw new ApiError(
+      `Sunucuya ulaşılamıyor.\n\n` +
+        `• İnternet bağlantını kontrol et\n` +
+        `• ${API_URL} adresine ulaşılabilir mi?\n\n` +
+        `Detay: ${e?.message ?? "bilinmiyor"}`,
+      0,
+      "NETWORK_ERROR",
+    );
+  }
+
   if (!res.ok) {
     let errMsg = `${res.status} ${res.statusText}`;
     let errCode: string | undefined;
@@ -64,14 +78,25 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       errMsg = j.error ?? errMsg;
       errCode = j.code;
     } catch {
-      // text fallback
       try {
         errMsg = await res.text();
       } catch {}
     }
+
+    // Bilinen route'lar için daha açıklayıcı mesaj
+    if (res.status === 404) {
+      errMsg =
+        `Endpoint bulunamadı: ${path}\n\n` +
+        `Sunucudaki API güncel olmayabilir. Yöneticinin api.highfivepps.com'u son sürümle deploy etmesi gerek.\n\n` +
+        `(${errMsg})`;
+    } else if (res.status === 401) {
+      errMsg = "Oturumun süresi doldu, tekrar giriş yap.";
+    } else if (res.status >= 500) {
+      errMsg = `Sunucu hatası (${res.status}). Lütfen tekrar dene.\n\n(${errMsg})`;
+    }
+
     throw new ApiError(errMsg, res.status, errCode);
   }
-  // 204 NoContent
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }

@@ -54,7 +54,7 @@ function ProductImage({
 
 export function ProductCard({ product, variant = "list" }: Props) {
   const add = useCart((s) => s.add);
-  const isFav = useFavorites((s) => s.ids.has(product.id));
+  const isFav = useFavorites((s) => s.ids.includes(product.id));
   const toggleFav = useFavorites((s) => s.toggle);
   const user = useAuth((s) => s.user);
   const price = parsePrice(product.price);
@@ -78,7 +78,7 @@ export function ProductCard({ product, variant = "list" }: Props) {
   const handleFav = () => {
     if (!user) return;
     Haptics.selectionAsync();
-    toggleFav(product.id);
+    toggleFav(product.id, product);
   };
 
   if (variant === "grid") {

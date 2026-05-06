@@ -39,9 +39,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: "#FFFFFF" },
           }}
         >
-          {/* Tablar otomatik yükleniyor; sadece presentation/animation ezmek istediklerimizi
-              burada listeliyoruz. Diğer tüm ekranlar dosya keşfi ile çalışır. */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+          {/* AUTH */}
           <Stack.Screen
             name="auth/welcome"
             options={{ presentation: "modal", animation: "slide_from_bottom" }}
@@ -54,17 +54,69 @@ export default function RootLayout() {
             name="auth/signup"
             options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
+
+          {/* MODALS */}
           <Stack.Screen
             name="product/[id]"
             options={{ presentation: "modal", animation: "slide_from_bottom" }}
+          />
+          <Stack.Screen
+            name="campaign/[id]"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* CHECKOUT */}
+          <Stack.Screen
+            name="checkout/index"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="checkout/payment"
+            options={{ animation: "slide_from_right", gestureEnabled: false }}
+          />
+
+          {/* ORDERS */}
+          <Stack.Screen
+            name="orders/[id]"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* LOYALTY */}
+          <Stack.Screen
+            name="loyalty/index"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* ADDRESSES */}
+          <Stack.Screen
+            name="addresses/index"
+            options={{ animation: "slide_from_right" }}
           />
           <Stack.Screen
             name="addresses/new"
             options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen
-            name="checkout/payment"
-            options={{ gestureEnabled: false }}
+            name="addresses/[id]"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* FAVORITES */}
+          <Stack.Screen
+            name="favorites/index"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* SETTINGS */}
+          <Stack.Screen
+            name="settings/notifications"
+            options={{ animation: "slide_from_right" }}
+          />
+
+          {/* PROFILE */}
+          <Stack.Screen
+            name="profile/edit"
+            options={{ animation: "slide_from_right" }}
           />
         </Stack>
       </SafeAreaProvider>

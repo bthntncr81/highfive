@@ -1,19 +1,19 @@
 // Favorites store — backend ile sync, optimistik toggle
 import { create } from "zustand";
-import { endpoints, ApiMenuItem } from "./api";
+import { endpoints, ApiMenuItem, ApiError } from "./api";
 
 type FavoritesState = {
-  ids: Set<string>;
+  ids: string[]; // Array — referans değişince selector kesinlikle re-render
   items: ApiMenuItem[];
   loaded: boolean;
   loading: boolean;
   load: () => Promise<void>;
-  toggle: (menuItemId: string) => Promise<void>;
+  toggle: (menuItemId: string, item?: ApiMenuItem) => Promise<void>;
   isFavorite: (id: string) => boolean;
 };
 
 export const useFavorites = create<FavoritesState>((set, get) => ({
-  ids: new Set(),
+  ids: [],
   items: [],
   loaded: false,
   loading: false,
@@ -23,42 +23,53 @@ export const useFavorites = create<FavoritesState>((set, get) => ({
     try {
       const res = await endpoints.favorites();
       set({
-        ids: new Set(res.favorites.map((f) => f.menuItemId)),
+        ids: res.favorites.map((f) => f.menuItemId),
         items: res.items ?? [],
         loaded: true,
       });
-    } catch {
-      // sessizce geç — guest user vs.
+    } catch (e) {
+      // 404/network sessizce geç (guest user / endpoint yok)
+      console.log("[favorites] load failed", e);
     } finally {
       set({ loading: false });
     }
   },
 
-  toggle: async (menuItemId: string) => {
-    const has = get().ids.has(menuItemId);
+  toggle: async (menuItemId: string, item?: ApiMenuItem) => {
+    const prevIds = get().ids;
+    const prevItems = get().items;
+    const isFav = prevIds.includes(menuItemId);
+
     // Optimistik
-    const next = new Set(get().ids);
-    if (has) next.delete(menuItemId);
-    else next.add(menuItemId);
-    set({ ids: next });
+    if (isFav) {
+      set({
+        ids: prevIds.filter((id) => id !== menuItemId),
+        items: prevItems.filter((it) => it.id !== menuItemId),
+      });
+    } else {
+      set({
+        ids: [menuItemId, ...prevIds],
+        items: item ? [item, ...prevItems] : prevItems,
+      });
+    }
 
     try {
       const res = await endpoints.toggleFavorite(menuItemId);
-      // Backend gerçek durumu döner; senkronize et
-      const final = new Set(get().ids);
-      if (res.favorited) final.add(menuItemId);
-      else final.delete(menuItemId);
-      set({ ids: final });
-
-      // Items listesini de güncelle (sadece favori sayfasında kritik)
-      if (res.favorited === false) {
-        set({ items: get().items.filter((it) => it.id !== menuItemId) });
+      // Backend gerçek durumu döner — emin olmak için listeyi yenile
+      // (özellikle items array için item objesi gerekiyor)
+      if (res.favorited && !item) {
+        // Item objesi yoksa listeyi tazele
+        get().load();
       }
-    } catch {
-      // Hata: orijinaline geri sar
-      set({ ids: get().ids });
+    } catch (e: any) {
+      // Rollback
+      set({ ids: prevIds, items: prevItems });
+      if (!(e instanceof ApiError && e.status === 404)) {
+        // 404 sessiz, diğer hataları log
+        console.log("[favorites] toggle failed", e);
+      }
     }
   },
 
-  isFavorite: (id: string) => get().ids.has(id),
+  isFavorite: (id: string) => get().ids.includes(id),
 }));
