@@ -3,6 +3,8 @@ import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, Tab
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcastKitchenNewItems } from '../websocket';
 import { webhookService } from '../services/webhook.service';
+import { sendOrderStatusPush } from '../lib/order-push';
+import { awardMobileOrderPoints } from '../lib/loyalty-award';
 
 // Email notification - uses nodemailer if available
 async function sendOrderNotification(order: any) {
@@ -774,6 +776,20 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     broadcastOrderUpdate(updatedOrder);
 
+    // Customer mobil push (status değişti)
+    if (status !== order.status) {
+      sendOrderStatusPush(prisma, updatedOrder, status).catch((err) => {
+        console.error('📱 Mobile push error:', err);
+      });
+    }
+
+    // Puan kazanım — status COMPLETED'a geçtiğinde (mobile sipariş ise CustomerOrder bağ var)
+    if (status === OrderStatus.COMPLETED && order.status !== OrderStatus.COMPLETED) {
+      awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
+        console.error('🏆 Loyalty award error:', err);
+      });
+    }
+
     // Dispatch webhook for external orders
     if (updatedOrder.externalOrderId) {
       webhookService.dispatchOrderStatusChanged(updatedOrder).catch((err) => {
@@ -1250,6 +1266,11 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     broadcastOrderUpdate(updatedOrder);
 
+    // Customer mobil push (iptal)
+    sendOrderStatusPush(prisma, updatedOrder, 'CANCELLED').catch((err) => {
+      console.error('📱 Mobile push error:', err);
+    });
+
     // Dispatch webhook for external orders
     if (updatedOrder.externalOrderId) {
       webhookService.dispatchOrderStatusChanged(updatedOrder).catch((err) => {
@@ -1290,7 +1311,8 @@ export default async function orderRoutes(server: FastifyInstance) {
         courierId: courierId || user.id,
         assignedAt: order.assignedAt || new Date(),
         pickedUpAt: new Date(),
-        status: OrderStatus.SERVED, // Yola çıktı
+        // DELIVERY için OUT_FOR_DELIVERY, TAKEAWAY için SERVED kullan
+        status: order.type === 'DELIVERY' ? OrderStatus.OUT_FOR_DELIVERY : OrderStatus.SERVED,
       },
       include: {
         table: true,
@@ -1301,6 +1323,11 @@ export default async function orderRoutes(server: FastifyInstance) {
     });
 
     broadcastOrderUpdate(updatedOrder);
+
+    // Customer mobil push (kurye yola çıktı / paket hazır)
+    sendOrderStatusPush(prisma, updatedOrder, updatedOrder.status).catch((err) => {
+      console.error('📱 Mobile push error:', err);
+    });
 
     return { order: updatedOrder, message: 'Sipariş alındı' };
   });
@@ -1326,7 +1353,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       data: {
         deliveredAt: new Date(),
         completedAt: new Date(),
-        status: OrderStatus.COMPLETED,
+        status: order.type === 'DELIVERY' ? OrderStatus.DELIVERED : OrderStatus.COMPLETED,
       },
       include: {
         table: true,
@@ -1337,6 +1364,16 @@ export default async function orderRoutes(server: FastifyInstance) {
     });
 
     broadcastOrderUpdate(updatedOrder);
+
+    // Customer mobil push (teslim edildi)
+    sendOrderStatusPush(prisma, updatedOrder, updatedOrder.status).catch((err) => {
+      console.error('📱 Mobile push error:', err);
+    });
+
+    // Sipariş tamamlandığında müşteriye puan ekle (mobile sipariş ise CustomerOrder bağ var)
+    awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
+      console.error('🏆 Loyalty award error:', err);
+    });
 
     return { order: updatedOrder, message: 'Sipariş teslim edildi' };
   });

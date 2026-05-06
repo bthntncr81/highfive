@@ -2,6 +2,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
+import { broadcastCampaignToMobile } from '../lib/auto-broadcast';
 
 export default async function campaignsRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
@@ -62,6 +63,16 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         stackable: data.stackable || false,
       },
     });
+
+    // Otomatik mobil duyuru — admin POS'tan "notifyCustomers: true" gönderirse
+    if (data.notifyCustomers === true) {
+      broadcastCampaignToMobile(prisma, {
+        campaignId: campaign.id,
+        title: data.notifyTitle,
+        body: data.notifyBody,
+        imageUrl: data.notifyImageUrl,
+      }).catch((err) => console.error('📱 Auto-broadcast error:', err));
+    }
 
     return { campaign };
   });

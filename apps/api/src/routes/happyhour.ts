@@ -2,6 +2,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
+import { broadcastHappyHourToMobile } from '../lib/auto-broadcast';
 
 export default async function happyHourRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
@@ -156,6 +157,16 @@ export default async function happyHourRoutes(server: FastifyInstance) {
           campaign: true,
         },
       });
+
+      // Otomatik mobil duyuru — body'de `notifyCustomers: true` varsa
+      const reqBody = request.body as any;
+      if (reqBody?.notifyCustomers === true) {
+        broadcastHappyHourToMobile(prisma, {
+          happyHourId: happyHour.id,
+          title: reqBody.notifyTitle,
+          body: reqBody.notifyBody,
+        }).catch((err) => console.error('📱 Auto-broadcast error:', err));
+      }
 
       return { success: true, happyHour };
     }

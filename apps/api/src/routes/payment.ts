@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { broadcastNewOrder } from '../websocket';
+import { sendOrderStatusPush } from '../lib/order-push';
 import * as crypto from 'crypto';
 
 // iyzico Configuration - read from settings DB, fallback to env vars
@@ -428,10 +429,41 @@ export default async function paymentRoutes(server: FastifyInstance) {
   // 3DS Callback - Called by iyzico after 3DS verification
   server.post('/3ds-callback', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as any;
-    
+
     console.log('📥 3DS Callback received:', body);
 
     const { status, paymentId, conversationId, mdStatus } = body;
+
+    // Mobile için: paymentId'yi settings'e yaz ki client polling ile alabilsin
+    if (conversationId && paymentId) {
+      try {
+        const existing = await prisma.settings.findUnique({
+          where: { key: `payment_${conversationId}` },
+        });
+        const oldValue = (existing?.value as any) || {};
+        await prisma.settings.upsert({
+          where: { key: `payment_${conversationId}` },
+          update: {
+            value: {
+              ...oldValue,
+              paymentId,
+              callbackStatus: status,
+              callbackAt: new Date().toISOString(),
+            },
+          },
+          create: {
+            key: `payment_${conversationId}`,
+            value: {
+              paymentId,
+              callbackStatus: status,
+              callbackAt: new Date().toISOString(),
+            },
+          },
+        });
+      } catch (e) {
+        console.error('📥 Failed to persist callback paymentId:', e);
+      }
+    }
 
     // Return HTML that posts message to parent window
     const isSuccess = status === 'success';
@@ -623,6 +655,114 @@ export default async function paymentRoutes(server: FastifyInstance) {
     }
 
     return { status: (paymentSession.value as any).status };
+  });
+
+  // Mobile-friendly: callback sonrası paymentId'yi al, complete-3ds'i otomatik tamamla
+  // Mobile WebView callback URL'e yönlendiğinde bu endpoint'i çağırır
+  server.get('/mobile-finalize/:conversationId', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { conversationId } = request.params as { conversationId: string };
+
+    const session = await prisma.settings.findUnique({
+      where: { key: `payment_${conversationId}` },
+    });
+    if (!session) {
+      return reply.status(404).send({ error: 'Ödeme oturumu bulunamadı' });
+    }
+    const v = (session.value as any) || {};
+
+    // Henüz callback gelmemiş olabilir — client polling yapsın
+    if (!v.paymentId) {
+      return { status: 'pending' };
+    }
+
+    // Zaten finalize edilmiş mi?
+    if (v.status === 'completed' || v.status === 'failed') {
+      return {
+        status: v.status,
+        paymentId: v.paymentId,
+        orderId: v.orderId,
+      };
+    }
+
+    // Finalize et
+    try {
+      const result = await iyzicoRequest('/payment/3dsecure/auth', {
+        locale: 'tr',
+        conversationId,
+        paymentId: v.paymentId,
+      });
+
+      if (result.status !== 'success') {
+        await prisma.settings.update({
+          where: { key: `payment_${conversationId}` },
+          data: { value: { ...v, status: 'failed', error: result.errorMessage } },
+        });
+        return reply.status(400).send({
+          status: 'failed',
+          error: result.errorMessage || 'Ödeme tamamlanamadı',
+        });
+      }
+
+      const orderId = v.orderId as string | undefined;
+      if (orderId) {
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          include: { items: true },
+        });
+        if (order) {
+          await prisma.payment.create({
+            data: {
+              orderId,
+              amount: Number(result.paidPrice),
+              method: PaymentMethod.CREDIT_CARD,
+              reference: result.paymentId,
+            },
+          });
+          const updatedOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              paymentStatus: PaymentStatus.PAID,
+              paymentMethod: PaymentMethod.CREDIT_CARD,
+              status: OrderStatus.CONFIRMED,
+            },
+            include: { items: { include: { menuItem: true } } },
+          });
+
+          for (const item of order.items) {
+            await prisma.orderItem.update({
+              where: { id: item.id },
+              data: { paidQuantity: item.quantity },
+            });
+          }
+
+          // Mobile sipariş ise lifecycle push'ları tetikle
+          broadcastNewOrder(updatedOrder);
+          sendOrderStatusPush(prisma, updatedOrder, 'CONFIRMED').catch(() => {});
+
+          await prisma.settings.update({
+            where: { key: `payment_${conversationId}` },
+            data: {
+              value: {
+                ...v,
+                status: 'completed',
+                completedAt: new Date().toISOString(),
+              },
+            },
+          });
+
+          return {
+            status: 'completed',
+            paymentId: result.paymentId,
+            orderId,
+          };
+        }
+      }
+
+      return { status: 'completed', paymentId: result.paymentId };
+    } catch (e: any) {
+      console.error('💳 Mobile finalize error:', e);
+      return reply.status(500).send({ error: e?.message ?? 'Sunucu hatası' });
+    }
   });
 
   // Test endpoint to verify signature

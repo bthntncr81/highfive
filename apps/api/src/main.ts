@@ -30,6 +30,14 @@ import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
 import integrationPartnerRoutes from './routes/integration-partners';
+import mobileAuthRoutes from './routes/mobile-auth';
+import devicesRoutes from './routes/devices';
+import notificationRoutes, { processScheduledNotifications } from './routes/notifications';
+import mobileOrdersRoutes from './routes/mobile-orders';
+import mobileLoyaltyRoutes from './routes/mobile-loyalty';
+import mobileAddressesRoutes from './routes/mobile-addresses';
+import mobileFavoritesRoutes from './routes/mobile-favorites';
+import mobilePrefsRoutes from './routes/mobile-prefs';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -95,6 +103,14 @@ server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham mad
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
 server.register(integrationPartnerRoutes, { prefix: '/api/integration-partners' }); // Partner management UI
+server.register(mobileAuthRoutes, { prefix: '/api/mobile' }); // Mobile (Customer) auth: phone+OTP
+server.register(devicesRoutes, { prefix: '/api/mobile/devices' }); // Push token register
+server.register(notificationRoutes, { prefix: '/api' }); // /api/notifications/* (admin push)
+server.register(mobileOrdersRoutes, { prefix: '/api/mobile/orders' }); // Mobile customer orders
+server.register(mobileLoyaltyRoutes, { prefix: '/api/mobile/loyalty' }); // Mobile loyalty
+server.register(mobileAddressesRoutes, { prefix: '/api/mobile/addresses' }); // Mobile addresses
+server.register(mobileFavoritesRoutes, { prefix: '/api/mobile/favorites' }); // Mobile favorites
+server.register(mobilePrefsRoutes, { prefix: '/api/mobile/prefs' }); // Mobile notification prefs
 
 // WebSocket - must be registered AFTER websocket plugin is ready
 server.after(() => {
@@ -107,6 +123,13 @@ const start = async () => {
     const port = parseInt(process.env.PORT || '3000', 10);
     await server.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 HighFive API running on http://localhost:${port}`);
+
+    // Push notification scheduler — her 30 saniyede bir scheduled bildirimleri işle
+    setInterval(() => {
+      processScheduledNotifications(prisma).catch((e) =>
+        server.log.error({ err: e }, '[push-scheduler] tick failed'),
+      );
+    }, 30_000);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
