@@ -18,6 +18,7 @@ import {
   X,
   Volume2,
   VolumeX,
+  Bell,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -62,6 +63,7 @@ export default function Layout() {
     { to: '/raw-materials', icon: ClipboardList, label: 'Ham Madde Yönetimi', emoji: '🧪' },
     { to: '/happy-hour', icon: ClipboardList, label: 'Happy Hour', emoji: '🍹' },
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
+    { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },
     { to: '/settings', icon: Settings, label: 'Ayarlar', emoji: '⚙️' },

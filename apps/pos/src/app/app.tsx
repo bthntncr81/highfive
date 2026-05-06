@@ -18,6 +18,7 @@ import StockManagement from './pages/StockManagement';
 import MenuManagement from './pages/MenuManagement';
 import HappyHourManagement from './pages/HappyHourManagement';
 import CampaignsLoyalty from './pages/CampaignsLoyalty';
+import PushNotifications from './pages/PushNotifications';
 import RawMaterialsManagement from './pages/RawMaterialsManagement';
 import CourierDashboard from './pages/CourierDashboard';
 
@@ -149,6 +150,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <CampaignsLoyalty />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="push-notifications"
+                element={
+                  <AdminRoute>
+                    <PushNotifications />
                   </AdminRoute>
                 }
               />
