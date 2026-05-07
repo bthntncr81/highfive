@@ -664,16 +664,33 @@ export default function Settings() {
 
       {/* Online Payment Settings */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Wifi className="w-5 h-5 text-blue-500" />
-          Online Ödeme (iyzico)
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Wifi className="w-5 h-5 text-blue-500" />
+            Online Ödeme (iyzico)
+            {services.onlinePaymentEnabled && (
+              <span
+                className={`ml-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold border ${
+                  services.iyzicoBaseUrl === 'https://api.iyzipay.com'
+                    ? 'bg-green-50 text-green-700 border-green-300'
+                    : 'bg-amber-50 text-amber-700 border-amber-300'
+                }`}
+              >
+                {services.iyzicoBaseUrl === 'https://api.iyzipay.com'
+                  ? '🟢 CANLI MOD'
+                  : '🟡 TEST MOD (Sandbox)'}
+              </span>
+            )}
+          </h2>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Online Kart ile Ödeme</p>
-              <p className="text-sm text-gray-500">iyzico 3D Secure ile kart ödemesi</p>
+              <p className="text-sm text-gray-500">
+                iyzico 3D Secure ile mobile + landing kart ödemesi
+              </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -687,7 +704,65 @@ export default function Settings() {
           </div>
 
           {services.onlinePaymentEnabled && (
-            <div className="space-y-3 pt-2 border-t border-gray-100">
+            <div className="space-y-4 pt-2 border-t border-gray-100">
+              {/* MOD SEÇİMİ — büyük kart radio */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Çalışma Modu
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setServices({
+                        ...services,
+                        iyzicoBaseUrl: 'https://sandbox-api.iyzipay.com',
+                      })
+                    }
+                    className={`text-left rounded-xl border-2 p-3 transition ${
+                      services.iyzicoBaseUrl === 'https://sandbox-api.iyzipay.com'
+                        ? 'border-amber-400 bg-amber-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🟡</span>
+                      <span className="font-bold text-foreground">Test (Sandbox)</span>
+                    </div>
+                    <p className="mt-1 text-xs text-foreground-muted">
+                      Sahte kartla deneme. Para çekilmez.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setServices({
+                        ...services,
+                        iyzicoBaseUrl: 'https://api.iyzipay.com',
+                      })
+                    }
+                    className={`text-left rounded-xl border-2 p-3 transition ${
+                      services.iyzicoBaseUrl === 'https://api.iyzipay.com'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🟢</span>
+                      <span className="font-bold text-foreground">Canlı (Production)</span>
+                    </div>
+                    <p className="mt-1 text-xs text-foreground-muted">
+                      Gerçek kart, gerçek para çekilir.
+                    </p>
+                  </button>
+                </div>
+                {services.iyzicoBaseUrl === 'https://api.iyzipay.com' && (
+                  <p className="mt-2 text-xs text-red-600 font-medium">
+                    ⚠️ Canlı mod aktif — gerçek müşteri kartlarından gerçekten para çekilir.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   iyzico API Key
@@ -697,7 +772,11 @@ export default function Settings() {
                   value={services.iyzicoApiKey}
                   onChange={(e) => setServices({ ...services, iyzicoApiKey: e.target.value })}
                   className="input font-mono text-sm"
-                  placeholder="sandbox-xxxxxxxxxxxx"
+                  placeholder={
+                    services.iyzicoBaseUrl === 'https://api.iyzipay.com'
+                      ? 'production API key'
+                      : 'sandbox-xxxxxxxxxxxx'
+                  }
                 />
               </div>
               <div>
@@ -709,22 +788,30 @@ export default function Settings() {
                   value={services.iyzicoSecretKey}
                   onChange={(e) => setServices({ ...services, iyzicoSecretKey: e.target.value })}
                   className="input font-mono text-sm"
-                  placeholder="sandbox-xxxxxxxxxxxx"
+                  placeholder={
+                    services.iyzicoBaseUrl === 'https://api.iyzipay.com'
+                      ? 'production secret key'
+                      : 'sandbox-xxxxxxxxxxxx'
+                  }
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  iyzico Base URL
-                </label>
-                <select
-                  value={services.iyzicoBaseUrl}
-                  onChange={(e) => setServices({ ...services, iyzicoBaseUrl: e.target.value })}
-                  className="input"
-                >
-                  <option value="https://sandbox-api.iyzipay.com">Sandbox (Test)</option>
-                  <option value="https://api.iyzipay.com">Production (Canlı)</option>
-                </select>
-              </div>
+
+              <details className="text-xs">
+                <summary className="cursor-pointer text-foreground-muted">
+                  💡 iyzico key nereden alınır?
+                </summary>
+                <div className="mt-2 rounded-xl bg-gray-50 p-3 text-foreground-muted leading-5">
+                  <p>
+                    <strong>Test:</strong> sandbox-merchant.iyzipay.com → API Anahtarları
+                  </p>
+                  <p>
+                    <strong>Canlı:</strong> merchant.iyzipay.com → API Anahtarları
+                  </p>
+                  <p className="mt-1">
+                    Test/canlı arasında geçiş için yukarıdaki mod butonuna tıkla — Base URL otomatik ayarlanır.
+                  </p>
+                </div>
+              </details>
             </div>
           )}
         </div>
