@@ -2,9 +2,21 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
+import { sendMail, emailOtpTemplate, welcomeTemplate } from '../lib/mailer';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = 60 * 60 * 24 * 7; // 7 days in seconds
+const CUSTOMER_OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CUSTOMER_JWT_AUDIENCE = 'customer';
+
+function generateOtp(): string {
+  // 6-digit numeric — easy to type on mobile keyboards.
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 export default async function authRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
@@ -245,4 +257,129 @@ export default async function authRoutes(server: FastifyInstance) {
       }
     },
   );
+
+  // -----------------------------------------------------------------
+  // Customer (loyalty member) email + OTP flow
+  // -----------------------------------------------------------------
+  // Two endpoints:
+  //   POST /customer/email/request-otp   — generates a 6-digit code, stores
+  //     it on the Customer row (creating the Customer if first sight), and
+  //     mails it via the HighFive branded template.
+  //   POST /customer/email/verify-otp    — checks the code, marks isVerified,
+  //     fires a welcome email on first verification, returns a customer JWT.
+
+  server.post('/customer/email/request-otp', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { email, name } = request.body as { email?: string; name?: string };
+    if (!email || !isValidEmail(email)) {
+      return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
+    }
+    const cleaned = email.toLowerCase().trim();
+
+    // Find or create. Email is @unique so this is safe.
+    let customer = await prisma.customer.findUnique({ where: { email: cleaned } });
+    const code = generateOtp();
+    const expiresAt = new Date(Date.now() + CUSTOMER_OTP_TTL_MS);
+
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          email: cleaned,
+          name: name?.trim() || null,
+          verificationCode: code,
+          verificationCodeExpiresAt: expiresAt,
+          emailConsent: false, // explicit opt-in later
+        },
+      });
+    } else {
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          verificationCode: code,
+          verificationCodeExpiresAt: expiresAt,
+          // Update name if it was missing and the request supplies one
+          name: customer.name ?? (name?.trim() || null),
+        },
+      });
+    }
+
+    const html = emailOtpTemplate(code);
+    const sendResult = await sendMail({
+      to: cleaned,
+      subject: `High Five — Giriş Kodun: ${code}`,
+      html,
+      text: `High Five giriş kodun: ${code}\n\n10 dakika geçerli. Bu kodu paylaşma.`,
+    });
+
+    if (!sendResult.ok) {
+      // Don't leak SMTP failure detail — surface a friendly error and log.
+      console.error('OTP send failed:', sendResult.error);
+      return reply.status(500).send({
+        error: 'E-posta gönderilemedi, biraz sonra tekrar dene',
+      });
+    }
+
+    return {
+      success: true,
+      // Don't return the code, even in dev — operators can read SMTP logs.
+      message: 'Doğrulama kodu e-posta adresine gönderildi',
+    };
+  });
+
+  server.post('/customer/email/verify-otp', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { email, code } = request.body as { email?: string; code?: string };
+    if (!email || !code) {
+      return reply.status(400).send({ error: 'E-posta ve kod gerekli' });
+    }
+    const cleaned = email.toLowerCase().trim();
+    const customer = await prisma.customer.findUnique({ where: { email: cleaned } });
+    if (!customer || !customer.verificationCode) {
+      return reply.status(400).send({ error: 'Önce kod talebinde bulun' });
+    }
+    if (customer.verificationCodeExpiresAt && customer.verificationCodeExpiresAt < new Date()) {
+      return reply.status(400).send({ error: 'Kod süresi dolmuş, yeni kod iste' });
+    }
+    if (customer.verificationCode !== code.trim()) {
+      return reply.status(400).send({ error: 'Kod hatalı' });
+    }
+
+    const wasVerified = customer.isVerified;
+    const updated = await prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        isVerified: true,
+        emailConsent: true, // verifying = implicit opt-in to transactional+marketing
+        verificationCode: null,
+        verificationCodeExpiresAt: null,
+      },
+      include: { loyaltyTier: true },
+    });
+
+    // First-time verification → fire welcome email (best-effort, ignore failure)
+    if (!wasVerified) {
+      sendMail({
+        to: cleaned,
+        subject: 'High Five sadakat programına hoş geldin!',
+        html: welcomeTemplate(updated.name || 'High Five üyesi'),
+      }).catch(() => { /* don't block login on welcome email */ });
+    }
+
+    const token = jwt.sign(
+      { customerId: updated.id, email: updated.email, aud: CUSTOMER_JWT_AUDIENCE },
+      JWT_SECRET,
+      { expiresIn: '90d' },
+    );
+
+    return {
+      success: true,
+      token,
+      customer: {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        phone: updated.phone,
+        totalPoints: updated.totalPoints,
+        loyaltyTier: updated.loyaltyTier,
+      },
+    };
+  });
 }

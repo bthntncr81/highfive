@@ -299,16 +299,19 @@ export default async function orderRoutes(server: FastifyInstance) {
       };
     }
 
-    // Online ödeme bekleyen siparişler — explicit istenmedikçe POS'a gizle.
-    // Müşteri ödeme tamamlamadan iyzico 3DS ekranındayken bu sipariş zaten
-    // PENDING + paymentStatus PENDING + paymentMethod ONLINE durumunda DB'de
-    // ama henüz "gerçek" sipariş değil. Ödeme bitince broadcast yapılıp
-    // POS'a düşüyor.
+    // Online ödeme bekleyen siparişleri (iyzico 3DS limbo'sunda kalanlar)
+    // POS'a göstermiyoruz. AMA: önceki versiyonda kullanılan
+    //   where.NOT = { paymentMethod: 'ONLINE', paymentStatus: 'PENDING' }
+    // SQL three-valued logic'te NULL paymentMethod olan satırları yanlışlıkla
+    // hariç tutuyordu — POS-yarattığı yeni PENDING siparişler hiç görünmüyordu.
+    // Doğru ifade: row included if EITHER method≠ONLINE OR method IS NULL
+    // OR status≠PENDING — yalnızca üçü birden eşitse hariç.
     if (includePendingPayment !== 'true') {
-      where.NOT = {
-        paymentMethod: 'ONLINE',
-        paymentStatus: 'PENDING',
-      };
+      where.OR = [
+        { paymentMethod: { not: 'ONLINE' } },
+        { paymentMethod: null },
+        { paymentStatus: { not: 'PENDING' } },
+      ];
     }
 
     const orders = await prisma.order.findMany({

@@ -36,6 +36,14 @@ services:
       IYZICO_SECRET_KEY: sandbox-0PfKYCdPshA2ZhqfdGq6JxfB5dXQWeqa
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # GoDaddy SMTP for info@highfivepps.com — used by all customer emails
+      # (OTP login, welcome, marketing). Override per-host via .env.
+      HIGHFIVE_SMTP_HOST: ${HIGHFIVE_SMTP_HOST:-smtpout.secureserver.net}
+      HIGHFIVE_SMTP_PORT: ${HIGHFIVE_SMTP_PORT:-465}
+      HIGHFIVE_SMTP_SECURE: ${HIGHFIVE_SMTP_SECURE:-true}
+      HIGHFIVE_SMTP_USER: ${HIGHFIVE_SMTP_USER:-info@highfivepps.com}
+      HIGHFIVE_SMTP_PASS: ${HIGHFIVE_SMTP_PASS:-}
+      HIGHFIVE_SMTP_FROM_NAME: ${HIGHFIVE_SMTP_FROM_NAME:-High Five}
       WA_PHONE_NUMBER_ID: ${WA_PHONE_NUMBER_ID:-}
       WA_ACCESS_TOKEN: ${WA_ACCESS_TOKEN:-}
       WA_NOTIFY_PHONE: ${WA_NOTIFY_PHONE:-905552438181}

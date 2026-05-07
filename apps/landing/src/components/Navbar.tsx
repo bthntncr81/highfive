@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -308,13 +308,13 @@ export const Navbar = () => {
   )
 }
 
-// Login Modal Component
+// Login Modal — email + OTP flow.
+// Step 1: enter email (and name on first time) → OTP mailed via info@highfivepps.com
+// Step 2: enter 6-digit code → backend verifies, returns customer + JWT
 const LoginModal = ({
   onClose,
-  loginPhone,
-  setLoginPhone,
   loginError,
-  setLoginError
+  setLoginError,
 }: {
   onClose: () => void
   loginPhone: string
@@ -322,42 +322,58 @@ const LoginModal = ({
   loginError: string
   setLoginError: (v: string) => void
 }) => {
-  const { login, register } = useLoyalty()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const { requestEmailOtp, verifyEmailOtp } = useLoyalty()
+  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
 
-  const handleSubmit = async () => {
-    if (loginPhone.length < 10) {
-      setLoginError('Geçerli bir telefon numarası girin')
+  // Tick the cooldown for the resend button
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(t)
+  }, [resendCooldown])
+
+  const handleRequest = async () => {
+    const trimmed = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setLoginError('Geçerli bir e-posta adresi girin')
       return
     }
-
     setIsLoading(true)
     setLoginError('')
-
-    if (mode === 'login') {
-      const found = await login(loginPhone)
-      if (found) {
-        setSuccess(true)
-        setTimeout(onClose, 1500)
-      } else {
-        setLoginError('Bu numara ile kayıtlı üye bulunamadı')
-        setMode('register')
-      }
-    } else {
-      const result = await register(loginPhone, name || undefined)
-      if (result.success) {
-        setSuccess(true)
-        setTimeout(onClose, 1500)
-      } else {
-        setLoginError(result.error || 'Kayıt başarısız')
-      }
-    }
-
+    const res = await requestEmailOtp(trimmed, name.trim() || undefined)
     setIsLoading(false)
+    if (res.success) {
+      setStep('code')
+      setResendCooldown(45)
+    } else {
+      setLoginError(res.error || 'Kod gönderilemedi')
+    }
   }
+
+  const handleVerify = async () => {
+    if (code.replace(/\D/g, '').length !== 6) {
+      setLoginError('6 haneli kodu gir')
+      return
+    }
+    setIsLoading(true)
+    setLoginError('')
+    const res = await verifyEmailOtp(email, code)
+    setIsLoading(false)
+    if (res.success) {
+      setSuccess(true)
+      setTimeout(onClose, 1500)
+    } else {
+      setLoginError(res.error || 'Kod hatalı')
+    }
+  }
+
+  const handleSubmit = step === 'email' ? handleRequest : handleVerify
 
   return (
     <motion.div
@@ -386,10 +402,10 @@ const LoginModal = ({
               </svg>
             </div>
             <h3 className="font-display font-bold text-2xl text-foreground">
-              {mode === 'login' ? 'Hoş Geldin!' : 'Tebrikler!'}
+              Hoş Geldin!
             </h3>
             <p className="text-foreground-muted mt-2">
-              {mode === 'register' && '50 puan hesabına eklendi!'}
+              Giriş başarılı — sadakat puanların hazır
             </p>
           </motion.div>
         ) : (
@@ -408,45 +424,71 @@ const LoginModal = ({
                 </svg>
               </div>
               <h3 className="font-display font-bold text-2xl text-foreground">
-                {mode === 'login' ? 'Üye Girişi' : 'Üye Ol'}
+                {step === 'email' ? 'E-posta ile Giriş' : 'Kodu Gir'}
               </h3>
               <p className="text-foreground-muted text-sm mt-1">
-                {mode === 'login'
-                  ? 'Telefon numaranızla giriş yapın'
-                  : 'Ücretsiz üye ol, 50 puan kazan!'}
+                {step === 'email'
+                  ? 'E-posta adresine 6 haneli kod göndereceğiz — şifre yok, telefon yok'
+                  : `Kod ${email} adresine gönderildi`}
               </p>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Telefon Numarası
-                </label>
-                <input
-                  type="tel"
-                  value={loginPhone}
-                  onChange={(e) => setLoginPhone(e.target.value)}
-                  placeholder="05XX XXX XX XX"
-                  className="input-field text-lg"
-                />
-              </div>
-
-              {mode === 'register' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                >
+              {step === 'email' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      E-posta Adresi
+                    </label>
+                    <input
+                      type="email"
+                      autoFocus
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="ornek@mail.com"
+                      className="input-field text-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Adınız <span className="text-foreground-subtle">(opsiyonel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="İlk üyelikte kayıt için"
+                      className="input-field"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
-                    Adınız
+                    Doğrulama Kodu
                   </label>
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="İsminiz"
-                    className="input-field"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoFocus
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
+                    className="input-field text-2xl text-center tracking-[0.5em] font-mono"
                   />
-                </motion.div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('email')
+                      setCode('')
+                      setLoginError('')
+                    }}
+                    className="text-xs text-foreground-muted hover:text-primary mt-2"
+                  >
+                    ← E-postayı değiştir
+                  </button>
+                </div>
               )}
 
               {loginError && (
@@ -460,20 +502,32 @@ const LoginModal = ({
                 disabled={isLoading}
                 className="btn-primary w-full"
               >
-                {isLoading ? 'Bekleyin...' : mode === 'login' ? 'Giriş Yap' : 'Üye Ol'}
+                {isLoading
+                  ? 'Bekleyin...'
+                  : step === 'email'
+                    ? 'Kod Gönder'
+                    : 'Giriş Yap'}
               </button>
 
-              <button
-                onClick={() => {
-                  setMode(mode === 'login' ? 'register' : 'login')
-                  setLoginError('')
-                }}
-                className="w-full py-2 text-sm text-foreground-muted hover:text-primary"
-              >
-                {mode === 'login'
-                  ? 'Hesabın yok mu? Üye ol'
-                  : 'Zaten üye misin? Giriş yap'}
-              </button>
+              {step === 'code' && (
+                <button
+                  onClick={async () => {
+                    if (resendCooldown > 0) return
+                    setIsLoading(true)
+                    const res = await requestEmailOtp(email, name)
+                    setIsLoading(false)
+                    if (res.success) {
+                      setResendCooldown(45)
+                    } else {
+                      setLoginError(res.error || 'Kod gönderilemedi')
+                    }
+                  }}
+                  disabled={isLoading || resendCooldown > 0}
+                  className="w-full py-2 text-sm text-foreground-muted hover:text-primary disabled:opacity-50"
+                >
+                  {resendCooldown > 0 ? `Kodu tekrar gönder (${resendCooldown}s)` : 'Kodu tekrar gönder'}
+                </button>
+              )}
             </div>
           </>
         )}

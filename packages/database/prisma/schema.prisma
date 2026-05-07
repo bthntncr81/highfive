@@ -603,28 +603,29 @@ model AnalyticsEvent {
 // Sadakat Programı Müşterisi
 model Customer {
   id              String   @id @default(cuid())
-  phone           String   @unique // Ana identifier
-  email           String?  @unique
+  phone           String?  @unique // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel
+  email           String?  @unique // Email-OTP login için ana identifier
   name            String?
   birthDate       DateTime?
-  password        String?  // Optional - for web login
-  
+  password        String?  // Optional - eski web login (kullanılmıyor)
+
   // Loyalty Info
   loyaltyTierId   String?
   totalPoints     Int      @default(0)
   lifetimePoints  Int      @default(0) // Toplam kazanılan puan
   totalSpent      Decimal  @default(0) @db.Decimal(10, 2) // Toplam harcama
   orderCount      Int      @default(0) // Sipariş sayısı
-  
+
   // Marketing
   smsConsent      Boolean  @default(false)
   emailConsent    Boolean  @default(false)
   pushConsent     Boolean  @default(false)
-  
+
   // Status
   isActive        Boolean  @default(true)
-  isVerified      Boolean  @default(false) // Telefon doğrulandı mı
+  isVerified      Boolean  @default(false) // Email doğrulandı mı
   verificationCode String?
+  verificationCodeExpiresAt DateTime?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
