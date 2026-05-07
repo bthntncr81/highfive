@@ -7,9 +7,120 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
+import * as crypto from 'crypto';
+
+// Müşteri için unique referral code üret
+async function ensureReferralCode(prisma: PrismaClient, customerId: string): Promise<string> {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (customer?.referralCode) return customer.referralCode;
+
+  // Üret + benzersizlik kontrolü
+  for (let i = 0; i < 10; i++) {
+    const code = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6 char
+    const existing = await prisma.customer.findUnique({ where: { referralCode: code } });
+    if (!existing) {
+      await prisma.customer.update({ where: { id: customerId }, data: { referralCode: code } });
+      return code;
+    }
+  }
+  throw new Error('Referral kodu üretilemedi');
+}
 
 export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
+
+  // ==================== ACTIVE PROGRAMS (public) ====================
+  server.get('/programs', async () => {
+    const programs = await prisma.loyaltyProgram.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+    });
+    return { programs };
+  });
+
+  // ==================== ME PROGRESS — kullanıcının her programdaki durumu ====================
+  server.get('/me/progress', { preHandler: verifyCustomerAuth }, async (
+    request: FastifyRequest,
+  ) => {
+    const customerId = (request as any).customerId as string;
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { loyaltyTier: true },
+    });
+    if (!customer) return { customer: null, programs: [], progress: [] };
+
+    // Referral code yoksa üret (lazy)
+    if (!customer.referralCode) {
+      await ensureReferralCode(prisma, customerId);
+    }
+    const fresh = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { loyaltyTier: true },
+    });
+
+    const programs = await prisma.loyaltyProgram.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    const progress = await prisma.customerLoyaltyProgress.findMany({
+      where: { customerId },
+    });
+
+    return {
+      customer: {
+        id: fresh!.id,
+        name: fresh!.name,
+        phone: fresh!.phone,
+        email: fresh!.email,
+        totalPoints: fresh!.totalPoints,
+        lifetimePoints: fresh!.lifetimePoints,
+        cashbackBalance: fresh!.cashbackBalance,
+        referralCode: fresh!.referralCode,
+        referralCount: fresh!.referralCount,
+        currentStreak: fresh!.currentStreak,
+        longestStreak: fresh!.longestStreak,
+        orderCount: fresh!.orderCount,
+        loyaltyTier: fresh!.loyaltyTier,
+        birthDate: fresh!.birthDate,
+      },
+      programs,
+      progress,
+    };
+  });
+
+  // ==================== APPLY REFERRAL CODE — yeni kullanıcı kayıt sırasında ====================
+  server.post('/apply-referral', { preHandler: verifyCustomerAuth }, async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    const customerId = (request as any).customerId as string;
+    const { code } = (request.body ?? {}) as { code?: string };
+    if (!code) return reply.status(400).send({ error: 'Kod gerekli' });
+
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) return reply.status(404).send({ error: 'Müşteri bulunamadı' });
+    if (customer.referredByCode) {
+      return reply.status(400).send({ error: 'Zaten bir davet kodu kullandın' });
+    }
+    if (customer.orderCount > 0) {
+      return reply.status(400).send({ error: 'Sipariş geçmişin var, davet kodu kullanılamaz' });
+    }
+
+    const referrer = await prisma.customer.findUnique({
+      where: { referralCode: code.toUpperCase() },
+    });
+    if (!referrer || referrer.id === customerId) {
+      return reply.status(400).send({ error: 'Geçersiz kod' });
+    }
+
+    await prisma.customer.update({
+      where: { id: customerId },
+      data: { referredByCode: code.toUpperCase() },
+    });
+
+    return { ok: true, referrer: { name: referrer.name, phone: referrer.phone } };
+  });
 
   // ==================== ME ====================
   server.get('/me', { preHandler: verifyCustomerAuth }, async (request: FastifyRequest) => {

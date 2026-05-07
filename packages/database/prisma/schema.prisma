@@ -632,6 +632,17 @@ model Customer {
   lastOrderAt     DateTime?
 
   loyaltyTier     LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id])
+  // Cashback bakiyesi (TL cinsinden — 1 cashback unit = 1 TL)
+  cashbackBalance Decimal @default(0) @db.Decimal(10, 2)
+  // Davet (referral) sistemi
+  referralCode    String? @unique // Kişiye özel davet kodu
+  referredByCode  String? // Bu müşteri hangi koddan geldi
+  referralCount   Int     @default(0) // Bu müşteri kaç kişi davet etti
+  // Streak takibi
+  currentStreak   Int     @default(0)
+  longestStreak   Int     @default(0)
+  lastStreakDate  DateTime?
+
   orders          CustomerOrder[]
   pointsHistory   PointsTransaction[]
   usedCoupons     CouponUsage[]
@@ -639,9 +650,11 @@ model Customer {
   addresses       Address[]
   favorites       FavoriteItem[]
   notificationPrefs NotificationPreference?
+  loyaltyProgress CustomerLoyaltyProgress[]
 
   @@index([phone])
   @@index([email])
+  @@index([referralCode])
 }
 
 // Sadakat Seviyesi (Bronze, Silver, Gold vb.)
@@ -922,6 +935,88 @@ model PushNotification {
   @@index([status])
   @@index([campaignId])
   @@index([scheduledAt])
+}
+
+// ==================== LOYALTY PROGRAMS (genişletilmiş sadakat) ====================
+// 12+ farklı program türü tek model üzerinden — config JSON ile esneklik
+//
+// Type değerleri:
+// - BASIC_POINTS: klasik puan sistemi (mevcut Customer.totalPoints — sadece kontrol için kullanılır)
+// - STAMP_CARD: "10 X al, 11.si bedava" — ürün/kategori bazlı damga
+// - BIRTHDAY: doğum gününde otomatik kupon/indirim
+// - WELCOME: ilk siparişe özel ödül
+// - REFERRAL: arkadaş davet sistemi (Customer.referralCode kullanılır)
+// - MILESTONE: N. siparişte özel ödül
+// - STREAK: N kez üst üste sipariş
+// - CASHBACK: %X harcamanın wallet'a (Customer.cashbackBalance)
+// - PRODUCT_VIP: belirli ürün/kategoriyi N kere alana özel
+// - HAPPY_HOUR_POINTS: belirli saatlerde 2x puan
+// - SOCIAL: sosyal medya/yorum karşılığı puan
+// - TIER_DISCOUNT: tier'a göre sabit % indirim (mevcut LoyaltyTier'i destekler)
+
+model LoyaltyProgram {
+  id          String   @id @default(cuid())
+  type        String   // Yukarıdaki türlerden biri
+  name        String   // "Pizza Damga Kartı", "Doğum Günü Sürprizi"
+  description String?
+  icon        String?  // Emoji veya url
+  color       String?  // Tema rengi (#bb1e10)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  // Tüm türler için esnek config — anlamı türe göre değişir
+  // Örnek STAMP_CARD: { stampsRequired: 10, rewardType: 'FREE_ITEM', rewardItemId: 'x', rewardValue: 0 }
+  // Örnek BIRTHDAY: { discountPercent: 20, freeItemId: 'tatli', daysBeforeBirthday: 0, validDays: 7 }
+  // Örnek WELCOME: { discountPercent: 25, bonusPoints: 100, freeItemId: 'icecek' }
+  // Örnek REFERRAL: { referrerPoints: 100, refereeDiscount: 15, minOrderForReward: 50 }
+  // Örnek MILESTONE: { milestones: [{ orderCount: 5, discountPercent: 20 }, { orderCount: 10, freeItemId: 'pizza' }] }
+  // Örnek STREAK: { period: 'WEEKLY', requiredCount: 5, bonusPoints: 100 }
+  // Örnek CASHBACK: { cashbackPercent: 5, maxPerOrder: 50 }
+  // Örnek PRODUCT_VIP: { trackedItemIds: ['x'], requiredCount: 20, rewardItemId: 'y' }
+  // Örnek HAPPY_HOUR_POINTS: { startHour: 14, endHour: 17, multiplier: 2 }
+  config      Json
+
+  // Tier bazlı override — Bronze/Silver/Gold/Platinum farklı parametre
+  // Örnek: { 'tier-id-1': { stampsRequired: 8 }, 'tier-id-2': { stampsRequired: 5 } }
+  tierConfig  Json?
+
+  // Hedef ürün / kategori (opsiyonel — STAMP_CARD, PRODUCT_VIP için)
+  applicableMenuItemIds String[] @default([])
+  applicableCategoryIds String[] @default([])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  progress    CustomerLoyaltyProgress[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+// Müşterinin her programdaki ilerlemesi
+model CustomerLoyaltyProgress {
+  id          String   @id @default(cuid())
+  customerId  String
+  programId   String
+
+  // Programın türüne göre data formatı:
+  // STAMP_CARD: { count: 5, target: 10, claimedRewards: 2 }
+  // STREAK: { current: 3, longest: 7, lastDate: '2026-05-01' }
+  // PRODUCT_VIP: { itemCounts: { 'item-x': 12, 'item-y': 5 } }
+  // BIRTHDAY: { lastClaimedYear: 2025 }
+  // WELCOME: { claimed: false }
+  // MILESTONE: { lastClaimedAt: 5 } — son verilmiş milestone sipariş sayısı
+  data        Json
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  program     LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, programId])
+  @@index([customerId])
+  @@index([programId])
 }
 
 // ==================== MOBILE: ADDRESSES, FAVORITES, PREFERENCES ====================

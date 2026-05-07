@@ -462,6 +462,48 @@ export const endpoints = {
       recentTransactions: ApiPointsTransaction[];
       pointsRules: { earnRate: string; redeemRate: string; minRedemption: number };
     }>("/api/mobile/loyalty/me"),
+
+  // Yeni: aktif sadakat programları + her programda kullanıcı durumu
+  loyaltyProgress: () =>
+    api.get<{
+      customer: {
+        id: string;
+        name: string | null;
+        phone: string;
+        email: string | null;
+        totalPoints: number;
+        lifetimePoints: number;
+        cashbackBalance: string | number;
+        referralCode: string | null;
+        referralCount: number;
+        currentStreak: number;
+        longestStreak: number;
+        orderCount: number;
+        loyaltyTier: ApiLoyaltyTier | null;
+        birthDate: string | null;
+      };
+      programs: {
+        id: string;
+        type: string;
+        name: string;
+        description: string | null;
+        icon: string | null;
+        color: string | null;
+        config: any;
+        applicableMenuItemIds: string[];
+      }[];
+      progress: {
+        id: string;
+        programId: string;
+        data: any;
+      }[];
+    }>("/api/mobile/loyalty/me/progress"),
+
+  applyReferralCode: (code: string) =>
+    api.post<{ ok: true; referrer: { name: string | null; phone: string } }>(
+      "/api/mobile/loyalty/apply-referral",
+      { code },
+    ),
   loyaltyHistory: (params?: { limit?: number; before?: string }) => {
     const q = new URLSearchParams();
     if (params?.limit) q.set("limit", String(params.limit));

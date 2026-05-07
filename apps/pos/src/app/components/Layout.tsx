@@ -63,6 +63,7 @@ export default function Layout() {
     { to: '/raw-materials', icon: ClipboardList, label: 'Ham Madde Yönetimi', emoji: '🧪' },
     { to: '/happy-hour', icon: ClipboardList, label: 'Happy Hour', emoji: '🍹' },
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
+    { to: '/loyalty-programs', icon: ClipboardList, label: 'Sadakat Programları', emoji: '✨' },
     { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },

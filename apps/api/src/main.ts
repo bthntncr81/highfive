@@ -25,6 +25,7 @@ import printerRoutes from './routes/printer';
 import tipRoutes from './routes/tip';
 import locationRoutes from './routes/location';
 import loyaltyRoutes from './routes/loyalty';
+import loyaltyProgramsRoutes from './routes/loyalty-programs';
 import campaignsRoutes from './routes/campaigns';
 import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
@@ -98,6 +99,7 @@ server.register(printerRoutes, { prefix: '/api' }); // /api/printers, /api/print
 server.register(tipRoutes, { prefix: '/api' }); // tip routes
 server.register(locationRoutes, { prefix: '/api' }); // /api/locations
 server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
+server.register(loyaltyProgramsRoutes, { prefix: '/api/loyalty/programs' }); // Loyalty Programs (12 tür)
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
