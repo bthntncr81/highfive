@@ -13,9 +13,27 @@ async function loadIyzicoConfig(prisma: PrismaClient) {
   try {
     const setting = await prisma.settings.findUnique({ where: { key: 'services' } });
     const services = setting?.value as any;
-    if (services?.iyzicoApiKey) IYZICO_API_KEY = services.iyzicoApiKey;
-    if (services?.iyzicoSecretKey) IYZICO_SECRET_KEY = services.iyzicoSecretKey;
-    if (services?.iyzicoBaseUrl) IYZICO_BASE_URL = services.iyzicoBaseUrl;
+    if (!services) return;
+
+    // Base URL — sandbox veya production
+    if (services.iyzicoBaseUrl) IYZICO_BASE_URL = services.iyzicoBaseUrl;
+
+    // Aktif moda göre sandbox/prod key seç (her iki mod ayrı kaydedilir)
+    const isSandbox = (services.iyzicoBaseUrl || IYZICO_BASE_URL).includes('sandbox');
+
+    if (isSandbox) {
+      // Sandbox modu — önce sandbox alanı, yoksa fallback genel alan, en son env
+      const sbKey = services.iyzicoSandboxApiKey || services.iyzicoApiKey;
+      const sbSecret = services.iyzicoSandboxSecretKey || services.iyzicoSecretKey;
+      if (sbKey) IYZICO_API_KEY = sbKey;
+      if (sbSecret) IYZICO_SECRET_KEY = sbSecret;
+    } else {
+      // Production modu
+      const prodKey = services.iyzicoProdApiKey || services.iyzicoApiKey;
+      const prodSecret = services.iyzicoProdSecretKey || services.iyzicoSecretKey;
+      if (prodKey) IYZICO_API_KEY = prodKey;
+      if (prodSecret) IYZICO_SECRET_KEY = prodSecret;
+    }
   } catch (e) { /* fallback to env */ }
 }
 

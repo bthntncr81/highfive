@@ -70,9 +70,13 @@ interface ServiceSettings {
   orderHoursStart: string;
   orderHoursEnd: string;
   orderHoursByDay?: WeeklyHours;
-  iyzicoApiKey: string;
-  iyzicoSecretKey: string;
-  iyzicoBaseUrl: string;
+  iyzicoApiKey: string;        // legacy / fallback
+  iyzicoSecretKey: string;     // legacy / fallback
+  iyzicoBaseUrl: string;       // aktif mod = sandbox/production URL
+  iyzicoSandboxApiKey?: string;
+  iyzicoSandboxSecretKey?: string;
+  iyzicoProdApiKey?: string;
+  iyzicoProdSecretKey?: string;
 }
 
 const DAY_LABELS: { key: string; label: string }[] = [
@@ -159,6 +163,10 @@ export default function Settings() {
     iyzicoApiKey: '',
     iyzicoSecretKey: '',
     iyzicoBaseUrl: 'https://sandbox-api.iyzipay.com',
+    iyzicoSandboxApiKey: '',
+    iyzicoSandboxSecretKey: '',
+    iyzicoProdApiKey: '',
+    iyzicoProdSecretKey: '',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -763,37 +771,102 @@ export default function Settings() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  iyzico API Key
-                </label>
-                <input
-                  type="text"
-                  value={services.iyzicoApiKey}
-                  onChange={(e) => setServices({ ...services, iyzicoApiKey: e.target.value })}
-                  className="input font-mono text-sm"
-                  placeholder={
-                    services.iyzicoBaseUrl === 'https://api.iyzipay.com'
-                      ? 'production API key'
-                      : 'sandbox-xxxxxxxxxxxx'
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  iyzico Secret Key
-                </label>
-                <input
-                  type="password"
-                  value={services.iyzicoSecretKey}
-                  onChange={(e) => setServices({ ...services, iyzicoSecretKey: e.target.value })}
-                  className="input font-mono text-sm"
-                  placeholder={
-                    services.iyzicoBaseUrl === 'https://api.iyzipay.com'
-                      ? 'production secret key'
-                      : 'sandbox-xxxxxxxxxxxx'
-                  }
-                />
+              {/* Aktif modun key'leri (sandbox veya production) */}
+              {services.iyzicoBaseUrl === 'https://api.iyzipay.com' ? (
+                <>
+                  <div className="rounded-xl bg-green-50 border border-green-200 p-3 text-xs text-green-800">
+                    🟢 <strong>Production</strong> key'leri kaydet — bunlar sadece canlı moda etki eder.
+                    Sandbox key'lerin korunur, mod değiştirince otomatik kullanılır.
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Production API Key
+                    </label>
+                    <input
+                      type="text"
+                      value={services.iyzicoProdApiKey || ''}
+                      onChange={(e) =>
+                        setServices({ ...services, iyzicoProdApiKey: e.target.value })
+                      }
+                      className="input font-mono text-sm"
+                      placeholder="merchant.iyzipay.com'dan al (sandbox- ön eki olmamalı)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Production Secret Key
+                    </label>
+                    <input
+                      type="password"
+                      value={services.iyzicoProdSecretKey || ''}
+                      onChange={(e) =>
+                        setServices({ ...services, iyzicoProdSecretKey: e.target.value })
+                      }
+                      className="input font-mono text-sm"
+                      placeholder="merchant.iyzipay.com → API Anahtarları"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                    🟡 <strong>Sandbox</strong> key'leri kaydet — sahte kart testi için.
+                    Production key'lerin korunur, mod değiştirince otomatik kullanılır.
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sandbox API Key
+                    </label>
+                    <input
+                      type="text"
+                      value={services.iyzicoSandboxApiKey || ''}
+                      onChange={(e) =>
+                        setServices({ ...services, iyzicoSandboxApiKey: e.target.value })
+                      }
+                      className="input font-mono text-sm"
+                      placeholder="sandbox-xxxxxxxxxxxx"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sandbox Secret Key
+                    </label>
+                    <input
+                      type="password"
+                      value={services.iyzicoSandboxSecretKey || ''}
+                      onChange={(e) =>
+                        setServices({ ...services, iyzicoSandboxSecretKey: e.target.value })
+                      }
+                      className="input font-mono text-sm"
+                      placeholder="sandbox-xxxxxxxxxxxx"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Kayıtlı diğer modun durumu */}
+              <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3">
+                <div className="flex items-center gap-2 text-xs">
+                  {services.iyzicoBaseUrl === 'https://api.iyzipay.com' ? (
+                    <>
+                      <span>🟡 Sandbox key'in:</span>
+                      <span className="font-bold">
+                        {services.iyzicoSandboxApiKey
+                          ? '✓ Kaydedilmiş'
+                          : '— Yok'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🟢 Production key'in:</span>
+                      <span className="font-bold">
+                        {services.iyzicoProdApiKey
+                          ? '✓ Kaydedilmiş'
+                          : '— Yok'}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
 
               <details className="text-xs">
@@ -802,13 +875,13 @@ export default function Settings() {
                 </summary>
                 <div className="mt-2 rounded-xl bg-gray-50 p-3 text-foreground-muted leading-5">
                   <p>
-                    <strong>Test:</strong> sandbox-merchant.iyzipay.com → API Anahtarları
+                    <strong>Sandbox:</strong> sandbox-merchant.iyzipay.com → API Anahtarları
                   </p>
                   <p>
-                    <strong>Canlı:</strong> merchant.iyzipay.com → API Anahtarları
+                    <strong>Production:</strong> merchant.iyzipay.com → API Anahtarları
                   </p>
-                  <p className="mt-1">
-                    Test/canlı arasında geçiş için yukarıdaki mod butonuna tıkla — Base URL otomatik ayarlanır.
+                  <p className="mt-1 text-[11px]">
+                    Her iki modun key'leri ayrı saklanır. Yukarıdaki mod butonu hangisi seçiliyse o key'ler input'larda görünür ve aktif olur. Diğeri korunur.
                   </p>
                 </div>
               </details>
