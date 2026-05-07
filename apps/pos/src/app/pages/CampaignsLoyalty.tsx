@@ -962,9 +962,12 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
   const [form, setForm] = useState({
     name: '',
     description: '',
+    image: '',
     bundlePrice: 0,
     items: [] as { menuItemId: string; quantity: number }[],
   });
+  const [uploading, setUploading] = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   const addItem = (menuItemId: string) => {
     if (!form.items.find((i) => i.menuItemId === menuItemId)) {
@@ -976,6 +979,30 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
     const menuItem = menuItems.find((m) => m.id === item.menuItemId);
     return sum + (menuItem ? Number(menuItem.price) * item.quantity : 0);
   }, 0);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Lütfen bir resim dosyası seç');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Resim 5MB'dan küçük olmalı");
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await api.upload('/api/upload', file, token);
+      const url = result?.file?.url || result?.url;
+      if (url) setForm((f) => ({ ...f, image: url }));
+    } catch (err: any) {
+      alert('Resim yüklenemedi: ' + (err?.message ?? 'hata'));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -1017,6 +1044,47 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
             className="input w-full"
             rows={2}
           />
+
+          {/* Kapak fotoğrafı */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Kapak fotoğrafı (opsiyonel)</label>
+            {form.image ? (
+              <div className="relative rounded-xl overflow-hidden border border-border-light">
+                <img src={form.image} alt="Paket" className="w-full h-40 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, image: '' })}
+                  className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full px-3 py-1"
+                >
+                  Kaldır
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="w-full border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                {uploading ? (
+                  <span className="text-sm text-foreground-muted">Yükleniyor...</span>
+                ) : (
+                  <>
+                    <div className="text-3xl mb-1">🖼️</div>
+                    <div className="text-sm font-semibold">Görsel yükle</div>
+                    <div className="text-xs text-foreground-muted mt-0.5">JPG/PNG/WebP, max 5MB</div>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">Ürünler</label>
