@@ -174,6 +174,15 @@ export default function PaymentScreen() {
 
   // ===== UI =====
   if (phase === "3ds" && htmlContent) {
+    // iyzico bazen base64 encoded, bazen düz HTML döner.
+    // İçerik '<' ile başlıyorsa düz, değilse base64.
+    const looksLikeHtml = /^\s*<(!doctype|html|body|head|form|meta|script)/i.test(
+      htmlContent,
+    );
+    const webviewSource = looksLikeHtml
+      ? { html: htmlContent, baseUrl: API_URL }
+      : { uri: `data:text/html;base64,${htmlContent}` };
+
     return (
       <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
         <View className="flex-row items-center px-5 pt-2 pb-3">
@@ -198,10 +207,13 @@ export default function PaymentScreen() {
         </View>
         <WebView
           ref={webviewRef}
-          source={{ html: htmlContent, baseUrl: API_URL }}
+          source={webviewSource}
           onNavigationStateChange={handleNavStateChange}
           onMessage={handleMessage}
           startInLoadingState
+          javaScriptEnabled
+          domStorageEnabled
+          mixedContentMode="always"
           renderLoading={() => (
             <View className="flex-1 items-center justify-center">
               <ActivityIndicator color="#bb1e10" size="large" />
