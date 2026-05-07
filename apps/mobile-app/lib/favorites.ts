@@ -1,6 +1,6 @@
 // Favorites store — backend ile sync, optimistik toggle
 import { create } from "zustand";
-import { endpoints, ApiMenuItem, ApiError } from "./api";
+import { endpoints, ApiMenuItem, ApiError, getToken } from "./api";
 
 type FavoritesState = {
   ids: string[]; // Array — referans değişince selector kesinlikle re-render
@@ -19,6 +19,12 @@ export const useFavorites = create<FavoritesState>((set, get) => ({
   loading: false,
 
   load: async () => {
+    // Login yoksa hiç çağırma (Alert açmasın)
+    const token = await getToken();
+    if (!token) {
+      set({ ids: [], items: [], loaded: true });
+      return;
+    }
     set({ loading: true });
     try {
       const res = await endpoints.favorites();
@@ -28,7 +34,7 @@ export const useFavorites = create<FavoritesState>((set, get) => ({
         loaded: true,
       });
     } catch (e) {
-      // 404/network sessizce geç (guest user / endpoint yok)
+      // 401/404/network sessizce geç
       console.log("[favorites] load failed", e);
     } finally {
       set({ loading: false });

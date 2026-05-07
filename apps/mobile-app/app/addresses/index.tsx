@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link, router, useFocusEffect } from "expo-router";
 
 import { endpoints, ApiAddress } from "@/lib/api";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function AddressesScreen() {
   const [items, setItems] = useState<ApiAddress[]>([]);
@@ -22,7 +23,7 @@ export default function AddressesScreen() {
       const res = await endpoints.addresses();
       setItems(res.addresses);
     } catch (e: any) {
-      Alert.alert("Hata", e?.message ?? "Yüklenemedi");
+      handleApiError(e);
     } finally {
       setLoading(false);
     }

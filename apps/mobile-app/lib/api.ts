@@ -45,6 +45,15 @@ export class ApiError extends Error {
   }
 }
 
+// 401 sırasında otomatik logout için (auth.ts'in setSession'ını import etmeden)
+async function clearSessionLocal() {
+  await setToken(null);
+  // AsyncStorage'da auth key'ini de temizle (zustand persist için)
+  try {
+    await AsyncStorage.removeItem("highfive-auth");
+  } catch {}
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await getToken();
   let res: Response;
@@ -59,12 +68,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       },
     });
   } catch (e: any) {
-    // Network failure — anlamlı mesaj
     throw new ApiError(
-      `Sunucuya ulaşılamıyor.\n\n` +
-        `• İnternet bağlantını kontrol et\n` +
-        `• ${API_URL} adresine ulaşılabilir mi?\n\n` +
-        `Detay: ${e?.message ?? "bilinmiyor"}`,
+      `Sunucuya ulaşılamıyor. İnternet bağlantını kontrol et.`,
       0,
       "NETWORK_ERROR",
     );
@@ -83,22 +88,40 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       } catch {}
     }
 
-    // Bilinen route'lar için daha açıklayıcı mesaj
     if (res.status === 404) {
       errMsg =
         `Endpoint bulunamadı: ${path}\n\n` +
-        `Sunucudaki API güncel olmayabilir. Yöneticinin api.highfivepps.com'u son sürümle deploy etmesi gerek.\n\n` +
-        `(${errMsg})`;
+        `Sunucu eski sürümde olabilir.`;
     } else if (res.status === 401) {
-      errMsg = "Oturumun süresi doldu, tekrar giriş yap.";
+      // Token YOK → giriş yapmamış (normal). VAR → süre dolmuş, logout.
+      if (token) {
+        await clearSessionLocal();
+        errMsg = "Oturumun süresi doldu, tekrar giriş yap.";
+        errCode = "TOKEN_EXPIRED";
+      } else {
+        errMsg = "Bu işlem için giriş yapman gerek.";
+        errCode = "AUTH_REQUIRED";
+      }
     } else if (res.status >= 500) {
-      errMsg = `Sunucu hatası (${res.status}). Lütfen tekrar dene.\n\n(${errMsg})`;
+      errMsg = `Sunucu hatası (${res.status}). Lütfen tekrar dene.`;
     }
 
     throw new ApiError(errMsg, res.status, errCode);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// Sessiz çağrı: 401/404 olursa exception fırlatma, null döner
+async function requestSilent<T>(path: string, init: RequestInit = {}): Promise<T | null> {
+  try {
+    return await request<T>(path, init);
+  } catch (e: any) {
+    if (e instanceof ApiError && (e.status === 401 || e.status === 404)) {
+      return null;
+    }
+    throw e;
+  }
 }
 
 export const api = {
@@ -110,6 +133,8 @@ export const api = {
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  // Sessiz çağrı — 401/404 sessizce null döner, Alert açmaz
+  getSilent: <T>(path: string) => requestSilent<T>(path),
 };
 
 // ==================== TYPES ====================

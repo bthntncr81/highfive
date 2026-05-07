@@ -11,8 +11,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router, useFocusEffect } from "expo-router";
 
-import { endpoints, ApiOrder, OrderStatus } from "@/lib/api";
+import { endpoints, ApiOrder, OrderStatus, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/error-handler";
 
 const STATUS_META: Record<
   OrderStatus,
@@ -67,7 +68,12 @@ export default function OrdersScreen() {
       const res = await endpoints.myOrders({ limit: 50 });
       setOrders(res.orders);
     } catch (e: any) {
-      setError(e?.message ?? "Yüklenemedi");
+      // 401 ise sessiz handle (auth hatası), diğerleri sayfada error olarak göster
+      if (e instanceof ApiError && (e.code === "AUTH_REQUIRED" || e.code === "TOKEN_EXPIRED")) {
+        handleApiError(e);
+      } else {
+        setError(e?.message ?? "Yüklenemedi");
+      }
     } finally {
       setLoading(false);
     }

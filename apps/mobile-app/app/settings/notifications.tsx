@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import { endpoints, ApiNotificationPreferences } from "@/lib/api";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function NotificationSettings() {
   const [prefs, setPrefs] = useState<ApiNotificationPreferences | null>(null);
@@ -25,7 +26,7 @@ export default function NotificationSettings() {
         const res = await endpoints.notificationPrefs();
         setPrefs(res.preferences);
       } catch (e: any) {
-        Alert.alert("Hata", e?.message ?? "Yüklenemedi");
+        handleApiError(e);
       } finally {
         setLoading(false);
       }

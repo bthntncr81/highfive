@@ -2,7 +2,7 @@
 // Token alır, backend'e register eder, foreground/background bildirim handler'ları kurar.
 // Yönetim (gönderim) YOK — bu sadece alıcı.
 
-import { Platform } from "react-native";
+import { Platform, Alert, Linking } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
@@ -42,11 +42,56 @@ export async function ensureAndroidChannel() {
   });
 }
 
+const PROMPT_KEY = "hf_push_prompt_seen";
+
 async function requestPermissions(): Promise<boolean> {
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === "granted") return true;
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+
+  // Bir kez kullanıcıya neden istediğimizi açıkla, sonra OS dialog'u
+  // (Android 13+ runtime permission, iOS native dialog)
+  if (existing === "undetermined") {
+    const seen = await AsyncStorage.getItem(PROMPT_KEY);
+    if (!seen) {
+      await new Promise<void>((resolve) => {
+        Alert.alert(
+          "🔔 Bildirim izni",
+          "Sipariş durumu, kampanya ve özel teklifler için bildirim izni vermen gerek. Diler misin?",
+          [
+            { text: "Hayır", style: "cancel", onPress: () => resolve() },
+            { text: "İzin ver", onPress: () => resolve() },
+          ],
+          { cancelable: false },
+        );
+      });
+      await AsyncStorage.setItem(PROMPT_KEY, "1");
+    }
+
+    const { status: req } = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
+    return req === "granted";
+  }
+
+  // Daha önce reddedilmiş — ayar aç
+  Alert.alert(
+    "Bildirim izni kapalı",
+    "Sipariş ve kampanya bildirimleri için izin gerek. Ayarlardan açabilirsin.",
+    [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Ayarları aç", onPress: () => Linking.openSettings() },
+    ],
+  );
+  return false;
+}
+
+// Public wrapper: Profile/Bildirim Tercihleri ekranından çağrılabilsin
+export async function ensurePushPermission(): Promise<boolean> {
+  return requestPermissions();
 }
 
 async function getProjectId(): Promise<string | undefined> {

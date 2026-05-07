@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import { endpoints, ApiCustomer, ApiLoyaltyTier, ApiPointsTransaction } from "@/lib/api";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function LoyaltyScreen() {
   const [data, setData] = useState<{
@@ -35,6 +36,7 @@ export default function LoyaltyScreen() {
       setData(me);
       setHistory(hist.transactions);
     } catch (e: any) {
+      handleApiError(e);
       setError(e?.message ?? "Yüklenemedi");
     } finally {
       setLoading(false);
