@@ -316,12 +316,29 @@ export type ApiNotificationPreferences = {
   quietHoursEnd: string | null;
 };
 
+export type ApiBundle = {
+  id: string;
+  name: string;
+  description: string | null;
+  image: string | null;
+  originalPrice: string;
+  bundlePrice: string;
+  savings: string;
+  isActive: boolean;
+  soldCount: number;
+  startDate: string | null;
+  endDate: string | null;
+  items: { quantity: number; menuItem: { id: string; name: string; image: string | null } }[];
+};
+
 // ==================== ENDPOINTS ====================
 
 export const endpoints = {
   // PUBLIC
   menu: () =>
-    api.get<{ categories: ApiCategory[]; items: ApiMenuItem[] }>("/api/menu"),
+    api.get<{ categories: ApiCategory[]; items: ApiMenuItem[]; bundles?: ApiBundle[] }>(
+      "/api/menu",
+    ),
   menuItem: (id: string) => api.get<ApiMenuItem>(`/api/menu/${id}`),
   campaigns: () =>
     api.get<{ campaigns: ApiCampaign[] }>("/api/campaigns/active"),

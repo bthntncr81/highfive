@@ -30,8 +30,9 @@ export default async function menuRoutes(server: FastifyInstance) {
       ];
     }
 
-    // Kategorileri ve menü öğelerini birlikte getir
-    const [categories, items] = await Promise.all([
+    // Kategorileri ve menü öğelerini + aktif bundle'ları birlikte getir
+    const now = new Date();
+    const [categories, items, bundles] = await Promise.all([
       prisma.category.findMany({
         orderBy: { sortOrder: 'asc' },
       }),
@@ -50,9 +51,23 @@ export default async function menuRoutes(server: FastifyInstance) {
           { sortOrder: 'asc' },
         ],
       }),
+      // Aktif paket menüler
+      prisma.bundleDeal.findMany({
+        where: {
+          isActive: true,
+          OR: [{ startDate: null }, { startDate: { lte: now } }],
+          AND: [{ OR: [{ endDate: null }, { endDate: { gte: now } }] }],
+        },
+        include: {
+          items: {
+            include: { menuItem: true },
+          },
+        },
+        orderBy: { sortOrder: 'asc' },
+      }),
     ]);
 
-    return { categories, items };
+    return { categories, items, bundles };
   });
 
   // Get single menu item

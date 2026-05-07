@@ -17,6 +17,7 @@ import { CategoryStrip } from "@/components/ui/CategoryStrip";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Logo } from "@/components/ui/Logo";
 import { ActiveOrderCard } from "@/components/ui/ActiveOrderCard";
+import { BundleCard } from "@/components/ui/BundleCard";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
@@ -25,6 +26,7 @@ export default function Home() {
 
   const categories = menu.data?.categories?.filter((c) => c.active) ?? [];
   const items = menu.data?.items?.filter((i) => i.available) ?? [];
+  const bundles = menu.data?.bundles ?? [];
 
   const featured = useMemo(() => {
     if (selectedCat === "all") {
@@ -98,6 +100,23 @@ export default function Home() {
             </View>
           )}
         </View>
+
+        {/* Paket Menüler (varsa) */}
+        {bundles.length > 0 && (
+          <View className="mt-6 px-5">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-lg font-extrabold text-foreground">
+                📦 Paket Menüler
+              </Text>
+              <Text className="text-xs text-foreground-muted">
+                {bundles.length} paket
+              </Text>
+            </View>
+            {bundles.map((b) => (
+              <BundleCard key={b.id} bundle={b} />
+            ))}
+          </View>
+        )}
 
         {/* Kategoriler */}
         <View className="mt-7 flex-row items-center justify-between px-5 pb-3">

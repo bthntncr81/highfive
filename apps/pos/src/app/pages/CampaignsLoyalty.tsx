@@ -92,8 +92,36 @@ export default function CampaignsLoyalty() {
   // Modal states
   const [showTierModal, setShowTierModal] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [showBundleModal, setShowBundleModal] = useState(false);
+  const [editingBundle, setEditingBundle] = useState<BundleDeal | null>(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
+
+  // Campaign actions
+  const deleteCampaign = async (c: Campaign) => {
+    if (!window.confirm(`"${c.name}" silinsin mi?`)) return;
+    try {
+      await api.del(`/api/campaigns/${c.id}`, token!);
+      fetchData();
+    } catch (e: any) {
+      alert('Silinemedi: ' + (e?.message ?? 'hata'));
+    }
+  };
+  const editCampaign = (c: Campaign) => {
+    setEditingCampaign(c);
+    setShowCampaignModal(true);
+  };
+
+  // Bundle actions
+  const deleteBundle = async (b: BundleDeal) => {
+    if (!window.confirm(`"${b.name}" silinsin mi?`)) return;
+    try {
+      await api.del(`/api/bundles/${b.id}`, token!);
+      fetchData();
+    } catch (e: any) {
+      alert('Silinemedi: ' + (e?.message ?? 'hata'));
+    }
+  };
   
   // Search
   const [customerSearch, setCustomerSearch] = useState('');
@@ -480,10 +508,18 @@ export default function CampaignsLoyalty() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <button className="p-2 hover:bg-gray-100 rounded-lg">
+                          <button
+                            onClick={() => editCampaign(campaign)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            title="Düzenle"
+                          >
                             <Edit2 className="w-4 h-4 text-gray-500" />
                           </button>
-                          <button className="p-2 hover:bg-red-100 rounded-lg">
+                          <button
+                            onClick={() => deleteCampaign(campaign)}
+                            className="p-2 hover:bg-red-100 rounded-lg"
+                            title="Sil"
+                          >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </button>
                         </div>
@@ -522,9 +558,18 @@ export default function CampaignsLoyalty() {
                       whileHover={{ y: -4 }}
                       className="bg-white rounded-xl overflow-hidden shadow-sm"
                     >
-                      {bundle.image && (
-                        <img src={bundle.image} alt={bundle.name} className="w-full h-40 object-cover" />
-                      )}
+                      <div className="relative">
+                        {bundle.image && (
+                          <img src={bundle.image} alt={bundle.name} className="w-full h-40 object-cover" />
+                        )}
+                        <button
+                          onClick={() => deleteBundle(bundle)}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow hover:bg-red-100"
+                          title="Sil"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
                       <div className="p-4">
                         <h3 className="font-bold text-gray-900">{bundle.name}</h3>
                         <p className="text-gray-500 text-sm">{bundle.description}</p>
@@ -615,9 +660,13 @@ export default function CampaignsLoyalty() {
       </AnimatePresence>
 
       {/* Campaign Modal */}
-      <CampaignModal 
-        show={showCampaignModal} 
-        onClose={() => setShowCampaignModal(false)} 
+      <CampaignModal
+        show={showCampaignModal}
+        existing={editingCampaign}
+        onClose={() => {
+          setShowCampaignModal(false);
+          setEditingCampaign(null);
+        }}
         onSave={fetchData}
         token={token!}
       />
@@ -643,7 +692,20 @@ export default function CampaignsLoyalty() {
 }
 
 // Campaign Modal Component
-function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClose: () => void; onSave: () => void; token: string }) {
+function CampaignModal({
+  show,
+  existing,
+  onClose,
+  onSave,
+  token,
+}: {
+  show: boolean;
+  existing?: Campaign | null;
+  onClose: () => void;
+  onSave: () => void;
+  token: string;
+}) {
+  const isEdit = !!existing;
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -656,6 +718,43 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notifyCustomers: true,
   });
+
+  // Edit modu için form'u doldur
+  useEffect(() => {
+    if (existing) {
+      setForm({
+        name: existing.name || '',
+        description: existing.description || '',
+        type: existing.type || 'DISCOUNT',
+        discountType: existing.discountType || 'PERCENT',
+        discountValue: existing.discountValue ?? 10,
+        minPurchase: existing.minPurchase ?? 0,
+        image: (existing as any).image || '',
+        startDate: existing.startDate
+          ? new Date(existing.startDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
+        endDate: existing.endDate
+          ? new Date(existing.endDate).toISOString().split('T')[0]
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notifyCustomers: false,
+      });
+    } else {
+      // yeni
+      setForm({
+        name: '',
+        description: '',
+        type: 'DISCOUNT',
+        discountType: 'PERCENT',
+        discountValue: 10,
+        minPurchase: 0,
+        image: '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notifyCustomers: true,
+      });
+    }
+  }, [existing, show]);
+
   const [uploading, setUploading] = useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -688,11 +787,15 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
 
   const handleSubmit = async () => {
     try {
-      await api.post('/api/campaigns', form, token);
+      if (isEdit && existing) {
+        await api.put(`/api/campaigns/${existing.id}`, form, token);
+      } else {
+        await api.post('/api/campaigns', form, token);
+      }
       onSave();
       onClose();
-    } catch (error) {
-      console.error('Save error:', error);
+    } catch (error: any) {
+      alert('Kaydedilemedi: ' + (error?.message ?? 'hata'));
     }
   };
 
@@ -706,7 +809,9 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
       >
-        <h2 className="text-xl font-bold mb-4">🎁 Yeni Kampanya</h2>
+        <h2 className="text-xl font-bold mb-4">
+          🎁 {isEdit ? 'Kampanyayı Düzenle' : 'Yeni Kampanya'}
+        </h2>
         <div className="space-y-4">
           <input
             type="text"
@@ -828,7 +933,9 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
         </div>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="btn btn-secondary flex-1">İptal</button>
-          <button onClick={handleSubmit} className="btn btn-primary flex-1">Oluştur</button>
+          <button onClick={handleSubmit} className="btn btn-primary flex-1">
+            {isEdit ? 'Güncelle' : 'Oluştur'}
+          </button>
         </div>
       </motion.div>
     </div>
