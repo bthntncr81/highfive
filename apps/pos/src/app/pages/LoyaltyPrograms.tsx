@@ -122,7 +122,7 @@ export default function LoyaltyPrograms() {
   const deleteProgram = async (p: Program) => {
     if (!window.confirm(`"${p.name}" silinsin mi?`)) return;
     try {
-      await api.del(`/api/loyalty/programs/${p.id}`, token!);
+      await api.delete(`/api/loyalty/programs/${p.id}`, token!);
       refresh();
     } catch (e: any) {
       alert(e?.message ?? 'hata');

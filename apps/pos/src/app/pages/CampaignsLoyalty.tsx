@@ -102,7 +102,7 @@ export default function CampaignsLoyalty() {
   const deleteCampaign = async (c: Campaign) => {
     if (!window.confirm(`"${c.name}" silinsin mi?`)) return;
     try {
-      await api.del(`/api/campaigns/${c.id}`, token!);
+      await api.delete(`/api/campaigns/${c.id}`, token!);
       fetchData();
     } catch (e: any) {
       alert('Silinemedi: ' + (e?.message ?? 'hata'));
@@ -117,7 +117,7 @@ export default function CampaignsLoyalty() {
   const deleteBundle = async (b: BundleDeal) => {
     if (!window.confirm(`"${b.name}" silinsin mi?`)) return;
     try {
-      await api.del(`/api/bundles/${b.id}`, token!);
+      await api.delete(`/api/bundles/${b.id}`, token!);
       fetchData();
     } catch (e: any) {
       alert('Silinemedi: ' + (e?.message ?? 'hata'));
