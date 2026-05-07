@@ -36,6 +36,7 @@ interface Campaign {
   id: string;
   name: string;
   description?: string;
+  image?: string;
   type: string;
   discountType?: string;
   discountValue?: number;
@@ -484,8 +485,15 @@ export default function CampaignsLoyalty() {
                         campaign.isActive ? 'border-green-200' : 'border-gray-100'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div>
+                      <div className="flex items-start gap-4">
+                        {campaign.image && (
+                          <img
+                            src={campaign.image}
+                            alt={campaign.name}
+                            className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-900">{campaign.name}</h3>
                             {campaign.isActive ? (
@@ -507,7 +515,7 @@ export default function CampaignsLoyalty() {
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 ml-auto flex-shrink-0">
                           <button
                             onClick={() => editCampaign(campaign)}
                             className="p-2 hover:bg-gray-100 rounded-lg"
@@ -886,13 +894,20 @@ function CampaignModal({
               className="input"
             />
           </div>
-          <input
-            type="number"
-            placeholder="Min. sepet tutarı (₺)"
-            value={form.minPurchase}
-            onChange={(e) => setForm({ ...form, minPurchase: Number(e.target.value) })}
-            className="input w-full"
-          />
+          <div>
+            <label className="block text-sm font-semibold mb-1">Min. sepet tutarı (₺)</label>
+            <input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={form.minPurchase}
+              onChange={(e) => setForm({ ...form, minPurchase: Number(e.target.value) })}
+              className="input w-full"
+            />
+            <p className="mt-1 text-[11px] text-foreground-muted">
+              Müşterinin sepet tutarı bu değerin altındaysa kampanya uygulanmaz. 0 = limit yok.
+            </p>
+          </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Başlangıç</label>
             <input

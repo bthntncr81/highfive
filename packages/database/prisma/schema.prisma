@@ -707,6 +707,7 @@ model Campaign {
   id              String   @id @default(cuid())
   name            String
   description     String?
+  image           String?  // Kapak fotoğrafı URL — landing/mobile kampanya kartlarında gösterilir
   type            String   // "DISCOUNT", "BOGO", "FREE_ITEM", "POINTS_MULTIPLIER", "MIN_PURCHASE"
   
   // Koşullar

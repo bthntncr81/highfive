@@ -46,6 +46,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       data: {
         name: data.name,
         description: data.description,
+        image: data.image || null,
         type: data.type || 'DISCOUNT',
         minPurchase: data.minPurchase,
         minItems: data.minItems,
@@ -82,17 +83,30 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   });
 
   // Update campaign
+  // Whitelist fields — formdan gelen `notifyCustomers` gibi Prisma'da olmayan
+  // alanlar `...data` ile spread edilirse update patlıyor.
   server.put('/campaigns/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
 
+    const updateData: any = {};
+    const allowed = [
+      'name', 'description', 'image', 'type',
+      'minPurchase', 'minItems', 'loyaltyTierIds', 'applicableItems', 'excludedItems',
+      'discountType', 'discountValue', 'freeItemId', 'maxDiscount',
+      'daysOfWeek', 'startTime', 'endTime',
+      'usageLimit', 'usagePerCustomer',
+      'isActive', 'autoApply', 'stackable',
+    ];
+    for (const k of allowed) {
+      if (data[k] !== undefined) updateData[k] = data[k];
+    }
+    if (data.startDate) updateData.startDate = new Date(data.startDate);
+    if (data.endDate) updateData.endDate = new Date(data.endDate);
+
     const campaign = await prisma.campaign.update({
       where: { id },
-      data: {
-        ...data,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-      },
+      data: updateData,
     });
 
     return { campaign };
