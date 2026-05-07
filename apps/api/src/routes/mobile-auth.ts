@@ -9,6 +9,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const OTP_TTL_MINUTES = 5;
 const OTP_RESEND_SECONDS = 60;
 
+// Master OTP — SMS gateway entegre edilene kadar sabit doğrulama kodu.
+// Her telefon için bu kod kabul edilir. SMS firma anlaşmasından sonra
+// MASTER_OTP_CODE env'i kaldırılarak deaktif edilir.
+const MASTER_OTP_CODE = process.env.MASTER_OTP_CODE || '999999';
+
 // Telefon normalize: +90555..., 0555..., 555... → 5xxxxxxxxx (10 hane)
 function normalizePhone(input: string): string | null {
   const digits = input.replace(/\D/g, '');
@@ -96,19 +101,35 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Geçersiz telefon numarası' });
     }
 
-    const customer = await prisma.customer.findUnique({ where: { phone: normalized } });
-    if (!customer || !customer.verificationCode) {
-      return reply.status(400).send({ error: 'Önce kod isteyin' });
-    }
+    let customer = await prisma.customer.findUnique({ where: { phone: normalized } });
 
-    // Expiry kontrolü
-    const ageMin = (Date.now() - new Date(customer.updatedAt).getTime()) / 60000;
-    if (ageMin > OTP_TTL_MINUTES) {
-      return reply.status(400).send({ error: 'Kod süresi dolmuş' });
-    }
+    // Master OTP shortcut — geliştirme/SMS-yok modu
+    // Customer yoksa otomatik oluştur (request-otp aşaması atlatılabilir)
+    if (code === MASTER_OTP_CODE) {
+      if (!customer) {
+        customer = await prisma.customer.create({
+          data: {
+            phone: normalized,
+            isVerified: false,
+            isActive: true,
+          },
+        });
+      }
+      server.log.info({ phone: normalized }, '[MOBILE-AUTH] Master OTP kullanıldı');
+    } else {
+      if (!customer || !customer.verificationCode) {
+        return reply.status(400).send({ error: 'Önce kod isteyin' });
+      }
 
-    if (customer.verificationCode !== code) {
-      return reply.status(400).send({ error: 'Kod hatalı' });
+      // Expiry kontrolü
+      const ageMin = (Date.now() - new Date(customer.updatedAt).getTime()) / 60000;
+      if (ageMin > OTP_TTL_MINUTES) {
+        return reply.status(400).send({ error: 'Kod süresi dolmuş' });
+      }
+
+      if (customer.verificationCode !== code) {
+        return reply.status(400).send({ error: 'Kod hatalı' });
+      }
     }
 
     // Doğrulama başarılı
