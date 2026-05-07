@@ -264,37 +264,50 @@ export default async function orderRoutes(server: FastifyInstance) {
 
   // Get all orders (with filters)
   server.get('/', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
-    const { status, type, date, tableId, limit } = request.query as {
+    const { status, type, date, tableId, limit, includePendingPayment } = request.query as {
       status?: OrderStatus;
       type?: OrderType;
       date?: string;
       tableId?: string;
       limit?: string;
+      includePendingPayment?: string;
     };
 
     const where: any = {};
-    
+
     if (status) {
       where.status = status;
     }
-    
+
     if (type) {
       where.type = type;
     }
-    
+
     if (tableId) {
       where.tableId = tableId;
     }
-    
+
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       where.createdAt = {
         gte: startOfDay,
         lte: endOfDay,
+      };
+    }
+
+    // Online ödeme bekleyen siparişler — explicit istenmedikçe POS'a gizle.
+    // Müşteri ödeme tamamlamadan iyzico 3DS ekranındayken bu sipariş zaten
+    // PENDING + paymentStatus PENDING + paymentMethod ONLINE durumunda DB'de
+    // ama henüz "gerçek" sipariş değil. Ödeme bitince broadcast yapılıp
+    // POS'a düşüyor.
+    if (includePendingPayment !== 'true') {
+      where.NOT = {
+        paymentMethod: 'ONLINE',
+        paymentStatus: 'PENDING',
       };
     }
 

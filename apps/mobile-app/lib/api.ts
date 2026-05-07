@@ -382,7 +382,7 @@ export const endpoints = {
   cancelOrder: (id: string) =>
     api.post<{ order: ApiOrder }>(`/api/mobile/orders/${id}/cancel`),
 
-  // PAYMENT (3DS)
+  // PAYMENT (3DS) — backend customerName/customerEmail/customerPhone zorunlu
   initialize3DS: (data: {
     orderId: string;
     cardNumber: string;
@@ -390,14 +390,14 @@ export const endpoints = {
     expireMonth: string;
     expireYear: string;
     cvc: string;
-    email?: string;
-    name?: string;
-    phone?: string;
-    address?: string;
-    city?: string;
-    tipAmount?: number;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    customerAddress?: string;
+    customerCity?: string;
+    customerIp?: string;
   }) =>
-    api.post<{ htmlContent: string; conversationId: string }>(
+    api.post<{ htmlContent: string; conversationId: string; success?: boolean }>(
       "/api/payment/initialize-3ds",
       data,
     ),

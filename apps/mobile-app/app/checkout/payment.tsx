@@ -109,6 +109,24 @@ export default function PaymentScreen() {
       Alert.alert("Hata", "Tüm kart bilgilerini doldurun");
       return;
     }
+
+    // Müşteri bilgilerini topla — kart adı dışında zorunlu olanlar
+    const finalName = (user?.name || cardHolder.trim()).trim();
+    const finalPhone = (user?.phone || "").trim();
+    const finalEmail = (user?.email || "musteri@highfivepps.com").trim();
+
+    if (!finalName) {
+      Alert.alert("Hata", "Müşteri adı eksik. Profil → Hesap bilgilerimden ekle.");
+      return;
+    }
+    if (!finalPhone || finalPhone.replace(/\D/g, "").length < 10) {
+      Alert.alert(
+        "Hata",
+        "Telefon eksik. Profil → Hesap bilgilerimden numaranı doğrula.",
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await endpoints.initialize3DS({
@@ -118,11 +136,11 @@ export default function PaymentScreen() {
         expireMonth: expireMonth.padStart(2, "0"),
         expireYear: expireYear.length === 2 ? `20${expireYear}` : expireYear,
         cvc,
-        email: user?.email ?? "musteri@highfivepps.com",
-        name: user?.name ?? cardHolder,
-        phone: user?.phone ?? "",
+        customerName: finalName,
+        customerEmail: finalEmail,
+        customerPhone: finalPhone,
       });
-      // htmlContent base64 değil — direkt HTML
+      // htmlContent — direkt HTML
       setHtmlContent(res.htmlContent);
       setConversationId(res.conversationId);
       setPhase("3ds");

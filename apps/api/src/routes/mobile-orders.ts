@@ -5,7 +5,7 @@
 // POST  /api/mobile/orders/:id/cancel - PENDING durumundakileri iptal et
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
+import { PrismaClient, OrderStatus, OrderType, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
@@ -174,7 +174,16 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     const deliveryAmount = body.type === 'DELIVERY' ? DELIVERY_FEE : 0;
     const finalTotal = Math.max(0, subtotal + tax + tipAmount + deliveryAmount - totalDiscount);
 
-    // Sipariş oluştur
+    // Sipariş oluştur — paymentMethod'u doğru kaydet
+    // ONLINE: 3DS ödeme akışı tamamlanana kadar bu sipariş POS'a görünmeyecek (broadcast yok).
+    // CASH: kapıda ödeme — direkt POS'a düşer.
+    const orderPaymentMethod =
+      body.paymentMethod === 'ONLINE'
+        ? PaymentMethod.ONLINE
+        : body.paymentMethod === 'CREDIT_CARD'
+        ? PaymentMethod.CREDIT_CARD
+        : PaymentMethod.CASH;
+
     const order = await prisma.order.create({
       data: {
         customerName: body.customerName ?? customer.name ?? null,
@@ -185,7 +194,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         customerLongitude: deliveryLng,
         type: body.type,
         status: OrderStatus.PENDING,
-        paymentStatus: body.paymentMethod === 'ONLINE' ? PaymentStatus.PENDING : PaymentStatus.PENDING,
+        paymentStatus: PaymentStatus.PENDING,
+        paymentMethod: orderPaymentMethod,
         subtotal,
         tax,
         discount: totalDiscount,
@@ -505,6 +515,13 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     const deliveryAmount = body.type === 'DELIVERY' ? DELIVERY_FEE : 0;
     const finalTotal = subtotal + tax + tipAmount + deliveryAmount;
 
+    const guestPaymentMethod =
+      body.paymentMethod === 'ONLINE'
+        ? PaymentMethod.ONLINE
+        : body.paymentMethod === 'CREDIT_CARD'
+        ? PaymentMethod.CREDIT_CARD
+        : PaymentMethod.CASH;
+
     const order = await prisma.order.create({
       data: {
         customerName: body.customerName.trim(),
@@ -516,6 +533,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         type: body.type,
         status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,
+        paymentMethod: guestPaymentMethod,
         subtotal,
         tax,
         deliveryFee: deliveryAmount,
