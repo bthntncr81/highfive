@@ -20,7 +20,7 @@ import { API_URL, endpoints, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
-type Phase = "form" | "3ds" | "polling" | "done" | "failed";
+type Phase = "form" | "3ds" | "polling" | "done" | "failed" | "cancelled";
 
 // Base64 → UTF-8 (atob ASCII only, UTF-8 karakterleri için %-encoded trick)
 function base64ToUtf8(b64: string): string {
@@ -170,11 +170,47 @@ export default function PaymentScreen() {
     }
   };
 
-  // WebView navigation: callback URL'e yönlendiğinde polling'e geç
+  // WebView navigation: callback URL'e yönlendiğinde polling'e veya direkt iptal/fail'e geç
   const handleNavStateChange = (navState: { url: string }) => {
     const url = navState.url || "";
-    if (url.includes("/3ds-callback") || url.includes("payment=success") || url.includes("payment=failed")) {
+    // Bankanın iptal/cancel/abort sayfası — pollig beklemeden direkt cancelled
+    if (
+      url.includes("payment=cancel") ||
+      url.includes("status=cancelled") ||
+      url.includes("/3ds-cancel") ||
+      url.includes("abort") ||
+      url.includes("vazgec")
+    ) {
+      cancelOrderAndShow();
+      return;
+    }
+    // Banka başarısızlık döndürdüyse — pollig beklemeden direkt failed
+    if (url.includes("payment=failed") || url.includes("status=failure")) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      setPhase("failed");
+      setPollError("Bankanız ödemeyi onaylamadı.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    // Başarılı görünüyor — polling ile finalize et
+    if (
+      url.includes("/3ds-callback") ||
+      url.includes("payment=success")
+    ) {
       setPhase("polling");
+    }
+  };
+
+  // Sipariş iptal et + ekrana dön
+  const cancelOrderAndShow = async () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setPhase("cancelled");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    // Backend'e order cancel sinyali — siparişi temizle
+    if (orderId) {
+      endpoints.cancelOrder(String(orderId)).catch(() => {
+        // Sessizce geç — order zaten PENDING + paymentStatus PENDING ONLINE'da
+      });
     }
   };
 
@@ -209,9 +245,9 @@ export default function PaymentScreen() {
               Alert.alert("İptal", "Ödemeyi iptal etmek istediğinden emin misin?", [
                 { text: "Devam et", style: "cancel" },
                 {
-                  text: "İptal et",
+                  text: "Evet, iptal et",
                   style: "destructive",
-                  onPress: () => router.back(),
+                  onPress: () => cancelOrderAndShow(),
                 },
               ]);
             }}
@@ -222,6 +258,12 @@ export default function PaymentScreen() {
           <Text className="ml-3 flex-1 text-lg font-bold text-foreground">
             3D Secure Doğrulama
           </Text>
+          <View className="flex-row items-center rounded-full bg-green-50 px-2.5 py-1">
+            <Ionicons name="lock-closed" size={11} color="#10b981" />
+            <Text className="ml-1 text-[10px] font-bold text-green-700">
+              GÜVENLİ
+            </Text>
+          </View>
         </View>
         <WebView
           ref={webviewRef}
@@ -260,17 +302,89 @@ export default function PaymentScreen() {
 
   if (phase === "done") {
     return (
-      <SafeAreaView edges={["top"]} className="flex-1 bg-white">
-        <View className="flex-1 items-center justify-center px-10">
-          <View className="h-24 w-24 items-center justify-center rounded-full bg-green-50">
-            <Ionicons name="checkmark-circle" size={64} color="#10b981" />
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center px-8">
+          {/* Success animation */}
+          <View className="h-32 w-32 items-center justify-center rounded-full bg-green-50">
+            <View className="h-24 w-24 items-center justify-center rounded-full bg-green-100">
+              <Ionicons name="checkmark-circle" size={84} color="#10b981" />
+            </View>
           </View>
-          <Text className="mt-4 text-2xl font-extrabold text-foreground">
-            Ödeme başarılı!
+
+          <Text className="mt-6 text-3xl font-extrabold text-foreground">
+            Ödeme başarılı! 🎉
           </Text>
-          <Text className="mt-1 text-center text-sm text-foreground-muted">
-            Siparişin alındı, mutfağa iletildi.
+          <Text className="mt-2 text-center text-sm text-foreground-muted leading-5">
+            Siparişin alındı ve mutfağa iletildi.{"\n"}
+            Birazdan hazırlanmaya başlanacak.
           </Text>
+
+          {/* Tutar kartı */}
+          <View className="mt-6 w-full max-w-xs rounded-3xl border border-green-200 bg-green-50 p-5">
+            <Text className="text-center text-[10px] font-bold uppercase tracking-widest text-green-700">
+              Ödenen tutar
+            </Text>
+            <Text className="mt-1 text-center text-3xl font-extrabold text-green-700">
+              {Number(amount).toFixed(2)} ₺
+            </Text>
+            <View className="mt-3 flex-row items-center justify-center">
+              <Ionicons name="receipt-outline" size={14} color="#065f46" />
+              <Text className="ml-1.5 text-xs font-semibold text-green-700">
+                Sipariş #{String(orderId).slice(-6).toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          <Text className="mt-8 text-xs text-foreground-muted">
+            Birkaç saniye içinde takip ekranına yönlendiriliyorsun...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (phase === "cancelled") {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="h-28 w-28 items-center justify-center rounded-full bg-amber-50">
+            <Ionicons name="hand-left-outline" size={64} color="#d97706" />
+          </View>
+
+          <Text className="mt-6 text-3xl font-extrabold text-foreground">
+            Ödeme iptal edildi
+          </Text>
+          <Text className="mt-2 text-center text-sm text-foreground-muted leading-5">
+            3D Secure adımında iptal ettin.{"\n"}
+            Siparişin oluşturulmadı, kart hesabından tutar çekilmedi.
+          </Text>
+
+          <View className="mt-8 w-full max-w-xs gap-2">
+            <Pressable
+              onPress={() => setPhase("form")}
+              className="items-center rounded-full bg-primary-500 py-4"
+            >
+              <Text className="text-base font-bold text-white">
+                Tekrar ödemeyi dene
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.replace("/(tabs)/cart")}
+              className="items-center rounded-full border border-border-light py-4"
+            >
+              <Text className="text-base font-semibold text-foreground">
+                Sepete dön
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.replace("/(tabs)")}
+              className="items-center py-3"
+            >
+              <Text className="text-sm font-semibold text-foreground-muted">
+                Anasayfaya dön
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -278,31 +392,41 @@ export default function PaymentScreen() {
 
   if (phase === "failed") {
     return (
-      <SafeAreaView edges={["top"]} className="flex-1 bg-white">
-        <View className="flex-1 items-center justify-center px-10">
-          <View className="h-24 w-24 items-center justify-center rounded-full bg-red-50">
-            <Ionicons name="close-circle" size={64} color="#ef4444" />
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="h-28 w-28 items-center justify-center rounded-full bg-red-50">
+            <Ionicons name="close-circle" size={72} color="#ef4444" />
           </View>
-          <Text className="mt-4 text-2xl font-extrabold text-foreground">
+
+          <Text className="mt-6 text-3xl font-extrabold text-foreground">
             Ödeme başarısız
           </Text>
-          <Text className="mt-1 text-center text-sm text-foreground-muted">
-            {pollError ?? "Ödeme tamamlanamadı."}
+          <Text className="mt-2 text-center text-sm text-foreground-muted leading-5">
+            {pollError ?? "Ödeme tamamlanamadı. Kart bilgilerini kontrol edip tekrar dene."}
           </Text>
-          <Pressable
-            onPress={() => setPhase("form")}
-            className="mt-6 rounded-full bg-primary-500 px-6 py-3"
-          >
-            <Text className="text-sm font-bold text-white">Tekrar dene</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.replace("/(tabs)/cart")}
-            className="mt-3"
-          >
-            <Text className="text-sm font-semibold text-foreground-muted">
-              Sepete dön
+
+          <View className="mt-4 rounded-2xl bg-red-50 px-4 py-3">
+            <Text className="text-center text-[11px] text-red-700">
+              💡 Yeterli bakiye, doğru CVC ve aktif 3DS şifresi olduğundan emin ol.
             </Text>
-          </Pressable>
+          </View>
+
+          <View className="mt-8 w-full max-w-xs gap-2">
+            <Pressable
+              onPress={() => setPhase("form")}
+              className="items-center rounded-full bg-primary-500 py-4"
+            >
+              <Text className="text-base font-bold text-white">Tekrar dene</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.replace("/(tabs)/cart")}
+              className="items-center rounded-full border border-border-light py-4"
+            >
+              <Text className="text-base font-semibold text-foreground">
+                Sepete dön
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
