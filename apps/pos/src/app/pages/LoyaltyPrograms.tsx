@@ -27,6 +27,8 @@ type Program = {
   tierConfig: any;
   applicableMenuItemIds: string[];
   applicableCategoryIds: string[];
+  rewardMenuItemIds: string[];
+  rewardCategoryIds: string[];
   createdAt: string;
 };
 
@@ -317,6 +319,9 @@ function ProgramEditor({
   const [applicableMenuItemIds, setApplicableMenuItemIds] = useState<string[]>(
     program.applicableMenuItemIds ?? [],
   );
+  const [rewardMenuItemIds, setRewardMenuItemIds] = useState<string[]>(
+    program.rewardMenuItemIds ?? [],
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -325,7 +330,9 @@ function ProgramEditor({
       await api.patch(
         `/api/loyalty/programs/${program.id}`,
         {
-          name, description, icon, color, config, applicableMenuItemIds,
+          name, description, icon, color, config,
+          applicableMenuItemIds,
+          rewardMenuItemIds,
         },
         token!,
       );
@@ -405,6 +412,8 @@ function ProgramEditor({
             menuItems={menuItems}
             applicableMenuItemIds={applicableMenuItemIds}
             setApplicableMenuItemIds={setApplicableMenuItemIds}
+            rewardMenuItemIds={rewardMenuItemIds}
+            setRewardMenuItemIds={setRewardMenuItemIds}
           />
         </div>
 
@@ -425,8 +434,20 @@ function ProgramEditor({
 }
 
 // ==================== TÜRE ÖZEL CONFIG EDITOR ====================
+const VISUAL_STYLE_OPTIONS = [
+  { v: 'auto', label: '🤖 Otomatik (kategoriden algıla)' },
+  { v: 'pie', label: '🍕 Pizza dilimleri (pasta için de uygun)' },
+  { v: 'stack', label: '🍔 Burger / sandviç katmanları' },
+  { v: 'bowl', label: '🍝 Makarna / çorba kâsesi' },
+  { v: 'cups', label: '🥤 İçecek / yan ürün dizisi' },
+  { v: 'hex', label: '⬡ Genel premium peteği' },
+  { v: 'dots', label: '⚪ Klasik damga noktaları' },
+];
+
 function ConfigEditor({
-  type, config, setConfig, menuItems, applicableMenuItemIds, setApplicableMenuItemIds,
+  type, config, setConfig, menuItems,
+  applicableMenuItemIds, setApplicableMenuItemIds,
+  rewardMenuItemIds, setRewardMenuItemIds,
 }: {
   type: ProgramType;
   config: any;
@@ -434,6 +455,8 @@ function ConfigEditor({
   menuItems: any[];
   applicableMenuItemIds: string[];
   setApplicableMenuItemIds: (ids: string[]) => void;
+  rewardMenuItemIds: string[];
+  setRewardMenuItemIds: (ids: string[]) => void;
 }) {
   const update = (k: string, v: any) => setConfig({ ...config, [k]: v });
 
@@ -457,22 +480,40 @@ function ConfigEditor({
         <ConfigBlock title="Damga Kartı Kuralları">
           <NumberField label="Kaç sipariş = 1 ödül?" value={config.stampsRequired ?? 10}
             onChange={(v) => update('stampsRequired', v)} />
+          <SelectField label="🎨 Mobile görseli (stamp visual)"
+            value={config.visualStyle ?? 'auto'}
+            options={VISUAL_STYLE_OPTIONS.map((o) => ({ v: o.v, label: o.label }))}
+            onChange={(v) => update('visualStyle', v)} />
           <SelectField label="Ödül türü" value={config.rewardType ?? 'FREE_ITEM'}
             options={[
-              { v: 'FREE_ITEM', label: 'Bedava ürün' },
+              { v: 'FREE_ITEM', label: 'Bedava ürün (çoklu seçim)' },
               { v: 'DISCOUNT', label: 'Tutar indirimi' },
             ]}
             onChange={(v) => update('rewardType', v)} />
-          {config.rewardType === 'FREE_ITEM' ? (
-            <ItemSelectField label="Ödül ürünü" menuItems={menuItems} value={config.rewardItemId}
-              onChange={(v) => update('rewardItemId', v)} />
-          ) : (
+          {config.rewardType === 'DISCOUNT' && (
             <NumberField label="İndirim tutarı (₺)" value={config.rewardValue ?? 0}
               onChange={(v) => update('rewardValue', v)} suffix="₺" />
           )}
-          <ItemMultiSelect label="Hangi ürünler damga kazandırır? (boş = tüm sipariş)"
-            menuItems={menuItems} value={applicableMenuItemIds}
-            onChange={setApplicableMenuItemIds} />
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-3">
+            <div>
+              <p className="text-xs font-bold text-amber-900 mb-1">📥 ALINAN ÜRÜNLER</p>
+              <p className="text-[10px] text-amber-700 mb-2">Müşteri bunları sipariş edince damga kazanır (boş = tüm sipariş damga sayar)</p>
+              <ItemMultiSelect label=""
+                menuItems={menuItems} value={applicableMenuItemIds}
+                onChange={setApplicableMenuItemIds} />
+            </div>
+          </div>
+          {config.rewardType === 'FREE_ITEM' && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 space-y-3">
+              <div>
+                <p className="text-xs font-bold text-emerald-900 mb-1">🎁 VERİLEN ÜRÜNLER</p>
+                <p className="text-[10px] text-emerald-700 mb-2">Damga dolduğunda müşteri bunlardan birini bedava alır (en az 1 seç)</p>
+                <ItemMultiSelect label=""
+                  menuItems={menuItems} value={rewardMenuItemIds}
+                  onChange={setRewardMenuItemIds} />
+              </div>
+            </div>
+          )}
         </ConfigBlock>
       );
 
@@ -560,12 +601,24 @@ function ConfigEditor({
     case 'PRODUCT_VIP':
       return (
         <ConfigBlock title="Ürün VIP Kuralları">
-          <ItemMultiSelect label="Takip edilecek ürünler" menuItems={menuItems}
-            value={applicableMenuItemIds} onChange={setApplicableMenuItemIds} />
           <NumberField label="Kaç adet gerekli?" value={config.requiredCount ?? 20}
             onChange={(v) => update('requiredCount', v)} suffix="adet" />
-          <ItemSelectField label="Ödül ürünü" menuItems={menuItems}
-            value={config.rewardItemId} onChange={(v) => update('rewardItemId', v)} />
+          <SelectField label="🎨 Mobile görseli"
+            value={config.visualStyle ?? 'auto'}
+            options={VISUAL_STYLE_OPTIONS.map((o) => ({ v: o.v, label: o.label }))}
+            onChange={(v) => update('visualStyle', v)} />
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-3">
+            <p className="text-xs font-bold text-amber-900 mb-1">📥 TAKİP EDİLEN ÜRÜNLER</p>
+            <p className="text-[10px] text-amber-700 mb-2">Müşteri bu ürünlerden satın aldıkça sayaç artar</p>
+            <ItemMultiSelect label="" menuItems={menuItems}
+              value={applicableMenuItemIds} onChange={setApplicableMenuItemIds} />
+          </div>
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 space-y-3">
+            <p className="text-xs font-bold text-emerald-900 mb-1">🎁 ÖDÜL ÜRÜNLERİ</p>
+            <p className="text-[10px] text-emerald-700 mb-2">Hedef tamamlanınca müşteri bunlardan birini bedava alır</p>
+            <ItemMultiSelect label="" menuItems={menuItems}
+              value={rewardMenuItemIds} onChange={setRewardMenuItemIds} />
+          </div>
         </ConfigBlock>
       );
 

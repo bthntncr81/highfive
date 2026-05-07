@@ -175,6 +175,8 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
         tierConfig: body.tierConfig ?? undefined,
         applicableMenuItemIds: body.applicableMenuItemIds ?? [],
         applicableCategoryIds: body.applicableCategoryIds ?? [],
+        rewardMenuItemIds: body.rewardMenuItemIds ?? [],
+        rewardCategoryIds: body.rewardCategoryIds ?? [],
       },
     });
     return { program };
@@ -190,7 +192,9 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
     const data: any = {};
     for (const k of [
       'name', 'description', 'icon', 'color', 'isActive', 'sortOrder',
-      'config', 'tierConfig', 'applicableMenuItemIds', 'applicableCategoryIds',
+      'config', 'tierConfig',
+      'applicableMenuItemIds', 'applicableCategoryIds',
+      'rewardMenuItemIds', 'rewardCategoryIds',
     ]) {
       if (body[k] !== undefined) data[k] = body[k];
     }

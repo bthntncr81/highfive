@@ -982,8 +982,14 @@ model LoyaltyProgram {
   tierConfig  Json?
 
   // Hedef ürün / kategori (opsiyonel — STAMP_CARD, PRODUCT_VIP için)
+  // Bu ürünleri/kategorileri alınca damga/sayaç tetiklenir (ALINAN ÜRÜNLER)
   applicableMenuItemIds String[] @default([])
   applicableCategoryIds String[] @default([])
+
+  // Ödül olarak verilebilecek ürünler — çoklu seçim (VERİLEN ÜRÜNLER)
+  // Damga dolduğunda buradaki ürünlerden biri (veya hepsi) bedava verilebilir
+  rewardMenuItemIds  String[] @default([])
+  rewardCategoryIds  String[] @default([])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
