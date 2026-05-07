@@ -1,53 +1,15 @@
-// Centralized SMTP mailer for HighFive.
-//
-// All outgoing email goes through info@highfivepps.com via GoDaddy SMTP. The
-// account password and host are read from env vars at runtime — see the
-// HIGHFIVE_SMTP_* keys in docker-compose / .env.
+// Centralized mailer for HighFive — uses Resend's HTTP API (api.resend.com)
+// instead of raw SMTP because the production host's ISP blocks outbound
+// 25/465/587. Resend gives us free 100/day with DKIM-signed delivery from
+// info@highfivepps.com once the domain is verified in their dashboard.
 //
 // Emails ship in a HighFive-branded HTML shell so OTP / loyalty / marketing
 // messages feel cohesive without each call site re-writing the wrapper.
 
-let nodemailer: any;
-try {
-  // The API container installs nodemailer into /tmp/nm at build time
-  // (see Dockerfile.api) to avoid rootDir/tsc issues. Resolve from there
-  // first, then fall back to the workspace dependency tree.
-  const tmpPath = ['/tmp', 'nm', 'node_modules', 'nodemailer'].join('/');
-  nodemailer = require(tmpPath);
-} catch {
-  try {
-    nodemailer = require('nodemailer');
-  } catch {
-    nodemailer = null;
-  }
-}
-
-const SMTP_HOST = process.env.HIGHFIVE_SMTP_HOST || 'smtpout.secureserver.net';
-const SMTP_PORT = Number(process.env.HIGHFIVE_SMTP_PORT || 465);
-const SMTP_SECURE = process.env.HIGHFIVE_SMTP_SECURE !== 'false'; // 465 → secure, 587 → starttls
-const SMTP_USER = process.env.HIGHFIVE_SMTP_USER || 'info@highfivepps.com';
-const SMTP_PASS = process.env.HIGHFIVE_SMTP_PASS || '';
-const FROM_NAME = process.env.HIGHFIVE_SMTP_FROM_NAME || 'High Five';
-
-let cachedTransport: any = null;
-function getTransport() {
-  if (cachedTransport) return cachedTransport;
-  if (!nodemailer) {
-    console.error('📧 nodemailer not installed — emails will fail');
-    return null;
-  }
-  if (!SMTP_PASS) {
-    console.error('📧 HIGHFIVE_SMTP_PASS env not set — emails will fail');
-    return null;
-  }
-  cachedTransport = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_SECURE,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-  return cachedTransport;
-}
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const FROM_EMAIL = process.env.HIGHFIVE_MAIL_FROM || 'info@highfivepps.com';
+const FROM_NAME = process.env.HIGHFIVE_MAIL_FROM_NAME || 'High Five';
+const REPLY_TO = process.env.HIGHFIVE_MAIL_REPLY_TO || FROM_EMAIL;
 
 /**
  * Wrap a single content block in the HighFive email shell. Used by every
@@ -149,21 +111,33 @@ export interface SendMailOpts {
 }
 
 export async function sendMail(opts: SendMailOpts): Promise<{ ok: boolean; error?: string; messageId?: string }> {
-  const transport = getTransport();
-  if (!transport) {
-    return { ok: false, error: 'SMTP not configured' };
+  if (!RESEND_API_KEY) {
+    return { ok: false, error: 'RESEND_API_KEY not configured' };
   }
   try {
-    const info = await transport.sendMail({
-      from: `"${FROM_NAME}" <${SMTP_USER}>`,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-      text: opts.text,
-      replyTo: opts.replyTo || SMTP_USER,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: [opts.to],
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+        reply_to: opts.replyTo || REPLY_TO,
+      }),
     });
-    console.log(`📧 sent to ${opts.to}: ${info.messageId}`);
-    return { ok: true, messageId: info.messageId };
+    const data: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data?.message || data?.error || `HTTP ${res.status}`;
+      console.error('📧 resend failed:', msg);
+      return { ok: false, error: msg };
+    }
+    console.log(`📧 sent to ${opts.to}: ${data?.id}`);
+    return { ok: true, messageId: data?.id };
   } catch (err: any) {
     console.error('📧 send failed:', err?.message);
     return { ok: false, error: err?.message || 'send failed' };
