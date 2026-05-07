@@ -8,6 +8,9 @@ interface LoyaltyContextType {
   isLoading: boolean
   login: (phone: string) => Promise<boolean>
   register: (phone: string, name?: string) => Promise<{ success: boolean; error?: string }>
+  // Email + OTP — yeni tercih edilen akış (telefon doğrulamamız yok)
+  requestEmailOtp: (email: string, name?: string) => Promise<{ success: boolean; error?: string }>
+  verifyEmailOtp: (email: string, code: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   refreshMember: () => Promise<void>
   redeemPoints: (points: number) => number // Returns discount amount
@@ -97,9 +100,41 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
+  const requestEmailOtp = useCallback(async (email: string, name?: string) => {
+    try {
+      const res = await loyaltyApi.requestEmailOtp(email.trim().toLowerCase(), name?.trim())
+      if (res.success) return { success: true }
+      return { success: false, error: res.error || 'Kod gönderilemedi' }
+    } catch {
+      return { success: false, error: 'Sunucuya bağlanılamadı' }
+    }
+  }, [])
+
+  const verifyEmailOtp = useCallback(async (email: string, code: string) => {
+    setIsLoading(true)
+    try {
+      const res = await loyaltyApi.verifyEmailOtp(email.trim().toLowerCase(), code.trim())
+      if (res.success && res.data?.customer) {
+        const c = res.data.customer
+        setMember(c)
+        localStorage.setItem(LOYALTY_STORAGE_KEY, JSON.stringify(c))
+        if (res.data.token) {
+          localStorage.setItem('highfive-customer-token', res.data.token)
+        }
+        return { success: true }
+      }
+      return { success: false, error: res.error || 'Kod hatalı' }
+    } catch {
+      return { success: false, error: 'Sunucuya bağlanılamadı' }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   const logout = useCallback(() => {
     setMember(null)
     localStorage.removeItem(LOYALTY_STORAGE_KEY)
+    localStorage.removeItem('highfive-customer-token')
   }, [])
 
   const refreshMember = useCallback(async () => {
@@ -120,6 +155,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         login,
         register,
+        requestEmailOtp,
+        verifyEmailOtp,
         logout,
         refreshMember,
         redeemPoints,

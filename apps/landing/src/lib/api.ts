@@ -366,7 +366,20 @@ export interface LoyaltyCustomer {
 
 // Loyalty Program API
 export const loyaltyApi = {
-  // Lookup customer by phone
+  // Email + OTP login (preferred path).
+  requestEmailOtp: (email: string, name?: string) =>
+    api.post<{ success: boolean; message: string }>(
+      '/api/auth/customer/email/request-otp',
+      { email, name },
+    ),
+  verifyEmailOtp: (email: string, code: string) =>
+    api.post<{
+      success: boolean;
+      token: string;
+      customer: LoyaltyCustomer & { email?: string | null };
+    }>('/api/auth/customer/email/verify-otp', { email, code }),
+
+  // Lookup customer by phone (legacy)
   lookupCustomer: (phone: string) =>
     api.get<{ customer: LoyaltyCustomer | null }>(`/api/loyalty/customers/phone/${encodeURIComponent(phone)}`),
 
