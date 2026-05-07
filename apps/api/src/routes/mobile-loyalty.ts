@@ -9,6 +9,38 @@ import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 import * as crypto from 'crypto';
 
+/**
+ * Program listesini reward/applicable menu item objeleriyle zenginleştir.
+ * Mobile UI bu sayede "🎁 bedava alacağın ürünler" listesini gösterir.
+ */
+async function decorateProgramsWithMenuItems(
+  prisma: PrismaClient,
+  programs: any[],
+): Promise<any[]> {
+  const allIds = new Set<string>();
+  for (const p of programs) {
+    (p.applicableMenuItemIds ?? []).forEach((id: string) => allIds.add(id));
+    (p.rewardMenuItemIds ?? []).forEach((id: string) => allIds.add(id));
+  }
+  if (allIds.size === 0) return programs;
+
+  const items = await prisma.menuItem.findMany({
+    where: { id: { in: Array.from(allIds) } },
+    select: { id: true, name: true, price: true, image: true, categoryId: true },
+  });
+  const byId = new Map(items.map((it) => [it.id, it]));
+
+  return programs.map((p) => ({
+    ...p,
+    applicableMenuItems: (p.applicableMenuItemIds ?? [])
+      .map((id: string) => byId.get(id))
+      .filter(Boolean),
+    rewardMenuItems: (p.rewardMenuItemIds ?? [])
+      .map((id: string) => byId.get(id))
+      .filter(Boolean),
+  }));
+}
+
 // Müşteri için unique referral code üret
 async function ensureReferralCode(prisma: PrismaClient, customerId: string): Promise<string> {
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
@@ -35,7 +67,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
-    return { programs };
+    return { programs: await decorateProgramsWithMenuItems(prisma, programs) };
   });
 
   // ==================== ME PROGRESS — kullanıcının her programdaki durumu ====================
@@ -84,7 +116,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
         loyaltyTier: fresh!.loyaltyTier,
         birthDate: fresh!.birthDate,
       },
-      programs,
+      programs: await decorateProgramsWithMenuItems(prisma, programs),
       progress,
     };
   });

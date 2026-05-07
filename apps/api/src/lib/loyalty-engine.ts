@@ -141,12 +141,26 @@ async function createStampReward(prisma: PrismaClient, program: AnyProgram, cust
   const validUntil = new Date(Date.now() + 30 * 86400_000); // 30 gün
 
   if (rewardType === 'FREE_ITEM') {
-    // %100 indirim, sınırlı belirli ürün üzerinde
+    // Ödül ürün isimlerini açıklamaya ekle (çoklu seçim destekli)
+    let rewardDescription = 'Damga kartı ödülü';
+    const rewardIds = program.rewardMenuItemIds ?? [];
+    if (rewardIds.length > 0) {
+      const items = await prisma.menuItem.findMany({
+        where: { id: { in: rewardIds } },
+        select: { name: true },
+      });
+      if (items.length > 0) {
+        const names = items.map((i) => i.name).join(', ');
+        rewardDescription = `Bedava: ${names}`;
+      }
+    }
+
+    // %100 indirim — geçerli ürünler kupon açıklamasında
     await prisma.coupon.create({
       data: {
         code,
         name: `${program.name} - Bedava Ürün`,
-        description: 'Damga kartı ödülü',
+        description: rewardDescription,
         discountType: 'PERCENT',
         discountValue: 100,
         startDate: new Date(),

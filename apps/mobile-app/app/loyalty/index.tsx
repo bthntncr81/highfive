@@ -20,6 +20,7 @@ import * as Haptics from "expo-haptics";
 
 import { endpoints } from "@/lib/api";
 import { handleApiError } from "@/lib/error-handler";
+import { StampVisual } from "@/components/loyalty/StampVisuals";
 
 type ProgramType =
   | "BASIC_POINTS" | "STAMP_CARD" | "BIRTHDAY" | "WELCOME"
@@ -283,12 +284,20 @@ function CardHeader({ icon, color, name, description, badge }: any) {
   );
 }
 
-// 1) STAMP CARD — Domino's tarzı 10 daire
+// 1) STAMP CARD — Pizza/Burger/Pasta/Cup/Hex SVG visual
 function StampCard({ program, progress }: any) {
-  const target = program.config?.stampsRequired ?? 10;
-  const count = progress?.count ?? 0;
+  const target = Math.max(2, Number(program.config?.stampsRequired ?? 10));
+  const count = Math.min(target, Number(progress?.count ?? 0));
   const remaining = Math.max(0, target - count);
   const color = program.color ?? "#bb1e10";
+  const ready = remaining === 0;
+  const pctText = Math.round((count / target) * 100);
+  const visualStyle = program.config?.visualStyle ?? "auto";
+  // categoryHint: program adından/açıklamasından çıkarılmaya çalışılır
+  const categoryHint = `${program.name ?? ""} ${program.description ?? ""}`.toLowerCase();
+
+  // Reward ürünleri (ödüller) — birden fazla seçilmiş olabilir
+  const rewardItems: any[] = program.rewardMenuItems ?? [];
 
   return (
     <>
@@ -297,47 +306,74 @@ function StampCard({ program, progress }: any) {
         color={color}
         name={program.name}
         description={program.description}
-        badge={remaining === 0 ? "🎉 ÖDÜL HAZIR" : `${count}/${target}`}
+        badge={ready ? "🎉 ÖDÜL HAZIR" : `${count}/${target}`}
       />
       <View className="p-4">
-        {/* Stamp circles grid */}
-        <View className="flex-row flex-wrap gap-2">
-          {Array.from({ length: target }).map((_, i) => {
-            const filled = i < count;
-            const isReward = i === target - 1;
-            return (
-              <View
-                key={i}
-                style={{
-                  width: 36, height: 36,
-                  backgroundColor: filled ? color : "#f3f4f6",
-                  borderWidth: 2,
-                  borderColor: isReward ? "#10b981" : (filled ? color : "#d1d5db"),
-                  borderStyle: isReward && !filled ? "dashed" : "solid",
-                }}
-                className="items-center justify-center rounded-full"
-              >
-                <Text style={{ color: filled ? "#fff" : (isReward ? "#10b981" : "#9ca3af") }} className="text-sm font-bold">
-                  {filled ? "✓" : isReward ? "🎁" : i + 1}
-                </Text>
-              </View>
-            );
-          })}
+        {/* Big counter row */}
+        <View className="mb-3 flex-row items-end justify-between">
+          <View>
+            <Text className="text-xs font-medium text-foreground-muted">İlerleme</Text>
+            <Text className="text-3xl font-extrabold" style={{ color }}>
+              {count}
+              <Text className="text-base font-semibold text-foreground-muted"> / {target}</Text>
+            </Text>
+          </View>
+          <View
+            style={{ backgroundColor: ready ? "#10b981" : `${color}15` }}
+            className="rounded-full px-3 py-1.5"
+          >
+            <Text style={{ color: ready ? "#fff" : color }} className="text-xs font-bold">
+              {ready ? "🎁 Hediye hazır!" : `%${pctText}`}
+            </Text>
+          </View>
         </View>
 
-        {remaining > 0 ? (
-          <Text className="mt-3 text-center text-xs text-foreground-muted">
-            Hedefe <Text className="font-bold text-foreground">{remaining} sipariş</Text> kaldı 🎯
-          </Text>
-        ) : (
+        {/* SVG Visual — pizza pie / burger stack / pasta bowl / cups / hex */}
+        <View className="my-2 items-center">
+          <StampVisual
+            count={count}
+            target={target}
+            color={color}
+            visualStyle={visualStyle}
+            categoryHint={categoryHint}
+          />
+        </View>
+
+        {/* Reward items preview — verilen ürünler */}
+        {rewardItems.length > 0 && (
+          <View className="mt-3 rounded-xl bg-amber-50 p-3 border border-amber-200">
+            <Text className="mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              🎁 Bedava alacağın ürünler
+            </Text>
+            <Text className="text-xs font-semibold text-amber-900">
+              {rewardItems.map((it: any) => it.name).join(" · ")}
+            </Text>
+          </View>
+        )}
+
+        {/* Footer: remaining or claim */}
+        {ready ? (
           <Pressable
             style={{ backgroundColor: color }}
-            className="mt-3 items-center rounded-full py-3"
+            className="mt-4 flex-row items-center justify-center rounded-full py-3.5"
           >
-            <Text className="text-sm font-extrabold text-white">
-              🎁 Ödülünü kullan
+            <Ionicons name="gift" size={18} color="#fff" />
+            <Text className="ml-2 text-sm font-extrabold text-white">
+              Ödülünü Kullan
             </Text>
           </Pressable>
+        ) : (
+          <View className="mt-3 flex-row items-center justify-center">
+            <View
+              style={{ backgroundColor: `${color}10` }}
+              className="flex-row items-center rounded-full px-3 py-1.5"
+            >
+              <Ionicons name="flag" size={12} color={color} />
+              <Text className="ml-1.5 text-xs font-semibold" style={{ color }}>
+                {remaining} sipariş daha = bedava!
+              </Text>
+            </View>
+          </View>
         )}
       </View>
     </>
