@@ -60,6 +60,15 @@
           "locationAlwaysAndWhenInUsePermission": "Teslimat adresi için konumunuzu kullanırız.",
           "locationWhenInUsePermission": "Teslimat adresi için konumunuzu kullanırız."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#bb1e10",
+          "defaultChannel": "default",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {

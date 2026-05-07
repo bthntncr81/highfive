@@ -5,7 +5,29 @@ import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 import { sendCampaignPush, sendPushToTokens } from '../lib/push';
 
-type TargetType = 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE';
+type TargetType = 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE' | 'SEGMENT';
+
+type Recurrence =
+  | { type: 'DAILY'; hour: number; minute?: number }
+  | { type: 'WEEKLY'; dayOfWeek: number; hour: number; minute?: number } // 0=Pazar
+  | { type: 'MONTHLY'; dayOfMonth: number; hour: number; minute?: number };
+
+type SegmentCriteria = {
+  // Müşteri belirli ürünleri sipariş etmiş olmalı
+  menuItemIds?: string[];
+  // Belirli kategorideki ürünleri sipariş etmiş olmalı
+  categoryIds?: string[];
+  // Son N gün içinde sipariş vermiş olmalı
+  lastNDays?: number;
+  // Belirli bir günde sipariş veriyor olmalı (0=Pazar, 6=Cumartesi)
+  dayOfWeek?: number;
+  // Min sipariş sayısı
+  minOrderCount?: number;
+  // Min toplam harcama
+  minTotalSpent?: number;
+  // Sadece doğrulanmış üyeler
+  verifiedOnly?: boolean;
+};
 
 export default async function notificationRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
@@ -70,7 +92,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
     return { notification };
   });
 
-  // ==================== CREATE (Send NOW or SCHEDULE) ====================
+  // ==================== CREATE (Send NOW / SCHEDULE / RECURRING) ====================
   server.post('/notifications', { preHandler: verifyAdmin }, async (
     request: any,
     reply: any,
@@ -83,15 +105,25 @@ export default async function notificationRoutes(server: FastifyInstance) {
       campaignId?: string;
       targetType?: TargetType;
       targetIds?: string[];
-      scheduledAt?: string;            // ISO; null/undefined = hemen gönder
-      sendNow?: boolean;               // true = scheduledAt'ı yoksay, anında gönder
+      segmentCriteria?: SegmentCriteria;
+      scheduledAt?: string;
+      sendNow?: boolean;
+      recurrence?: Recurrence;
     };
 
     if (!body.title || !body.body) {
       return reply.status(400).send({ error: 'title ve body gerekli' });
     }
 
-    const sendNow = body.sendNow === true || !body.scheduledAt;
+    const sendNow = body.sendNow === true || (!body.scheduledAt && !body.recurrence);
+
+    // Segment ise targetIds'i şimdi hesaplama (anlık send için)
+    let targetType: TargetType = body.targetType ?? 'ALL';
+    let targetIds: string[] = body.targetIds ?? [];
+    if (sendNow && targetType === 'SEGMENT' && body.segmentCriteria) {
+      targetIds = await findCustomersBySegment(prisma, body.segmentCriteria);
+      targetType = 'CUSTOMER';
+    }
 
     if (sendNow) {
       const result = await sendCampaignPush(prisma, {
@@ -100,10 +132,29 @@ export default async function notificationRoutes(server: FastifyInstance) {
         imageUrl: body.imageUrl,
         data: body.data,
         campaignId: body.campaignId,
-        targetType: body.targetType ?? 'ALL',
-        targetIds: body.targetIds ?? [],
+        targetType: targetType as 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE',
+        targetIds,
       });
       return result;
+    }
+
+    // RECURRING
+    if (body.recurrence) {
+      const notification = await prisma.pushNotification.create({
+        data: {
+          title: body.title,
+          body: body.body,
+          imageUrl: body.imageUrl,
+          data: (body.data as any) ?? {},
+          campaignId: body.campaignId,
+          targetType: body.targetType ?? 'ALL',
+          targetIds: body.targetIds ?? [],
+          segmentCriteria: (body.segmentCriteria as any) ?? undefined,
+          recurrence: body.recurrence as any,
+          status: 'RECURRING',
+        },
+      });
+      return { notification };
     }
 
     // SCHEDULE
@@ -124,6 +175,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
         campaignId: body.campaignId,
         targetType: body.targetType ?? 'ALL',
         targetIds: body.targetIds ?? [],
+        segmentCriteria: (body.segmentCriteria as any) ?? undefined,
         scheduledAt,
         status: 'SCHEDULED',
       },
@@ -173,14 +225,58 @@ export default async function notificationRoutes(server: FastifyInstance) {
       where: { id },
     });
     if (!existing) return reply.status(404).send({ error: 'Bulunamadı' });
-    if (existing.status !== 'SCHEDULED') {
-      return reply.status(400).send({ error: 'Sadece zamanlanmış bildirim iptal edilebilir' });
+    if (existing.status !== 'SCHEDULED' && existing.status !== 'RECURRING') {
+      return reply.status(400).send({ error: 'Sadece zamanlanmış veya tekrarlayan bildirim iptal edilebilir' });
     }
     const updated = await prisma.pushNotification.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
     return { notification: updated };
+  });
+
+  // ==================== CUSTOMER SEARCH (target=CUSTOMER için) ====================
+  server.get('/notifications/customers/search', { preHandler: verifyAdmin }, async (request: any) => {
+    const { q, limit } = request.query as { q?: string; limit?: string };
+    const take = Math.min(parseInt(limit || '20', 10), 100);
+    const customers = await prisma.customer.findMany({
+      where: q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q } },
+              { email: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        email: true,
+        isVerified: true,
+        totalPoints: true,
+        orderCount: true,
+        loyaltyTier: { select: { name: true, icon: true } },
+      },
+    });
+    return { customers };
+  });
+
+  // ==================== SEGMENT PREVIEW ====================
+  // Belirli kriterlerle eşleşen müşterileri sayar + örnek liste döner
+  server.post('/notifications/segment/preview', { preHandler: verifyAdmin }, async (
+    request: any,
+  ) => {
+    const criteria = (request.body ?? {}) as SegmentCriteria;
+    const ids = await findCustomersBySegment(prisma, criteria);
+    const sample = await prisma.customer.findMany({
+      where: { id: { in: ids.slice(0, 5) } },
+      select: { id: true, name: true, phone: true, email: true },
+    });
+    return { count: ids.length, sample };
   });
 
   // ==================== TEST: Send to a single token ====================
@@ -201,49 +297,220 @@ export default async function notificationRoutes(server: FastifyInstance) {
   });
 }
 
-// ==================== SCHEDULED WORKER ====================
-// Her dakikada bir çalışan basit worker (main.ts'ten setInterval ile başlatılır)
+// ==================== SEGMENT HELPER ====================
+// Müşterileri segment kriterine göre bulur — Customer.id[] döner.
+// Mobile bildirimleri için: aktif device token'ı olan müşteriler önce filtrelenir.
+export async function findCustomersBySegment(
+  prisma: PrismaClient,
+  c: SegmentCriteria,
+): Promise<string[]> {
+  // Base where — verified ve device'ı olanlar
+  const customerWhere: any = {};
+  if (c.verifiedOnly !== false) {
+    customerWhere.isVerified = true;
+  }
+  if (c.minOrderCount && c.minOrderCount > 0) {
+    customerWhere.orderCount = { gte: c.minOrderCount };
+  }
+  if (c.minTotalSpent && c.minTotalSpent > 0) {
+    customerWhere.totalSpent = { gte: c.minTotalSpent };
+  }
+  // Sadece aktif device'ı olanlar
+  customerWhere.devices = { some: { isActive: true } };
+
+  // Önce candidate customer'ları topla
+  const candidates = await prisma.customer.findMany({
+    where: customerWhere,
+    select: { id: true },
+  });
+  let ids = candidates.map((x) => x.id);
+
+  // Sipariş bazlı kriterler — CustomerOrder + Order üzerinden filtrele
+  if (
+    c.menuItemIds?.length ||
+    c.categoryIds?.length ||
+    c.lastNDays ||
+    typeof c.dayOfWeek === 'number'
+  ) {
+    const sinceDate = c.lastNDays
+      ? new Date(Date.now() - c.lastNDays * 86400_000)
+      : undefined;
+
+    // Order WHERE clause'ı oluştur
+    const orderWhere: any = {};
+    if (sinceDate) orderWhere.createdAt = { gte: sinceDate };
+
+    // Bu kriterlere uyan order'ları bul
+    const matchingOrders = await prisma.order.findMany({
+      where: orderWhere,
+      select: {
+        id: true,
+        createdAt: true,
+        customerPhone: true,
+        items: {
+          select: {
+            menuItemId: true,
+            menuItem: { select: { categoryId: true } },
+          },
+        },
+      },
+    });
+
+    // Filter (in-memory, daha karmaşık joinler için)
+    const filteredOrders = matchingOrders.filter((o) => {
+      if (typeof c.dayOfWeek === 'number') {
+        const day = new Date(o.createdAt).getDay();
+        if (day !== c.dayOfWeek) return false;
+      }
+      if (c.menuItemIds?.length) {
+        const hasMatch = o.items.some(
+          (it) => it.menuItemId && c.menuItemIds!.includes(it.menuItemId),
+        );
+        if (!hasMatch) return false;
+      }
+      if (c.categoryIds?.length) {
+        const hasMatch = o.items.some(
+          (it) =>
+            it.menuItem?.categoryId && c.categoryIds!.includes(it.menuItem.categoryId),
+        );
+        if (!hasMatch) return false;
+      }
+      return true;
+    });
+
+    // Bu sipariş sahiplerinin Customer.id'lerini topla
+    const orderIds = filteredOrders.map((o) => o.id);
+    const customerOrders = await prisma.customerOrder.findMany({
+      where: { orderId: { in: orderIds } },
+      select: { customerId: true },
+    });
+    const matchedCustomerIds = new Set(customerOrders.map((co) => co.customerId));
+
+    ids = ids.filter((id) => matchedCustomerIds.has(id));
+  }
+
+  return ids;
+}
+
+// ==================== RECURRING TIMING ====================
+function shouldFireRecurring(
+  rec: Recurrence,
+  lastSentAt: Date | null,
+  now: Date,
+): boolean {
+  // Bu dakikadaki saat/dakika kombinasyonu
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+
+  if (rec.type === 'DAILY') {
+    if (hour !== rec.hour) return false;
+    if ((rec.minute ?? 0) !== minute) return false;
+  } else if (rec.type === 'WEEKLY') {
+    if (now.getDay() !== rec.dayOfWeek) return false;
+    if (hour !== rec.hour) return false;
+    if ((rec.minute ?? 0) !== minute) return false;
+  } else if (rec.type === 'MONTHLY') {
+    if (now.getDate() !== rec.dayOfMonth) return false;
+    if (hour !== rec.hour) return false;
+    if ((rec.minute ?? 0) !== minute) return false;
+  } else {
+    return false;
+  }
+
+  // Son 5 dakika içinde gönderilmiş mi? (idempotency — recurring çift göndermesin)
+  if (lastSentAt) {
+    const ageMin = (now.getTime() - lastSentAt.getTime()) / 60_000;
+    if (ageMin < 5) return false;
+  }
+  return true;
+}
+
+// ==================== SCHEDULED + RECURRING WORKER ====================
+// main.ts'ten setInterval ile başlatılır (60sn'de bir önerilir)
 export async function processScheduledNotifications(prisma: PrismaClient): Promise<void> {
+  const now = new Date();
+
+  // 1) Tek seferlik scheduled bildirimler
   const due = await prisma.pushNotification.findMany({
     where: {
       status: 'SCHEDULED',
-      scheduledAt: { lte: new Date() },
+      scheduledAt: { lte: now },
     },
     take: 50,
   });
 
-  if (due.length === 0) return;
-
   for (const n of due) {
     try {
-      // Status'u SENDING'e al (race condition koruması)
       const claimed = await prisma.pushNotification.updateMany({
         where: { id: n.id, status: 'SCHEDULED' },
         data: { status: 'SENDING' },
       });
-      if (claimed.count === 0) continue; // başka worker aldı
+      if (claimed.count === 0) continue;
 
-      await sendCampaignPush(prisma, {
-        title: n.title,
-        body: n.body,
-        imageUrl: n.imageUrl ?? undefined,
-        data: (n.data as Record<string, unknown>) ?? {},
-        campaignId: n.campaignId ?? undefined,
-        targetType: (n.targetType as TargetType) ?? 'ALL',
-        targetIds: n.targetIds,
-      });
+      await fireNotification(prisma, n);
 
-      // sendCampaignPush kendi notification kaydını oluşturuyor; orijinali güncelleyelim
       await prisma.pushNotification.update({
         where: { id: n.id },
-        data: { status: 'SENT', sentAt: new Date() },
+        data: { status: 'SENT', sentAt: new Date(), lastSentAt: new Date() },
       });
     } catch (e: any) {
-      console.error('[push-worker] error', e);
+      console.error('[push-worker] scheduled error', e);
       await prisma.pushNotification.update({
         where: { id: n.id },
         data: { status: 'FAILED' },
       });
     }
   }
+
+  // 2) Recurring bildirimler — pattern eşleşince gönder
+  const recurring = await prisma.pushNotification.findMany({
+    where: {
+      status: 'RECURRING',
+    },
+    take: 100,
+  });
+
+  for (const n of recurring) {
+    const rec = n.recurrence as Recurrence | null;
+    if (!rec) continue;
+
+    if (!shouldFireRecurring(rec, n.lastSentAt, now)) continue;
+
+    try {
+      await fireNotification(prisma, n);
+
+      await prisma.pushNotification.update({
+        where: { id: n.id },
+        data: {
+          lastSentAt: new Date(),
+          sentAt: new Date(),
+          // status RECURRING kalıyor — bir sonraki pattern eşleşmesinde tekrar
+        },
+      });
+    } catch (e: any) {
+      console.error('[push-worker] recurring error', e);
+    }
+  }
+}
+
+// Bildirim send (segment desteğiyle)
+async function fireNotification(prisma: PrismaClient, n: any): Promise<void> {
+  let targetType: TargetType = (n.targetType as TargetType) ?? 'ALL';
+  let targetIds: string[] = n.targetIds ?? [];
+
+  // Segment ise customer ID'leri çıkart
+  if (targetType === 'SEGMENT' && n.segmentCriteria) {
+    targetIds = await findCustomersBySegment(prisma, n.segmentCriteria as SegmentCriteria);
+    targetType = 'CUSTOMER';
+  }
+
+  await sendCampaignPush(prisma, {
+    title: n.title,
+    body: n.body,
+    imageUrl: n.imageUrl ?? undefined,
+    data: (n.data as Record<string, unknown>) ?? {},
+    campaignId: n.campaignId ?? undefined,
+    targetType: targetType as 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE',
+    targetIds,
+  });
 }

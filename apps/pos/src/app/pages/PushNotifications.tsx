@@ -28,13 +28,28 @@ type Notification = {
   imageUrl?: string | null;
   data?: Record<string, unknown>;
   campaignId?: string | null;
-  targetType: 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE';
+  targetType: 'ALL' | 'VERIFIED' | 'CUSTOMER' | 'DEVICE' | 'SEGMENT';
+  targetIds?: string[];
+  segmentCriteria?: any;
+  recurrence?: any;
   sentCount: number;
   failedCount: number;
-  status: 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
+  status: 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED' | 'RECURRING';
   scheduledAt?: string | null;
   sentAt?: string | null;
+  lastSentAt?: string | null;
   createdAt: string;
+};
+
+type Customer = {
+  id: string;
+  phone: string;
+  name: string | null;
+  email: string | null;
+  isVerified: boolean;
+  totalPoints: number;
+  orderCount: number;
+  loyaltyTier?: { name: string; icon: string | null } | null;
 };
 
 type Stats = {
@@ -53,6 +68,7 @@ const STATUS_CHIPS: Record<Notification['status'], { label: string; cls: string 
   SENT: { label: 'Gönderildi', cls: 'bg-green-100 text-green-700' },
   FAILED: { label: 'Başarısız', cls: 'bg-red-100 text-red-700' },
   CANCELLED: { label: 'İptal', cls: 'bg-foreground-subtle/10 text-foreground-muted' },
+  RECURRING: { label: '🔁 Tekrarlanan', cls: 'bg-purple-100 text-purple-700' },
 };
 
 const TARGET_LABELS = {
@@ -60,7 +76,10 @@ const TARGET_LABELS = {
   VERIFIED: 'Sadece üye olanlar',
   CUSTOMER: 'Belirli müşteriler',
   DEVICE: 'Belirli cihazlar',
+  SEGMENT: 'Davranış segmenti',
 };
+
+const DAYS_TR = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
 export default function PushNotifications() {
   const { token } = useAuth();
@@ -74,12 +93,46 @@ export default function PushNotifications() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [linkRoute, setLinkRoute] = useState(''); // örn /campaign/abc, /menu, /product/123
+  const [linkRoute, setLinkRoute] = useState('');
   const [targetType, setTargetType] = useState<Notification['targetType']>('ALL');
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>([]);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+
+  // Segment kriterleri
+  const [segMenuItemIds, setSegMenuItemIds] = useState<string[]>([]);
+  const [segCategoryIds, setSegCategoryIds] = useState<string[]>([]);
+  const [segLastNDays, setSegLastNDays] = useState<number | null>(null);
+  const [segDayOfWeek, setSegDayOfWeek] = useState<number | null>(null);
+  const [segMinOrderCount, setSegMinOrderCount] = useState<number | null>(null);
+  const [segPreview, setSegPreview] = useState<{ count: number; sample: any[] } | null>(null);
+
+  // Zamanlama
+  type Schedule = 'NOW' | 'ONCE' | 'RECURRING';
+  const [schedule, setSchedule] = useState<Schedule>('NOW');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [recType, setRecType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('WEEKLY');
+  const [recHour, setRecHour] = useState(18);
+  const [recMinute, setRecMinute] = useState(0);
+  const [recDayOfWeek, setRecDayOfWeek] = useState(0); // Pazar
+  const [recDayOfMonth, setRecDayOfMonth] = useState(1);
+
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  // Menu items for segment criteria
+  const [menuItems, setMenuItems] = useState<{ id: string; name: string; categoryId: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    api
+      .get('/api/menu', token)
+      .then((res) => {
+        setMenuItems(res?.items ?? []);
+        setCategories(res?.categories ?? []);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const refresh = async () => {
     setError(null);
@@ -110,12 +163,42 @@ export default function PushNotifications() {
     setImageUrl('');
     setLinkRoute('');
     setTargetType('ALL');
-    setScheduleEnabled(false);
+    setSelectedCustomers([]);
+    setSegMenuItemIds([]);
+    setSegCategoryIds([]);
+    setSegLastNDays(null);
+    setSegDayOfWeek(null);
+    setSegMinOrderCount(null);
+    setSegPreview(null);
+    setSchedule('NOW');
     setScheduledAt('');
+    setRecType('WEEKLY');
+    setRecHour(18);
+    setRecMinute(0);
+    setRecDayOfWeek(0);
+    setRecDayOfMonth(1);
     setFeedback(null);
   };
 
-  const handleSubmit = async (sendNow: boolean) => {
+  // Segment preview
+  const previewSegment = async () => {
+    try {
+      const criteria: any = {
+        verifiedOnly: true,
+      };
+      if (segMenuItemIds.length) criteria.menuItemIds = segMenuItemIds;
+      if (segCategoryIds.length) criteria.categoryIds = segCategoryIds;
+      if (segLastNDays) criteria.lastNDays = segLastNDays;
+      if (typeof segDayOfWeek === 'number') criteria.dayOfWeek = segDayOfWeek;
+      if (segMinOrderCount) criteria.minOrderCount = segMinOrderCount;
+      const res = await api.post('/api/notifications/segment/preview', criteria, token);
+      setSegPreview(res);
+    } catch (e: any) {
+      setFeedback({ type: 'err', text: e?.message ?? 'Önizleme hatası' });
+    }
+  };
+
+  const handleSubmit = async () => {
     if (title.trim().length < 3) {
       setFeedback({ type: 'err', text: 'Başlık en az 3 karakter olmalı' });
       return;
@@ -124,10 +207,22 @@ export default function PushNotifications() {
       setFeedback({ type: 'err', text: 'İçerik en az 5 karakter olmalı' });
       return;
     }
-    if (!sendNow && (!scheduleEnabled || !scheduledAt)) {
+    // Target validation
+    if (targetType === 'CUSTOMER' && selectedCustomers.length === 0) {
+      setFeedback({ type: 'err', text: 'En az 1 müşteri seç' });
+      return;
+    }
+    if (targetType === 'SEGMENT' && !segPreview?.count) {
+      setFeedback({ type: 'err', text: 'Segment kriteri eşleşen müşteri yok — önizleme yap' });
+      return;
+    }
+    // Schedule validation
+    if (schedule === 'ONCE' && !scheduledAt) {
       setFeedback({ type: 'err', text: 'Zamanlama tarihi gerekli' });
       return;
     }
+
+    const sendNow = schedule === 'NOW';
 
     setSending(true);
     setFeedback(null);
@@ -140,9 +235,33 @@ export default function PushNotifications() {
         sendNow,
         data: linkRoute.trim() ? { route: linkRoute.trim() } : undefined,
       };
-      if (!sendNow && scheduledAt) {
+
+      if (targetType === 'CUSTOMER') {
+        payload.targetIds = selectedCustomers.map((c) => c.id);
+      }
+      if (targetType === 'SEGMENT') {
+        const criteria: any = { verifiedOnly: true };
+        if (segMenuItemIds.length) criteria.menuItemIds = segMenuItemIds;
+        if (segCategoryIds.length) criteria.categoryIds = segCategoryIds;
+        if (segLastNDays) criteria.lastNDays = segLastNDays;
+        if (typeof segDayOfWeek === 'number') criteria.dayOfWeek = segDayOfWeek;
+        if (segMinOrderCount) criteria.minOrderCount = segMinOrderCount;
+        payload.segmentCriteria = criteria;
+      }
+
+      if (schedule === 'ONCE' && scheduledAt) {
         payload.scheduledAt = new Date(scheduledAt).toISOString();
       }
+      if (schedule === 'RECURRING') {
+        payload.recurrence = {
+          type: recType,
+          hour: recHour,
+          minute: recMinute,
+          ...(recType === 'WEEKLY' && { dayOfWeek: recDayOfWeek }),
+          ...(recType === 'MONTHLY' && { dayOfMonth: recDayOfMonth }),
+        };
+      }
+
       const res = await api.post('/api/notifications', payload, token);
       if (sendNow) {
         setFeedback({
@@ -180,7 +299,10 @@ export default function PushNotifications() {
   }, [composerOpen]);
 
   const scheduled = notifications.filter((n) => n.status === 'SCHEDULED');
-  const history = notifications.filter((n) => n.status !== 'SCHEDULED');
+  const recurring = notifications.filter((n) => n.status === 'RECURRING');
+  const history = notifications.filter(
+    (n) => n.status !== 'SCHEDULED' && n.status !== 'RECURRING',
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -395,7 +517,7 @@ export default function PushNotifications() {
 
               <Field label="Hedef kitle">
                 <div className="grid grid-cols-2 gap-2">
-                  {(['ALL', 'VERIFIED'] as const).map((t) => (
+                  {(['ALL', 'VERIFIED', 'CUSTOMER', 'SEGMENT'] as const).map((t) => (
                     <label
                       key={t}
                       className={`cursor-pointer rounded-xl border-2 p-3 transition ${
@@ -416,36 +538,293 @@ export default function PushNotifications() {
                       <p className="text-xs text-foreground-muted mt-0.5">
                         {t === 'ALL'
                           ? `${stats?.totalDevices ?? '?'} cihaz`
-                          : `${stats?.verifiedDevices ?? '?'} cihaz`}
+                          : t === 'VERIFIED'
+                          ? `${stats?.verifiedDevices ?? '?'} cihaz`
+                          : t === 'CUSTOMER'
+                          ? `${selectedCustomers.length} seçili`
+                          : segPreview
+                          ? `${segPreview.count} müşteri`
+                          : 'Kriter belirle'}
                       </p>
                     </label>
                   ))}
                 </div>
+
+                {/* CUSTOMER seçim */}
+                {targetType === 'CUSTOMER' && (
+                  <div className="mt-3 rounded-xl bg-surface p-3">
+                    {selectedCustomers.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {selectedCustomers.map((c) => (
+                          <span
+                            key={c.id}
+                            className="inline-flex items-center gap-1 rounded-full bg-primary-50 border border-primary-200 px-2.5 py-1 text-xs"
+                          >
+                            <span className="font-semibold">
+                              {c.name || c.phone}
+                            </span>
+                            <button
+                              onClick={() =>
+                                setSelectedCustomers((s) => s.filter((x) => x.id !== c.id))
+                              }
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerPicker(true)}
+                      className="w-full rounded-xl border-2 border-dashed border-primary-300 bg-white py-2.5 text-sm font-semibold text-primary-600 hover:bg-primary-50"
+                    >
+                      + Müşteri ekle (telefon/ad/e-posta arama)
+                    </button>
+                  </div>
+                )}
+
+                {/* SEGMENT kriter */}
+                {targetType === 'SEGMENT' && (
+                  <div className="mt-3 space-y-3 rounded-xl bg-surface p-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">
+                        Hangi ürünleri sipariş etmiş?
+                      </label>
+                      <select
+                        multiple
+                        value={segMenuItemIds}
+                        onChange={(e) =>
+                          setSegMenuItemIds(
+                            Array.from(e.target.selectedOptions).map((o) => o.value),
+                          )
+                        }
+                        className="input h-32"
+                      >
+                        {menuItems.map((it) => (
+                          <option key={it.id} value={it.id}>
+                            {it.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-foreground-muted mt-1">
+                        Cmd/Ctrl + tık ile çoklu seç. Boş = filtrele
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">
+                          Son N gün içinde
+                        </label>
+                        <input
+                          type="number"
+                          value={segLastNDays ?? ''}
+                          onChange={(e) =>
+                            setSegLastNDays(e.target.value ? Number(e.target.value) : null)
+                          }
+                          placeholder="örn 30"
+                          className="input"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">
+                          Hangi gün?
+                        </label>
+                        <select
+                          value={segDayOfWeek ?? ''}
+                          onChange={(e) =>
+                            setSegDayOfWeek(e.target.value === '' ? null : Number(e.target.value))
+                          }
+                          className="input"
+                        >
+                          <option value="">— Hepsi —</option>
+                          {DAYS_TR.map((d, i) => (
+                            <option key={i} value={i}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">
+                        Min sipariş sayısı
+                      </label>
+                      <input
+                        type="number"
+                        value={segMinOrderCount ?? ''}
+                        onChange={(e) =>
+                          setSegMinOrderCount(e.target.value ? Number(e.target.value) : null)
+                        }
+                        placeholder="örn 3"
+                        className="input"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={previewSegment}
+                      className="w-full rounded-xl bg-accent-500 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+                    >
+                      🔍 Segmenti önizle
+                    </button>
+
+                    {segPreview && (
+                      <div className="rounded-xl bg-white border border-border-light p-3">
+                        <p className="text-sm font-bold">
+                          🎯 {segPreview.count} müşteri eşleşiyor
+                        </p>
+                        {segPreview.sample.length > 0 && (
+                          <p className="mt-1 text-xs text-foreground-muted">
+                            Örn:{' '}
+                            {segPreview.sample
+                              .map((c: any) => c.name || c.phone)
+                              .join(', ')}
+                            {segPreview.count > segPreview.sample.length && ' ...'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-foreground-muted bg-amber-50 border border-amber-200 rounded-lg p-2">
+                      💡 Örnek: "Pazarları 4 peynirli pizza alanlar" → ürün: 4 Peynirli, gün: Pazar, son: 60 gün → bu segmente 'tekrarlanan'
+                      bildirim ile pazarlık yap (her pazar 18:00 indirim kodu)
+                    </p>
+                  </div>
+                )}
               </Field>
 
               <Field label="Zamanlama">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scheduleEnabled}
-                      onChange={(e) => setScheduleEnabled(e.target.checked)}
-                      className="h-4 w-4 accent-primary-500"
-                    />
-                    <span className="text-sm text-foreground">
-                      Belirli bir tarihte gönder
-                    </span>
-                  </label>
-                  {scheduleEnabled && (
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      min={minSchedule}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="input"
-                    />
-                  )}
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      { v: 'NOW', label: '⚡ Şimdi', desc: 'Anında gönder' },
+                      { v: 'ONCE', label: '📅 Bir kez', desc: 'Belirli tarih' },
+                      { v: 'RECURRING', label: '🔁 Tekrarlı', desc: 'Pazar/her ay vs.' },
+                    ] as const
+                  ).map((opt) => (
+                    <label
+                      key={opt.v}
+                      className={`cursor-pointer rounded-xl border-2 p-2.5 transition text-center ${
+                        schedule === opt.v
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-border hover:border-foreground-subtle'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        className="sr-only"
+                        checked={schedule === opt.v}
+                        onChange={() => setSchedule(opt.v)}
+                      />
+                      <p className="text-sm font-bold">{opt.label}</p>
+                      <p className="text-[10px] text-foreground-muted mt-0.5">{opt.desc}</p>
+                    </label>
+                  ))}
                 </div>
+
+                {schedule === 'ONCE' && (
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    min={minSchedule}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="input mt-3"
+                  />
+                )}
+
+                {schedule === 'RECURRING' && (
+                  <div className="mt-3 space-y-3 rounded-xl bg-surface p-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setRecType(t)}
+                          className={`rounded-lg border-2 py-1.5 text-xs font-semibold ${
+                            recType === t
+                              ? 'border-primary-500 bg-primary-50 text-primary-700'
+                              : 'border-border bg-white text-foreground-muted'
+                          }`}
+                        >
+                          {t === 'DAILY' ? 'Her gün' : t === 'WEEKLY' ? 'Haftalık' : 'Aylık'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {recType === 'WEEKLY' && (
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">Hangi gün?</label>
+                        <select
+                          value={recDayOfWeek}
+                          onChange={(e) => setRecDayOfWeek(Number(e.target.value))}
+                          className="input"
+                        >
+                          {DAYS_TR.map((d, i) => (
+                            <option key={i} value={i}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {recType === 'MONTHLY' && (
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">
+                          Ayın kaçı? (1-28)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={28}
+                          value={recDayOfMonth}
+                          onChange={(e) =>
+                            setRecDayOfMonth(Math.max(1, Math.min(28, Number(e.target.value))))
+                          }
+                          className="input"
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">Saat</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={23}
+                          value={recHour}
+                          onChange={(e) =>
+                            setRecHour(Math.max(0, Math.min(23, Number(e.target.value))))
+                          }
+                          className="input"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">Dakika</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={59}
+                          value={recMinute}
+                          onChange={(e) =>
+                            setRecMinute(Math.max(0, Math.min(59, Number(e.target.value))))
+                          }
+                          className="input"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-foreground-muted bg-purple-50 border border-purple-200 rounded-lg p-2">
+                      🔁 Bildirim {recType === 'DAILY' ? 'her gün' : recType === 'WEEKLY' ? `her ${DAYS_TR[recDayOfWeek]}` : `ayın ${recDayOfMonth}'inde`}{' '}
+                      {String(recHour).padStart(2, '0')}:{String(recMinute).padStart(2, '0')} saatinde gidecek
+                    </p>
+                  </div>
+                )}
               </Field>
 
               {feedback && (
@@ -474,29 +853,216 @@ export default function PushNotifications() {
               >
                 Vazgeç
               </button>
-              {scheduleEnabled ? (
-                <button
-                  onClick={() => handleSubmit(false)}
-                  disabled={sending}
-                  className="flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-2.5 font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
-                >
-                  <Calendar className="h-4 w-4" />
-                  {sending ? 'Zamanlanıyor…' : 'Zamanla'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSubmit(true)}
-                  disabled={sending}
-                  className="flex items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                  {sending ? 'Gönderiliyor…' : 'Şimdi gönder'}
-                </button>
-              )}
+              <button
+                onClick={handleSubmit}
+                disabled={sending}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-white disabled:opacity-50 ${
+                  schedule === 'NOW'
+                    ? 'bg-primary-500 hover:bg-primary-600'
+                    : schedule === 'RECURRING'
+                    ? 'bg-purple-500 hover:bg-purple-600'
+                    : 'bg-accent-500 hover:bg-accent-600'
+                }`}
+              >
+                {schedule === 'NOW' ? (
+                  <>
+                    <Send className="h-4 w-4" />
+                    {sending ? 'Gönderiliyor…' : 'Şimdi gönder'}
+                  </>
+                ) : schedule === 'RECURRING' ? (
+                  <>
+                    🔁 {sending ? 'Kaydediliyor…' : 'Tekrarlayan oluştur'}
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4" />
+                    {sending ? 'Zamanlanıyor…' : 'Zamanla'}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Customer Picker Modal */}
+      {showCustomerPicker && (
+        <CustomerPickerModal
+          token={token}
+          selected={selectedCustomers}
+          onClose={() => setShowCustomerPicker(false)}
+          onChange={setSelectedCustomers}
+        />
+      )}
+
+      {/* Recurring Section */}
+      {recurring.length > 0 && (
+        <Section
+          title="🔁 Tekrarlayan bildirimler"
+          subtitle={`${recurring.length} adet düzenli kampanya`}
+          icon={<Bell className="h-5 w-5 text-purple-500" />}
+        >
+          <div className="space-y-2">
+            {recurring.map((n) => (
+              <RecurringRow key={n.id} n={n} onCancel={() => handleCancel(n.id)} />
+            ))}
+          </div>
+        </Section>
+      )}
+    </div>
+  );
+}
+
+// ==================== Customer Picker Modal ====================
+function CustomerPickerModal({
+  token,
+  selected,
+  onClose,
+  onChange,
+}: {
+  token: string | null;
+  selected: Customer[];
+  onClose: () => void;
+  onChange: (s: Customer[]) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!token) return;
+      setLoading(true);
+      try {
+        const q = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
+        const res = await api.get(`/api/notifications/customers/search${q}`, token);
+        setResults(res.customers ?? []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, token]);
+
+  const isSelected = (id: string) => selected.some((s) => s.id === id);
+
+  const toggle = (c: Customer) => {
+    onChange(isSelected(c.id) ? selected.filter((s) => s.id !== c.id) : [...selected, c]);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border-light p-4">
+          <h2 className="text-lg font-bold">Müşteri seç ({selected.length})</h2>
+          <button onClick={onClose} className="rounded-full p-1.5 hover:bg-surface">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-4">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Telefon, ad veya e-posta..."
+            className="input w-full"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto px-4 pb-4">
+          {loading ? (
+            <p className="text-center text-sm text-foreground-muted py-8">Aranıyor...</p>
+          ) : results.length === 0 ? (
+            <p className="text-center text-sm text-foreground-muted py-8">
+              {query ? 'Sonuç yok' : 'Müşteri ara'}
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {results.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => toggle(c)}
+                  className={`w-full text-left rounded-xl border p-3 transition ${
+                    isSelected(c.id)
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-border-light hover:bg-surface'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">
+                        {c.name || '(İsimsiz)'}
+                      </p>
+                      <p className="text-xs text-foreground-muted truncate">
+                        {c.phone}
+                        {c.email && ` • ${c.email}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      {c.isVerified && (
+                        <span className="rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-[10px] font-bold">
+                          ✓
+                        </span>
+                      )}
+                      <span className="text-foreground-muted">
+                        {c.orderCount} sip · {c.totalPoints}p
+                      </span>
+                      {isSelected(c.id) && <CheckCircle2 className="h-4 w-4 text-primary-500" />}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border-light p-4">
+          <button
+            onClick={onClose}
+            className="rounded-xl bg-primary-500 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-600"
+          >
+            Tamam ({selected.length})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Recurring Row ====================
+function RecurringRow({ n, onCancel }: { n: Notification; onCancel: () => void }) {
+  const r = n.recurrence as any;
+  const dayName = (i: number) =>
+    ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][i];
+  const time = `${String(r?.hour ?? 0).padStart(2, '0')}:${String(r?.minute ?? 0).padStart(2, '0')}`;
+  const desc =
+    r?.type === 'DAILY'
+      ? `Her gün ${time}`
+      : r?.type === 'WEEKLY'
+      ? `Her ${dayName(r.dayOfWeek)} ${time}`
+      : r?.type === 'MONTHLY'
+      ? `Ayın ${r.dayOfMonth}'inde ${time}`
+      : '?';
+
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
+      <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-purple-100 flex items-center justify-center text-lg">
+        🔁
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm text-foreground">{n.title}</p>
+        <p className="text-xs text-foreground-muted line-clamp-1">{n.body}</p>
+        <p className="mt-1 text-[11px] font-semibold text-purple-700">{desc}</p>
+        {n.lastSentAt && (
+          <p className="text-[10px] text-foreground-subtle">
+            Son gönderim: {new Date(n.lastSentAt).toLocaleString('tr-TR')}
+          </p>
+        )}
+      </div>
+      <button onClick={onCancel} className="p-2 rounded-lg text-red-500 hover:bg-red-100">
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   );
 }

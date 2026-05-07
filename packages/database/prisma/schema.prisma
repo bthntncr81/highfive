@@ -889,21 +889,33 @@ model PushNotification {
   data        Json?                     // { campaignId, productId, route, ... }
   imageUrl    String?
   campaignId  String?
-  targetType  String   @default("ALL")  // ALL, SEGMENT, CUSTOMER, DEVICE
-  targetIds   String[] @default([])     // hedef listesi
-  
+  targetType  String   @default("ALL")  // ALL, VERIFIED, CUSTOMER, DEVICE, SEGMENT
+  targetIds   String[] @default([])     // hedef listesi (CUSTOMER için Customer.id)
+  // Behavior segmentation kriterleri (targetType=SEGMENT için)
+  // Örn: { menuItemIds: ['x'], dayOfWeek: 0, lastNDays: 30 }
+  segmentCriteria Json?
+
+  // Recurring (kişiye özel zamanlanmış push'lar için)
+  // null = tek seferlik, scheduledAt'taki saatte gider
+  // Örn: { type: 'WEEKLY', dayOfWeek: 0, hour: 18, minute: 0 }
+  //      { type: 'DAILY', hour: 12 }
+  //      { type: 'MONTHLY', dayOfMonth: 1, hour: 9 }
+  recurrence  Json?
+  // Her recurring tetiklemede son ne zaman gönderildiğini takip et (idempotency)
+  lastSentAt  DateTime?
+
   // Stats
   sentCount   Int      @default(0)
   deliveredCount Int   @default(0)
   failedCount Int      @default(0)
   openCount   Int      @default(0)
-  
-  status      String   @default("DRAFT") // DRAFT, SENDING, SENT, FAILED
+
+  status      String   @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, FAILED, RECURRING
   scheduledAt DateTime?
   sentAt      DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([status])
