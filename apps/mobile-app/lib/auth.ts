@@ -25,6 +25,7 @@ type AuthState = {
   verifyOtp: (
     phone: string,
     code: string,
+    extra?: { name?: string; email?: string },
   ) => Promise<{ user: AuthUser; token: string }>;
   refreshMe: () => Promise<void>;
 };
@@ -59,11 +60,20 @@ export const useAuth = create<AuthState>()(
         );
       },
 
-      verifyOtp: async (phone: string, code: string) => {
+      verifyOtp: async (
+        phone: string,
+        code: string,
+        extra?: { name?: string; email?: string },
+      ) => {
         const res = await api.post<{
           token: string;
           user: AuthUser;
-        }>("/api/mobile/auth/verify-otp", { phone, code });
+        }>("/api/mobile/auth/verify-otp", {
+          phone,
+          code,
+          name: extra?.name,
+          email: extra?.email,
+        });
         await setToken(res.token);
         set({ token: res.token, user: res.user });
         return res;

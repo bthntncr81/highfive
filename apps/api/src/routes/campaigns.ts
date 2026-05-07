@@ -17,15 +17,19 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     return { campaigns };
   });
 
-  // Get active campaigns (public)
+  // Get active + upcoming campaigns (public)
+  // - Mobil ve landing'de gösterilenler
+  // - O gün aktif yoksa ileri tarihli kampanyalar da gözükür
+  // - Bitmiş olanlar gizli
   server.get('/campaigns/active', async () => {
     const now = new Date();
     const campaigns = await prisma.campaign.findMany({
       where: {
         isActive: true,
-        startDate: { lte: now },
-        endDate: { gte: now },
+        endDate: { gte: now }, // henüz bitmemiş olanlar
+        // startDate filtresi YOK — gelecekteki başlayacak olanlar da gelir
       },
+      orderBy: { startDate: 'asc' }, // yakın olanlar önce
     });
     return { campaigns };
   });

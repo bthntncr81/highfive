@@ -24,6 +24,7 @@ type Step = "info" | "otp";
 export default function Signup() {
   const [step, setStep] = useState<Step>("info");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,8 +40,12 @@ export default function Signup() {
   }, [resendIn]);
 
   const handleRequest = async () => {
-    if (!name.trim()) {
-      Alert.alert("Hata", "Ad Soyad gerekli");
+    if (!name.trim() || name.trim().length < 3) {
+      Alert.alert("Hata", "Ad Soyad gerekli (en az 3 karakter)");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      Alert.alert("Hata", "Geçerli e-posta adresi gerekli");
       return;
     }
     if (phone.replace(/\D/g, "").length < 10) {
@@ -66,11 +71,11 @@ export default function Signup() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      await verifyOtp(phone, code);
-      // Adı backend'e yaz (Customer.name)
-      try {
-        await endpoints.updateMe({ name: name.trim() });
-      } catch {}
+      // Backend verify-otp name + email kabul ediyor — atomik kayıt
+      await verifyOtp(phone, code, {
+        name: name.trim(),
+        email: email.trim().toLowerCase() || undefined,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Yeni üye → ilk adresini eklemeye yönlendir
@@ -135,7 +140,7 @@ export default function Signup() {
                 Birkaç saniyede hesabını aç, puan kazanmaya başla.
               </Text>
 
-              <Field label="Ad Soyad">
+              <Field label="Ad Soyad *">
                 <TextInput
                   value={name}
                   onChangeText={setName}
@@ -147,7 +152,20 @@ export default function Signup() {
                 />
               </Field>
 
-              <Field label="Telefon numaran">
+              <Field label="E-posta *">
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="ornek@mail.com"
+                  placeholderTextColor="#9a9a9a"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  className="rounded-2xl border border-border px-4 py-3 text-base text-foreground"
+                  editable={!loading}
+                />
+              </Field>
+
+              <Field label="Telefon numaran *">
                 <View className="flex-row items-center rounded-2xl border border-border px-4">
                   <Text className="mr-2 text-base font-semibold text-foreground">
                     +90

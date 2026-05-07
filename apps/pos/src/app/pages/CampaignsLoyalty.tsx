@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Gift, Tag, Percent, Star, Crown, Package,
@@ -651,9 +651,40 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
     discountType: 'PERCENT',
     discountValue: 10,
     minPurchase: 0,
+    image: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    notifyCustomers: true,
   });
+  const [uploading, setUploading] = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Lütfen bir resim dosyası seç');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Resim 5MB\'dan küçük olmalı');
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await api.upload('/api/upload', file, token);
+      if (result?.file?.url) {
+        setForm({ ...form, image: result.file.url });
+      } else if (result?.url) {
+        setForm({ ...form, image: result.url });
+      }
+    } catch (err: any) {
+      alert('Resim yüklenemedi: ' + (err?.message ?? 'hata'));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -673,7 +704,7 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 max-w-md w-full"
+        className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-xl font-bold mb-4">🎁 Yeni Kampanya</h2>
         <div className="space-y-4">
@@ -691,6 +722,48 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
             className="input w-full"
             rows={2}
           />
+
+          {/* Görsel upload */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Görsel (opsiyonel)</label>
+            {form.image ? (
+              <div className="relative rounded-xl overflow-hidden border border-border-light">
+                <img src={form.image} alt="Kampanya" className="w-full h-40 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, image: '' })}
+                  className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full px-3 py-1"
+                >
+                  Kaldır
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="w-full border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                {uploading ? (
+                  <span className="text-sm text-foreground-muted">Yükleniyor...</span>
+                ) : (
+                  <>
+                    <div className="text-3xl mb-1">🖼️</div>
+                    <div className="text-sm font-semibold">Görsel yükle</div>
+                    <div className="text-xs text-foreground-muted mt-0.5">JPG/PNG/WebP, max 5MB</div>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <select
               value={form.discountType}
@@ -715,20 +788,43 @@ function CampaignModal({ show, onClose, onSave, token }: { show: boolean; onClos
             onChange={(e) => setForm({ ...form, minPurchase: Number(e.target.value) })}
             className="input w-full"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-foreground-muted mb-1">Başlangıç</label>
             <input
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              className="input"
+              className="input w-full"
             />
+            <p className="mt-1 text-[11px] text-foreground-muted">
+              💡 İleri tarih seçersen, mobil app o güne kadar 'Yakında' badge ile gösterir
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs text-foreground-muted mb-1">Bitiş</label>
             <input
               type="date"
               value={form.endDate}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              className="input"
+              className="input w-full"
             />
           </div>
+
+          {/* Mobil push duyurusu toggle */}
+          <label className="flex items-center gap-2 cursor-pointer rounded-xl bg-amber-50 border border-amber-200 p-3">
+            <input
+              type="checkbox"
+              checked={form.notifyCustomers}
+              onChange={(e) => setForm({ ...form, notifyCustomers: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-semibold">📲 Mobil app kullanıcılarına duyur</div>
+              <div className="text-xs text-foreground-muted">
+                Kayıtlı tüm telefon-doğrulanmış müşterilere push gider
+              </div>
+            </div>
+          </label>
         </div>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="btn btn-secondary flex-1">İptal</button>

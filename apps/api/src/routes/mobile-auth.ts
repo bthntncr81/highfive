@@ -89,9 +89,16 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     };
   });
 
-  // Verify OTP
+  // Verify OTP — opsiyonel name + email kabul eder (signup'tan gelir)
   server.post('/auth/verify-otp', async (request: any, reply: any) => {
-    const { phone, code } = (request.body ?? {}) as { phone?: string; code?: string };
+    const body = (request.body ?? {}) as {
+      phone?: string;
+      code?: string;
+      name?: string;
+      email?: string;
+    };
+    const { phone, code, name, email } = body;
+
     if (!phone || !code) {
       return reply.status(400).send({ error: 'Telefon ve kod gerekli' });
     }
@@ -101,15 +108,41 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Geçersiz telefon numarası' });
     }
 
+    // Email çakışma kontrolü — başka bir customer aynı email ile kullanmasın
+    if (email && email.trim()) {
+      const emailTrim = email.trim().toLowerCase();
+      const existingEmail = await prisma.customer.findUnique({
+        where: { email: emailTrim },
+      });
+      if (existingEmail && existingEmail.phone !== normalized) {
+        return reply.status(400).send({
+          error: 'Bu e-posta başka bir hesapta kayıtlı',
+          code: 'EMAIL_EXISTS',
+        });
+      }
+    }
+
     let customer = await prisma.customer.findUnique({ where: { phone: normalized } });
 
+    // YENİ kayıt mı? Eğer Customer yok VE master OTP değilse, name zorunlu.
+    // (Signup ekranı verifyOtp'a name gönderir; Login ekranı göndermez.)
+    const isNewSignup = !customer;
+
     // Master OTP shortcut — geliştirme/SMS-yok modu
-    // Customer yoksa otomatik oluştur (request-otp aşaması atlatılabilir)
     if (code === MASTER_OTP_CODE) {
-      if (!customer) {
+      if (isNewSignup) {
+        // Yeni hesap için name zorunlu
+        if (!name || !name.trim()) {
+          return reply.status(400).send({
+            error: 'Yeni hesap için Ad Soyad gerekli',
+            code: 'NAME_REQUIRED',
+          });
+        }
         customer = await prisma.customer.create({
           data: {
             phone: normalized,
+            name: name.trim(),
+            email: email?.trim().toLowerCase() || null,
             isVerified: false,
             isActive: true,
           },
@@ -132,13 +165,22 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       }
     }
 
-    // Doğrulama başarılı
+    // Doğrulama başarılı + name/email update (signup ise veya update ise)
+    const updateData: any = {
+      isVerified: true,
+      verificationCode: null,
+    };
+    // Eğer customer.name yoksa ve name geldiyse update et (mevcut hesap login durumunda da)
+    if (name && name.trim() && !customer!.name) {
+      updateData.name = name.trim();
+    }
+    if (email && email.trim() && !customer!.email) {
+      updateData.email = email.trim().toLowerCase();
+    }
+
     const updated = await prisma.customer.update({
-      where: { id: customer.id },
-      data: {
-        isVerified: true,
-        verificationCode: null,
-      },
+      where: { id: customer!.id },
+      data: updateData,
     });
 
     const token = jwt.sign(

@@ -1,7 +1,7 @@
 // POS — Push Notifications Yönetim Ekranı
 // Müşteri mobil uygulamasına anlık veya zamanlı bildirim gönderir.
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   Send,
@@ -350,16 +350,32 @@ export default function PushNotifications() {
                 />
               </Field>
 
-              <Field
-                label="Görsel URL"
-                hint="(opsiyonel — uploads/ veya tam url)"
-              >
-                <input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://api.highfivepps.com/uploads/..."
-                  className="input"
-                />
+              <Field label="Görsel" hint="(opsiyonel)">
+                {imageUrl ? (
+                  <div className="relative rounded-xl overflow-hidden border border-border-light">
+                    <img
+                      src={
+                        imageUrl.startsWith('http')
+                          ? imageUrl
+                          : `${(import.meta as any).env?.VITE_API_URL || ''}${imageUrl}`
+                      }
+                      alt="Bildirim görseli"
+                      className="w-full h-32 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full px-3 py-1"
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                ) : (
+                  <ImageUploadField
+                    onUploaded={(url) => setImageUrl(url)}
+                    token={token}
+                  />
+                )}
               </Field>
 
               <Field
@@ -621,5 +637,72 @@ function Field({
       </div>
       {children}
     </div>
+  );
+}
+
+function ImageUploadField({
+  onUploaded,
+  token,
+}: {
+  onUploaded: (url: string) => void;
+  token: string | null;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Lütfen bir resim dosyası seç');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Resim 5MB'dan küçük olmalı");
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await api.upload('/api/upload', file, token!);
+      const url = result?.file?.url || result?.url;
+      if (url) onUploaded(url);
+    } catch (err: any) {
+      alert('Yükleme hatası: ' + (err?.message ?? 'bilinmiyor'));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="w-full border-2 border-dashed border-border rounded-xl p-5 text-center hover:bg-surface transition disabled:opacity-50"
+      >
+        {uploading ? (
+          <span className="text-sm text-foreground-muted">Yükleniyor...</span>
+        ) : (
+          <>
+            <div className="text-2xl mb-1">🖼️</div>
+            <div className="text-sm font-semibold text-foreground">
+              Resim yükle
+            </div>
+            <div className="text-[11px] text-foreground-muted mt-0.5">
+              JPG/PNG/WebP, max 5MB
+            </div>
+          </>
+        )}
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={handleUpload}
+        className="hidden"
+      />
+    </>
   );
 }

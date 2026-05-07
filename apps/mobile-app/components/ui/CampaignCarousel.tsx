@@ -63,6 +63,14 @@ export function CampaignCarousel({ campaigns }: { campaigns: ApiCampaign[] }) {
               ? `${c.discountValue} ₺ indirim`
               : "Detaya bak";
 
+          // Yakında / Aktif badge tespiti
+          const now = new Date();
+          const start = new Date(c.startDate);
+          const isUpcoming = start > now;
+          const daysUntil = isUpcoming
+            ? Math.ceil((start.getTime() - now.getTime()) / 86400000)
+            : 0;
+
           return (
             <Link
               key={c.id}
@@ -79,10 +87,19 @@ export function CampaignCarousel({ campaigns }: { campaigns: ApiCampaign[] }) {
               >
                 <View className="flex-row items-center p-6">
                   <View className="flex-1">
-                    <View className="self-start rounded-full bg-white/20 px-2.5 py-1">
-                      <Text className="text-[10px] font-bold uppercase tracking-widest text-white">
-                        {c.type === "BUNDLE" ? "Menü" : "Kampanya"}
-                      </Text>
+                    <View className="flex-row items-center gap-2">
+                      <View className="self-start rounded-full bg-white/20 px-2.5 py-1">
+                        <Text className="text-[10px] font-bold uppercase tracking-widest text-white">
+                          {c.type === "BUNDLE" ? "Menü" : "Kampanya"}
+                        </Text>
+                      </View>
+                      {isUpcoming && (
+                        <View className="rounded-full bg-yellow-300 px-2.5 py-1">
+                          <Text className="text-[10px] font-extrabold uppercase tracking-wide text-yellow-900">
+                            ⏰ {daysUntil > 1 ? `${daysUntil} gün sonra` : "Yakında"}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Text className="mt-3 text-2xl font-extrabold leading-tight text-white" numberOfLines={2}>
                       {c.name}
