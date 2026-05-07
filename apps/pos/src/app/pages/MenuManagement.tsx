@@ -938,26 +938,79 @@ export default function MenuManagement() {
                   Etiketler
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {BADGE_OPTIONS.map((badge) => (
-                    <button
-                      key={badge.value}
-                      type="button"
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          badges: toggleArrayItem(formData.badges, badge.value),
-                        })
-                      }
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        formData.badges.includes(badge.value)
-                          ? badge.color + ' ring-2 ring-offset-2 ring-gray-400'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {badge.label}
-                    </button>
-                  ))}
+                  {BADGE_OPTIONS.map((badge) => {
+                    // Match case-insensitively so legacy values stored with
+                    // different casing/diacritics still toggle correctly.
+                    const isActive = formData.badges.some(
+                      (b) => b.toLocaleLowerCase('tr-TR') === badge.value.toLocaleLowerCase('tr-TR')
+                    );
+                    return (
+                      <button
+                        key={badge.value}
+                        type="button"
+                        onClick={() => {
+                          // Remove any badge that matches case-insensitively,
+                          // then add the canonical value if it wasn't there.
+                          const filtered = formData.badges.filter(
+                            (b) => b.toLocaleLowerCase('tr-TR') !== badge.value.toLocaleLowerCase('tr-TR')
+                          );
+                          const next = isActive ? filtered : [...filtered, badge.value];
+                          setFormData({ ...formData, badges: next });
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                          isActive
+                            ? badge.color + ' ring-2 ring-offset-2 ring-gray-400'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {badge.label}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Stranded badges: anything stored on the item that isn't
+                    in BADGE_OPTIONS (legacy / typo'd / migrated). Always
+                    show a removable chip so the user can clean it up. */}
+                {(() => {
+                  const knownLower = BADGE_OPTIONS.map((b) =>
+                    b.value.toLocaleLowerCase('tr-TR'),
+                  );
+                  const stranded = formData.badges.filter(
+                    (b) => !knownLower.includes(b.toLocaleLowerCase('tr-TR')),
+                  );
+                  if (stranded.length === 0) return null;
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="text-xs text-gray-500 self-center mr-1">
+                        Tanımsız etiketler:
+                      </span>
+                      {stranded.map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              badges: formData.badges.filter((x) => x !== b),
+                            })
+                          }
+                          className="px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-300 hover:bg-red-100 hover:text-red-800 hover:border-red-300 transition-colors"
+                          title="Kaldırmak için tıkla"
+                        >
+                          {b} ✕
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, badges: [] })}
+                        className="px-3 py-1 rounded-full text-xs bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+                      >
+                        Tüm etiketleri sil
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Allergens */}
