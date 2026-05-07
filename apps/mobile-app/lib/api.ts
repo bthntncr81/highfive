@@ -453,6 +453,24 @@ export const endpoints = {
       `/api/payment/status/${conversationId}`,
     ),
 
+  // LOYALTY — public, herkese açık (login gerekmez)
+  loyaltyPrograms: () =>
+    api.get<{
+      programs: {
+        id: string;
+        type: string;
+        name: string;
+        description: string | null;
+        icon: string | null;
+        color: string | null;
+        config: any;
+        applicableMenuItemIds: string[];
+        rewardMenuItemIds: string[];
+        applicableMenuItems?: { id: string; name: string; price: string; image: string | null; categoryId: string | null }[];
+        rewardMenuItems?: { id: string; name: string; price: string; image: string | null; categoryId: string | null }[];
+      }[];
+    }>("/api/mobile/loyalty/programs"),
+
   // LOYALTY
   loyaltyMe: () =>
     api.get<{

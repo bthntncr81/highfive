@@ -46,3 +46,7 @@ export function useMenu() {
 export function useCampaigns() {
   return useAsync(() => endpoints.campaigns());
 }
+
+export function useLoyaltyPrograms() {
+  return useAsync(() => endpoints.loyaltyPrograms());
+}

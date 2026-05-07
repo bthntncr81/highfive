@@ -18,6 +18,7 @@ import { ProductCard } from "@/components/ui/ProductCard";
 import { Logo } from "@/components/ui/Logo";
 import { ActiveOrderCard } from "@/components/ui/ActiveOrderCard";
 import { BundleCard } from "@/components/ui/BundleCard";
+import { LoyaltyTeaser } from "@/components/ui/LoyaltyTeaser";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
@@ -117,6 +118,9 @@ export default function Home() {
             ))}
           </View>
         )}
+
+        {/* Sadakat programları (varsa) */}
+        <LoyaltyTeaser />
 
         {/* Kategoriler */}
         <View className="mt-7 flex-row items-center justify-between px-5 pb-3">
