@@ -34,6 +34,7 @@ import integrationPartnerRoutes from './routes/integration-partners';
 import mobileAuthRoutes from './routes/mobile-auth';
 import devicesRoutes from './routes/devices';
 import notificationRoutes, { processScheduledNotifications } from './routes/notifications';
+import { processBirthdayPrograms } from './lib/loyalty-engine';
 import mobileOrdersRoutes from './routes/mobile-orders';
 import mobileLoyaltyRoutes from './routes/mobile-loyalty';
 import mobileAddressesRoutes from './routes/mobile-addresses';
@@ -132,6 +133,17 @@ const start = async () => {
         server.log.error({ err: e }, '[push-scheduler] tick failed'),
       );
     }, 30_000);
+
+    // Doğum günü programları — saatte bir kontrol et (gün başında push gönderir)
+    setInterval(() => {
+      processBirthdayPrograms(prisma).catch((e) =>
+        server.log.error({ err: e }, '[birthday-scheduler] tick failed'),
+      );
+    }, 3600_000);
+    // İlk tick (uygulama yeni başlatıldığında 1 dk sonra)
+    setTimeout(() => {
+      processBirthdayPrograms(prisma).catch(() => {});
+    }, 60_000);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

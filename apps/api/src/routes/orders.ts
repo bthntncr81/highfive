@@ -5,6 +5,7 @@ import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcas
 import { webhookService } from '../services/webhook.service';
 import { sendOrderStatusPush } from '../lib/order-push';
 import { awardMobileOrderPoints } from '../lib/loyalty-award';
+import { processOrderForLoyalty } from '../lib/loyalty-engine';
 
 // Email notification - uses nodemailer if available
 async function sendOrderNotification(order: any) {
@@ -799,10 +800,13 @@ export default async function orderRoutes(server: FastifyInstance) {
       });
     }
 
-    // Puan kazanım — status COMPLETED'a geçtiğinde (mobile sipariş ise CustomerOrder bağ var)
+    // Puan kazanım + sadakat programları — status COMPLETED'a geçtiğinde
     if (status === OrderStatus.COMPLETED && order.status !== OrderStatus.COMPLETED) {
       awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
         console.error('🏆 Loyalty award error:', err);
+      });
+      processOrderForLoyalty(prisma, updatedOrder.id).catch((err) => {
+        console.error('🎁 Loyalty engine error:', err);
       });
     }
 
@@ -1386,9 +1390,12 @@ export default async function orderRoutes(server: FastifyInstance) {
       console.error('📱 Mobile push error:', err);
     });
 
-    // Sipariş tamamlandığında müşteriye puan ekle (mobile sipariş ise CustomerOrder bağ var)
+    // Sipariş tamamlandığında puan + sadakat programları
     awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
       console.error('🏆 Loyalty award error:', err);
+    });
+    processOrderForLoyalty(prisma, updatedOrder.id).catch((err) => {
+      console.error('🎁 Loyalty engine error:', err);
     });
 
     return { order: updatedOrder, message: 'Sipariş teslim edildi' };
