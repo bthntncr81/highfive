@@ -16,6 +16,7 @@ import { CampaignCarousel } from "@/components/ui/CampaignCarousel";
 import { CategoryStrip } from "@/components/ui/CategoryStrip";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Logo } from "@/components/ui/Logo";
+import { ActiveOrderCard } from "@/components/ui/ActiveOrderCard";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
@@ -62,6 +63,9 @@ export default function Home() {
             <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
           </Pressable>
         </View>
+
+        {/* Aktif sipariş kartı (varsa) */}
+        <ActiveOrderCard />
 
         {/* Adres barı */}
         <Pressable className="mx-5 mt-1 flex-row items-center rounded-2xl border border-border-light bg-white px-4 py-3">

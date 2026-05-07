@@ -64,6 +64,14 @@ export default function OrderDetail() {
     refresh();
   }, [refresh]);
 
+  // 8sn'de bir backup polling (WS bağlantısı kopsa bile güncel kal)
+  useEffect(() => {
+    const id = setInterval(() => {
+      refresh();
+    }, 8_000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
   // WebSocket: status değiştiğinde anlık güncelle
   useOrderSocket(order?.id ?? null, (msg) => {
     if (msg.type === "ORDER_UPDATED" || msg.type === "ORDER_READY") {

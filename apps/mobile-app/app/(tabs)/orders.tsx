@@ -83,10 +83,14 @@ export default function OrdersScreen() {
     refresh();
   }, [refresh]);
 
-  // Tab focus'ta refresh
+  // Tab focus'ta refresh + 10sn'de bir auto-refresh
   useFocusEffect(
     useCallback(() => {
       refresh();
+      const id = setInterval(() => {
+        refresh();
+      }, 10_000);
+      return () => clearInterval(id);
     }, [refresh]),
   );
 
