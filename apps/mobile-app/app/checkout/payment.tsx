@@ -22,6 +22,22 @@ import { useCart } from "@/lib/cart";
 
 type Phase = "form" | "3ds" | "polling" | "done" | "failed";
 
+// Base64 → UTF-8 (atob ASCII only, UTF-8 karakterleri için %-encoded trick)
+function base64ToUtf8(b64: string): string {
+  try {
+    const binary = atob(b64);
+    return decodeURIComponent(
+      binary
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+  } catch {
+    // Fallback — bozuk base64 ise direkt döner
+    return b64;
+  }
+}
+
 export default function PaymentScreen() {
   const { orderId, amount } = useLocalSearchParams<{
     orderId: string;
@@ -175,13 +191,15 @@ export default function PaymentScreen() {
   // ===== UI =====
   if (phase === "3ds" && htmlContent) {
     // iyzico bazen base64 encoded, bazen düz HTML döner.
-    // İçerik '<' ile başlıyorsa düz, değilse base64.
+    // İçerik '<' ile başlıyorsa düz, değilse base64 → manuel decode.
+    // (data: URI iOS WebView'de crash ediyor → 'is not a file URL')
     const looksLikeHtml = /^\s*<(!doctype|html|body|head|form|meta|script)/i.test(
       htmlContent,
     );
-    const webviewSource = looksLikeHtml
-      ? { html: htmlContent, baseUrl: API_URL }
-      : { uri: `data:text/html;base64,${htmlContent}` };
+    const decodedHtml = looksLikeHtml
+      ? htmlContent
+      : base64ToUtf8(htmlContent);
+    const webviewSource = { html: decodedHtml, baseUrl: API_URL };
 
     return (
       <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
