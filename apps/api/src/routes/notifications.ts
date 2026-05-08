@@ -50,9 +50,18 @@ export default async function notificationRoutes(server: FastifyInstance) {
 
   // ==================== STATS ====================
   server.get('/notifications/stats', { preHandler: verifyAdmin }, async () => {
+    // Tüm aktif cihazlar (push'lu + push'suz placeholder'lar dahil — POS aktif cihazlar listesi için)
     const totalDevices = await prisma.deviceToken.count({ where: { isActive: true } });
+    // Push gönderilebilir cihazlar (nopush-* placeholder'lar hariç)
+    const pushableDevices = await prisma.deviceToken.count({
+      where: { isActive: true, NOT: { token: { startsWith: 'nopush-' } } },
+    });
     const verifiedDevices = await prisma.deviceToken.count({
-      where: { isActive: true, customer: { isVerified: true } },
+      where: {
+        isActive: true,
+        NOT: { token: { startsWith: 'nopush-' } },
+        customer: { isVerified: true },
+      },
     });
     const iosDevices = await prisma.deviceToken.count({
       where: { isActive: true, platform: 'ios' },
@@ -69,12 +78,55 @@ export default async function notificationRoutes(server: FastifyInstance) {
     });
     return {
       totalDevices,
+      pushableDevices,
       verifiedDevices,
       iosDevices,
       androidDevices,
       totalSent,
       totalScheduled,
       lastNotification,
+    };
+  });
+
+  // ==================== DEVICE LIST (Admin: 'Aktif Cihazlar' panel) ====================
+  // Push gönderebilmek için aktif cihazları listele (customer info ile)
+  server.get('/notifications/devices', { preHandler: verifyAdmin }, async (request: any) => {
+    const { onlyPushable } = request.query as { onlyPushable?: string };
+    const where: any = { isActive: true };
+    if (onlyPushable === 'true' || onlyPushable === '1') {
+      where.NOT = { token: { startsWith: 'nopush-' } };
+    }
+    const devices = await prisma.deviceToken.findMany({
+      where,
+      select: {
+        id: true,
+        token: true,
+        platform: true,
+        appVersion: true,
+        locale: true,
+        lastSeenAt: true,
+        createdAt: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isVerified: true,
+            totalPoints: true,
+          },
+        },
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 200,
+    });
+    // Token ham gözükmesin, sadece push tipi göster
+    return {
+      devices: devices.map((d) => ({
+        ...d,
+        token: undefined,
+        canPush: !d.token.startsWith('nopush-'),
+      })),
     };
   });
 
