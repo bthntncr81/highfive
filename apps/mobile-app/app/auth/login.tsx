@@ -81,8 +81,8 @@ export default function LoginScreen() {
         </View>
 
         <View className="flex-1 px-6 pt-8">
-          <View className="mb-6 items-start">
-            <Logo height={32} />
+          <View className="mb-6 items-center">
+            <Logo height={56} />
           </View>
           {step === "email" ? (
             <>

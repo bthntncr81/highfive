@@ -30,6 +30,8 @@ export default function Signup() {
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
   const [birthDate, setBirthDate] = useState(""); // YYYY-MM-DD
+  const [referralCode, setReferralCode] = useState("");
+  const [showReferral, setShowReferral] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
@@ -90,6 +92,19 @@ export default function Signup() {
       // (AsyncStorage write race condition önleme)
       await new Promise((r) => setTimeout(r, 250));
 
+      // Davet kodu girildiyse uygula (yeni hesap → ilk siparişten önce)
+      if (referralCode.trim()) {
+        try {
+          await endpoints.applyReferralCode(referralCode.trim().toUpperCase());
+        } catch (e: any) {
+          // Referral fail olsa bile signup'ı bozma
+          Alert.alert(
+            "Davet kodu uygulanamadı",
+            e?.message ?? "Kod geçersiz olabilir, profilden tekrar dene.",
+          );
+        }
+      }
+
       // Direkt anasayfaya yönlendir — auto-login tamam
       router.replace("/(tabs)");
 
@@ -132,8 +147,8 @@ export default function Signup() {
           contentContainerStyle={{ padding: 24, paddingTop: 12, flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-6 items-start">
-            <Logo height={32} />
+          <View className="mb-6 items-center">
+            <Logo height={56} />
           </View>
 
           {step === "info" ? (
@@ -236,6 +251,39 @@ export default function Signup() {
                   editable={!loading}
                 />
               </Field>
+
+              {/* Davet kodu — toggle ile açılır */}
+              {!showReferral ? (
+                <Pressable
+                  onPress={() => setShowReferral(true)}
+                  className="mt-5 flex-row items-center justify-center"
+                >
+                  <Text className="text-sm font-semibold text-primary-500">
+                    🎁 Davet kodum var
+                  </Text>
+                </Pressable>
+              ) : (
+                <Field label="Davet kodu (opsiyonel — ikiniz de puan kazanırsınız)">
+                  <View className="flex-row items-center rounded-2xl border-2 border-primary-300 bg-primary-50/50 px-4">
+                    <Text style={{ fontSize: 16, marginRight: 6 }}>🎁</Text>
+                    <TextInput
+                      value={referralCode}
+                      onChangeText={(t) => setReferralCode(t.toUpperCase().replace(/\s/g, ""))}
+                      placeholder="6 haneli kod"
+                      placeholderTextColor="#9a9a9a"
+                      autoCapitalize="characters"
+                      className="flex-1 py-3 text-base font-bold text-primary-600 tracking-widest"
+                      maxLength={8}
+                      editable={!loading}
+                    />
+                    {referralCode.length > 0 && (
+                      <Pressable onPress={() => setReferralCode("")} hitSlop={8}>
+                        <Text className="text-foreground-muted">✕</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </Field>
+              )}
 
               <Pressable
                 disabled={loading}

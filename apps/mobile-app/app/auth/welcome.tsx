@@ -22,9 +22,9 @@ export default function Welcome() {
         contentContainerStyle={{ flexGrow: 1, padding: 24, paddingBottom: 12 }}
       >
         {/* Hero */}
-        <View className="items-center pt-4">
-          <Logo height={48} />
-          <Text className="mt-6 text-center text-3xl font-extrabold text-foreground">
+        <View className="items-center pt-8">
+          <Logo height={80} />
+          <Text className="mt-8 text-center text-3xl font-extrabold text-foreground">
             HighFive'a hoş geldin!
           </Text>
           <Text className="mt-2 text-center text-sm text-foreground-muted">
