@@ -25,13 +25,11 @@ export default function Signup() {
   const [step, setStep] = useState<Step>("info");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
 
-  const { requestOtp, verifyOtp } = useAuth();
+  const { requestEmailOtp, verifyEmailOtp } = useAuth();
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -44,19 +42,14 @@ export default function Signup() {
       Alert.alert("Hata", "Ad Soyad gerekli (en az 3 karakter)");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
+    if (!email.trim() || !email.includes("@") || !email.includes(".")) {
       Alert.alert("Hata", "Geçerli e-posta adresi gerekli");
-      return;
-    }
-    if (phone.replace(/\D/g, "").length < 10) {
-      Alert.alert("Hata", "Geçerli telefon numarası gir");
       return;
     }
     setLoading(true);
     try {
-      const res = await requestOtp(phone);
+      await requestEmailOtp(email.trim().toLowerCase(), name.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setDevCode(res.devCode ?? null);
       setStep("otp");
       setResendIn(60);
     } catch (e: any) {
@@ -71,11 +64,7 @@ export default function Signup() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      // Backend verify-otp name + email kabul ediyor — atomik kayıt
-      await verifyOtp(phone, code, {
-        name: name.trim(),
-        email: email.trim().toLowerCase() || undefined,
-      });
+      await verifyEmailOtp(email.trim().toLowerCase(), code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Yeni üye → ilk adresini eklemeye yönlendir
@@ -165,24 +154,6 @@ export default function Signup() {
                 />
               </Field>
 
-              <Field label="Telefon numaran *">
-                <View className="flex-row items-center rounded-2xl border border-border px-4">
-                  <Text className="mr-2 text-base font-semibold text-foreground">
-                    +90
-                  </Text>
-                  <TextInput
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    placeholder="555 555 55 55"
-                    placeholderTextColor="#9a9a9a"
-                    className="flex-1 py-3 text-base text-foreground"
-                    maxLength={11}
-                    editable={!loading}
-                  />
-                </View>
-              </Field>
-
               <Pressable
                 disabled={loading}
                 onPress={handleRequest}
@@ -194,7 +165,7 @@ export default function Signup() {
                   <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 )}
                 <Text className="text-base font-bold text-white">
-                  {loading ? "Gönderiliyor…" : "Doğrulama kodu gönder"}
+                  {loading ? "Gönderiliyor…" : "📧 E-postama doğrulama kodu gönder"}
                 </Text>
               </Pressable>
 
@@ -218,16 +189,15 @@ export default function Signup() {
                 Kodu gir
               </Text>
               <Text className="mt-2 text-sm text-foreground-muted">
-                +90 {phone} numarasına gönderilen 6 haneli kodu gir.
+                <Text className="font-semibold text-foreground">{email}</Text>{" "}
+                adresine gönderilen 6 haneli kodu gir.
               </Text>
 
-              {devCode && (
-                <View className="mt-3 rounded-xl bg-accent-50 p-3">
-                  <Text className="text-xs font-semibold text-accent-700">
-                    🛠 Geliştirici modu — kod: {devCode}
-                  </Text>
-                </View>
-              )}
+              <View className="mt-3 rounded-xl bg-blue-50 p-3 border border-blue-200">
+                <Text className="text-xs text-blue-900">
+                  💡 E-postanı görmüyorsan spam/junk klasörünü kontrol et.
+                </Text>
+              </View>
 
               <TextInput
                 value={code}
@@ -274,7 +244,6 @@ export default function Signup() {
                 onPress={() => {
                   setStep("info");
                   setCode("");
-                  setDevCode(null);
                 }}
                 className="mt-3 items-center"
                 disabled={loading}

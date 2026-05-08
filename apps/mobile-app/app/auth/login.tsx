@@ -18,14 +18,13 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/ui/Logo";
 
 export default function LoginScreen() {
-  const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
 
-  const { requestOtp, verifyOtp } = useAuth();
+  const { requestEmailOtp, verifyEmailOtp } = useAuth();
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -33,13 +32,14 @@ export default function LoginScreen() {
     return () => clearInterval(t);
   }, [resendIn]);
 
+  const isValidEmail = email.includes("@") && email.includes(".") && email.length > 5;
+
   const handleRequest = async () => {
-    if (phone.replace(/\D/g, "").length < 10) return;
+    if (!isValidEmail) return;
     setLoading(true);
     try {
-      const res = await requestOtp(phone);
+      await requestEmailOtp(email.trim().toLowerCase());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setDevCode(res.devCode ?? null);
       setStep("otp");
       setResendIn(60);
     } catch (e: any) {
@@ -54,7 +54,7 @@ export default function LoginScreen() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      await verifyOtp(phone, code);
+      await verifyEmailOtp(email.trim().toLowerCase(), code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e: any) {
@@ -84,45 +84,43 @@ export default function LoginScreen() {
           <View className="mb-6 items-start">
             <Logo height={32} />
           </View>
-          {step === "phone" ? (
+          {step === "email" ? (
             <>
               <Text className="text-3xl font-extrabold text-foreground">
-                Telefon numaran
+                E-posta adresin
               </Text>
               <Text className="mt-2 text-sm text-foreground-muted">
-                SMS ile gelen 6 haneli kodu girerek hızlıca giriş yap.
+                E-posta ile gelen 6 haneli kodu girerek hızlıca giriş yap.
               </Text>
 
-              <View className="mt-8 flex-row items-center rounded-2xl border border-border px-4 py-1">
-                <Text className="mr-2 text-base font-semibold text-foreground">
-                  +90
-                </Text>
+              <View className="mt-8 flex-row items-center rounded-2xl border border-border px-4">
+                <Ionicons name="mail-outline" size={20} color="#9a9a9a" />
                 <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholder="555 555 55 55"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="ornek@mail.com"
                   placeholderTextColor="#9a9a9a"
-                  className="flex-1 py-3 text-base text-foreground"
-                  maxLength={11}
+                  className="ml-2 flex-1 py-3 text-base text-foreground"
                   editable={!loading}
+                  autoFocus
                 />
               </View>
 
               <Pressable
-                disabled={phone.replace(/\D/g, "").length < 10 || loading}
+                disabled={!isValidEmail || loading}
                 onPress={handleRequest}
                 className={`mt-6 flex-row items-center justify-center rounded-2xl py-4 ${
-                  phone.replace(/\D/g, "").length < 10 || loading
-                    ? "bg-border"
-                    : "bg-primary-500"
+                  !isValidEmail || loading ? "bg-border" : "bg-primary-500"
                 }`}
               >
                 {loading && (
                   <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 )}
                 <Text className="text-base font-bold text-white">
-                  {loading ? "Gönderiliyor…" : "Kod gönder"}
+                  {loading ? "Gönderiliyor…" : "📧 E-postama kod gönder"}
                 </Text>
               </Pressable>
 
@@ -146,16 +144,15 @@ export default function LoginScreen() {
                 Kodu gir
               </Text>
               <Text className="mt-2 text-sm text-foreground-muted">
-                +90 {phone} numarasına gönderilen 6 haneli kodu gir.
+                <Text className="font-semibold text-foreground">{email}</Text>{" "}
+                adresine gönderilen 6 haneli kodu gir.
               </Text>
 
-              {devCode && (
-                <View className="mt-3 rounded-xl bg-accent-50 p-3">
-                  <Text className="text-xs font-semibold text-accent-700">
-                    🛠 Geliştirici modu — kod: {devCode}
-                  </Text>
-                </View>
-              )}
+              <View className="mt-3 rounded-xl bg-blue-50 p-3 border border-blue-200">
+                <Text className="text-xs text-blue-900">
+                  💡 E-postanı görmüyorsan spam/junk klasörünü kontrol et.
+                </Text>
+              </View>
 
               <TextInput
                 value={code}
@@ -200,15 +197,14 @@ export default function LoginScreen() {
 
               <Pressable
                 onPress={() => {
-                  setStep("phone");
+                  setStep("email");
                   setCode("");
-                  setDevCode(null);
                 }}
                 className="mt-3 items-center"
                 disabled={loading}
               >
                 <Text className="text-sm text-foreground-muted">
-                  Numarayı değiştir
+                  E-posta adresini değiştir
                 </Text>
               </Pressable>
             </>

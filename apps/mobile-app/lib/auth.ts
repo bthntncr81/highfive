@@ -18,7 +18,7 @@ type AuthState = {
   setSession: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
-  // API actions
+  // SMS OTP (legacy, master kod 999999 ile)
   requestOtp: (
     phone: string,
   ) => Promise<{ ok: true; devCode?: string }>;
@@ -26,6 +26,15 @@ type AuthState = {
     phone: string,
     code: string,
     extra?: { name?: string; email?: string },
+  ) => Promise<{ user: AuthUser; token: string }>;
+  // Email OTP (yeni, /api/auth/customer/email/...)
+  requestEmailOtp: (
+    email: string,
+    name?: string,
+  ) => Promise<{ success: true; message: string }>;
+  verifyEmailOtp: (
+    email: string,
+    code: string,
   ) => Promise<{ user: AuthUser; token: string }>;
   refreshMe: () => Promise<void>;
 };
@@ -77,6 +86,40 @@ export const useAuth = create<AuthState>()(
         await setToken(res.token);
         set({ token: res.token, user: res.user });
         return res;
+      },
+
+      // ----- EMAIL OTP -----
+      requestEmailOtp: async (email: string, name?: string) => {
+        return api.post<{ success: true; message: string }>(
+          "/api/auth/customer/email/request-otp",
+          { email, ...(name ? { name } : {}) },
+        );
+      },
+
+      verifyEmailOtp: async (email: string, code: string) => {
+        const res = await api.post<{
+          success: true;
+          token: string;
+          customer: {
+            id: string;
+            email: string | null;
+            name: string | null;
+            phone: string | null;
+            totalPoints: number;
+            loyaltyTier: any;
+          };
+        }>("/api/auth/customer/email/verify-otp", { email, code });
+        const user: AuthUser = {
+          id: res.customer.id,
+          phone: res.customer.phone ?? "",
+          name: res.customer.name,
+          email: res.customer.email,
+          totalPoints: res.customer.totalPoints,
+          isVerified: true,
+        };
+        await setToken(res.token);
+        set({ token: res.token, user });
+        return { user, token: res.token };
       },
 
       refreshMe: async () => {
