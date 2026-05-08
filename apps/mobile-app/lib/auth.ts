@@ -90,6 +90,13 @@ export const useAuth = create<AuthState>()(
         });
         await setToken(res.token);
         set({ token: res.token, user: res.user });
+
+        // Login sonrası push device kaydı
+        try {
+          const { initPushNotifications } = await import("./push");
+          initPushNotifications().catch(() => { /* silent */ });
+        } catch { /* skip */ }
+
         return res;
       },
 
@@ -138,6 +145,14 @@ export const useAuth = create<AuthState>()(
         };
         await setToken(res.token);
         set({ token: res.token, user });
+
+        // Login sonrası push device kaydı (token'la birlikte customer'a bind edilir)
+        // Lazy import — circular dep önleme
+        try {
+          const { initPushNotifications } = await import("./push");
+          initPushNotifications().catch(() => { /* silent */ });
+        } catch { /* push.ts yüklenemezse skip */ }
+
         return { user, token: res.token };
       },
 

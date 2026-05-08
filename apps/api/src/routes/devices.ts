@@ -12,8 +12,12 @@ function getCustomerId(request: any): string | null {
     const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as {
       customerId?: string;
       type?: string;
+      aud?: string;
     };
-    if (decoded.type !== 'customer' || !decoded.customerId) return null;
+    if (!decoded.customerId) return null;
+    // SMS OTP token'ı type='customer', email OTP token'ı aud='customer' kullanır
+    const isCustomer = decoded.type === 'customer' || decoded.aud === 'customer';
+    if (!isCustomer) return null;
     return decoded.customerId;
   } catch {
     return null;

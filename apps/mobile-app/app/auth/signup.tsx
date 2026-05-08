@@ -86,28 +86,25 @@ export default function Signup() {
       await verifyEmailOtp(email.trim().toLowerCase(), code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Yeni üye → ilk adresini eklemeye yönlendir
-      Alert.alert(
-        "🎉 Hoş geldin!",
-        "Şimdi ilk teslimat adresini ekleyelim — sipariş vermek 30 saniyede biter.",
-        [
-          {
-            text: "Sonra",
-            style: "cancel",
-            onPress: () => router.replace("/(tabs)"),
-          },
-          {
-            text: "Adres ekle",
-            onPress: () => {
-              router.replace("/(tabs)");
-              // Tab geçişi sonrası adres ekleme modal'ı
-              setTimeout(() => {
-                router.push("/addresses/new");
-              }, 100);
-            },
-          },
-        ],
-      );
+      // Verify token persist olsun + zustand güncellensin diye 250ms bekle
+      // (AsyncStorage write race condition önleme)
+      await new Promise((r) => setTimeout(r, 250));
+
+      // Direkt anasayfaya yönlendir — auto-login tamam
+      router.replace("/(tabs)");
+
+      // Anasayfaya geçtikten kısa süre sonra adres ekle prompt'u
+      // (modal yerine küçük bir nudge — geri tuşuyla home'a döner)
+      setTimeout(() => {
+        Alert.alert(
+          "🎉 Hoş geldin!",
+          "Şimdi ilk teslimat adresini ekleyelim — sipariş vermek 30 saniyede biter.",
+          [
+            { text: "Sonra", style: "cancel" },
+            { text: "Adres ekle", onPress: () => router.push("/addresses/new") },
+          ],
+        );
+      }, 600);
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Hata", e?.message ?? "Kod doğrulanamadı");
