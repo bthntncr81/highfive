@@ -21,6 +21,19 @@ import * as Haptics from "expo-haptics";
 import { endpoints } from "@/lib/api";
 import { handleApiError } from "@/lib/error-handler";
 import { StampVisual } from "@/components/loyalty/StampVisuals";
+import {
+  CashbackVisual,
+  BirthdayCakeVisual,
+  StreakFireVisual,
+  GiftBoxVisual,
+  ReferralPeopleVisual,
+  TrophyLadderVisual,
+  ClockDialVisual,
+  ProductCrownVisual,
+  DiamondTierVisual,
+  StarCounterVisual,
+  SocialIconsVisual,
+} from "@/components/loyalty/CardVisuals";
 
 type ProgramType =
   | "BASIC_POINTS" | "STAMP_CARD" | "BIRTHDAY" | "WELCOME"
@@ -380,7 +393,7 @@ function StampCard({ program, progress }: any) {
   );
 }
 
-// 2) CASHBACK
+// 2) CASHBACK — Coin stack + cüzdan
 function CashbackCard({ program, customer }: any) {
   const balance = Number(customer.cashbackBalance ?? 0);
   const pct = program.config?.cashbackPercent ?? 5;
@@ -392,12 +405,14 @@ function CashbackCard({ program, customer }: any) {
         color={color}
         name={program.name}
         description={`Her sipariş %${pct} cüzdana iade`}
+        badge={`%${pct}`}
       />
       <View className="p-4 items-center">
-        <Text className="text-xs text-foreground-muted uppercase tracking-widest">
+        <CashbackVisual balance={balance} color={color} />
+        <Text className="mt-3 text-xs uppercase tracking-widest text-foreground-muted">
           Mevcut bakiye
         </Text>
-        <Text style={{ color }} className="mt-1 text-4xl font-extrabold">
+        <Text style={{ color }} className="mt-1 text-3xl font-extrabold">
           {balance.toFixed(2)} ₺
         </Text>
         <Text className="mt-2 text-center text-xs text-foreground-muted">
@@ -408,10 +423,17 @@ function CashbackCard({ program, customer }: any) {
   );
 }
 
-// 3) BIRTHDAY
+// 3) BIRTHDAY — Pasta + mumlar
 function BirthdayCard({ program, customer }: any) {
   const color = program.color ?? "#EC4899";
   const hasBirthday = !!customer.birthDate;
+  // Yaş hesabı (mum sayısı)
+  let candleCount = 5;
+  if (hasBirthday) {
+    const bd = new Date(customer.birthDate);
+    const age = new Date().getFullYear() - bd.getFullYear();
+    candleCount = Math.min(8, Math.max(3, Math.ceil(age / 10) + 2));
+  }
   return (
     <>
       <CardHeader
@@ -420,23 +442,26 @@ function BirthdayCard({ program, customer }: any) {
         name={program.name}
         description={program.description}
       />
-      <View className="p-4">
+      <View className="p-4 items-center">
+        <BirthdayCakeVisual candles={candleCount} color={color} />
         {hasBirthday ? (
-          <Text className="text-center text-sm text-foreground-muted">
-            🎂 Doğum gününde otomatik bildirim alacaksın
-          </Text>
+          <View className="mt-3 rounded-xl bg-pink-50 px-3 py-2">
+            <Text className="text-center text-xs font-semibold text-pink-700">
+              🎂 Doğum gününde sürpriz hediyen otomatik gelecek
+            </Text>
+          </View>
         ) : (
-          <View>
-            <Text className="text-center text-sm text-foreground-muted mb-2">
-              Doğum tarihini eklemek için profilini güncelle
+          <View className="mt-3">
+            <Text className="text-center text-xs text-foreground-muted mb-2">
+              Doğum tarihini ekle, sürpriz hediyeni kaçırma
             </Text>
             <Pressable
               onPress={() => router.push("/profile/edit")}
               style={{ backgroundColor: color }}
-              className="items-center rounded-full py-2.5"
+              className="items-center rounded-full px-5 py-2.5"
             >
               <Text className="text-sm font-bold text-white">
-                Doğum tarihimi gir
+                🎂 Doğum tarihimi gir
               </Text>
             </Pressable>
           </View>
@@ -478,10 +503,11 @@ function ReferralCard({ program, customer, onChanged }: any) {
         description={program.description}
         badge={customer.referralCount > 0 ? `${customer.referralCount} davet` : undefined}
       />
-      <View className="p-4">
+      <View className="p-4 items-center">
+        <ReferralPeopleVisual count={customer.referralCount ?? 0} color={color} />
         <View
           style={{ backgroundColor: color + "10", borderWidth: 2, borderColor: color, borderStyle: "dashed" }}
-          className="rounded-2xl p-4 items-center"
+          className="mt-3 self-stretch rounded-2xl p-4 items-center"
         >
           <Text className="text-xs text-foreground-muted uppercase tracking-widest">
             Senin davet kodun
@@ -490,7 +516,7 @@ function ReferralCard({ program, customer, onChanged }: any) {
             {code ?? "..."}
           </Text>
         </View>
-        <View className="mt-3 flex-row gap-2">
+        <View className="mt-3 self-stretch flex-row gap-2">
           <Pressable
             onPress={copyCode}
             className="flex-1 items-center rounded-full bg-gray-100 py-3"
@@ -514,7 +540,7 @@ function ReferralCard({ program, customer, onChanged }: any) {
   );
 }
 
-// 5) STREAK
+// 5) STREAK — Alev (büyüklük seri sayısına göre)
 function StreakCard({ program, customer }: any) {
   const color = program.color ?? "#F97316";
   const period = program.config?.period ?? "WEEKLY";
@@ -529,24 +555,28 @@ function StreakCard({ program, customer }: any) {
         color={color}
         name={program.name}
         description={`${target} ${periodLabel} üst üste sipariş`}
+        badge={`${current}/${target}`}
       />
-      <View className="p-4">
-        <View className="flex-row items-end justify-between">
+      <View className="p-4 items-center">
+        <StreakFireVisual streak={current} color={color} />
+
+        <View className="mt-2 self-stretch flex-row items-center justify-between">
           <View>
-            <Text className="text-xs uppercase tracking-widest text-foreground-muted">
+            <Text className="text-[10px] uppercase tracking-widest text-foreground-muted">
               Şu anki seri
             </Text>
-            <Text style={{ color }} className="text-5xl font-black">
-              {current}
+            <Text style={{ color }} className="text-2xl font-black">
+              {current} <Text className="text-sm text-foreground-muted">{periodLabel}</Text>
             </Text>
           </View>
           <View className="items-end">
-            <Text className="text-[10px] text-foreground-muted">En uzun seri</Text>
-            <Text className="text-base font-bold text-foreground">{longest}</Text>
+            <Text className="text-[10px] text-foreground-muted">🏆 En uzun</Text>
+            <Text className="text-lg font-bold text-foreground">{longest}</Text>
           </View>
         </View>
+
         {/* Progress bar */}
-        <View className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200">
+        <View className="mt-3 self-stretch h-2 overflow-hidden rounded-full bg-gray-200">
           <View
             style={{ width: `${Math.min(100, (current / target) * 100)}%`, backgroundColor: color }}
             className="h-full"
@@ -560,12 +590,13 @@ function StreakCard({ program, customer }: any) {
   );
 }
 
-// 6) MILESTONE
+// 6) MILESTONE — Trophy merdiveni
 function MilestoneCard({ program, customer }: any) {
   const color = program.color ?? "#3B82F6";
   const milestones: any[] = program.config?.milestones ?? [];
   const orderCount = customer.orderCount ?? 0;
   const next = milestones.find((m) => m.orderCount > orderCount);
+  const milestoneNumbers = milestones.map((m) => m.orderCount).slice(0, 3);
   return (
     <>
       <CardHeader
@@ -573,34 +604,43 @@ function MilestoneCard({ program, customer }: any) {
         color={color}
         name={program.name}
         description={program.description}
+        badge={`${orderCount} sipariş`}
       />
-      <View className="p-4">
-        <Text className="text-xs uppercase tracking-widest text-foreground-muted">
-          Toplam sipariş
-        </Text>
-        <Text className="text-3xl font-extrabold text-foreground">
-          {orderCount}
-        </Text>
-        {next ? (
-          <View className="mt-3 rounded-xl bg-blue-50 border border-blue-200 p-3">
-            <Text className="text-xs text-blue-700 font-bold">
-              🎯 Sıradaki ödül: {next.label || `${next.orderCount}. siparişte`}
-            </Text>
-            <Text className="mt-1 text-xs text-foreground-muted">
-              {next.orderCount - orderCount} sipariş kaldı
-            </Text>
-          </View>
+      <View className="p-4 flex-row items-center">
+        {milestoneNumbers.length > 0 ? (
+          <TrophyLadderVisual current={orderCount} milestones={milestoneNumbers} color={color} />
         ) : (
-          <Text className="mt-3 text-sm text-green-700 font-bold">
-            🏆 Tüm milestone'ları tamamladın!
-          </Text>
+          <TrophyLadderVisual current={orderCount} milestones={[5, 10, 20]} color={color} />
         )}
+        <View className="flex-1 ml-3">
+          <Text className="text-xs uppercase tracking-widest text-foreground-muted">
+            Toplam sipariş
+          </Text>
+          <Text className="text-3xl font-extrabold text-foreground">{orderCount}</Text>
+          {next ? (
+            <View className="mt-3 rounded-xl bg-blue-50 border border-blue-200 p-2">
+              <Text className="text-[10px] text-blue-700 font-bold">
+                🎯 Sıradaki ödül
+              </Text>
+              <Text className="text-xs text-foreground mt-0.5">
+                {next.label || `${next.orderCount}. siparişte`}
+              </Text>
+              <Text className="mt-0.5 text-[10px] text-foreground-muted">
+                {next.orderCount - orderCount} sipariş kaldı
+              </Text>
+            </View>
+          ) : (
+            <Text className="mt-3 text-xs text-green-700 font-bold">
+              🏆 Tüm milestone'ları tamamladın!
+            </Text>
+          )}
+        </View>
       </View>
     </>
   );
 }
 
-// 7) WELCOME
+// 7) WELCOME — Hediye kutusu
 function WelcomeCard({ program, customer, progress }: any) {
   const color = program.color ?? "#10B981";
   const claimed = progress?.claimed === true || customer.orderCount > 0;
@@ -613,19 +653,23 @@ function WelcomeCard({ program, customer, progress }: any) {
         description={program.description}
         badge={claimed ? "✓ Kullanıldı" : "🎁 Senin"}
       />
-      <View className="p-4">
+      <View className="p-4 items-center">
+        <GiftBoxVisual color={color} />
         {!claimed ? (
-          <View className="rounded-xl bg-green-50 border-2 border-green-300 border-dashed p-3">
-            <Text className="text-sm font-bold text-green-800">
-              %{program.config?.discountPercent ?? 25} indirim + {program.config?.bonusPoints ?? 50} puan
+          <View className="mt-3 self-stretch rounded-xl bg-green-50 border-2 border-green-300 border-dashed p-3">
+            <Text className="text-center text-sm font-extrabold text-green-800">
+              %{program.config?.discountPercent ?? 25} indirim
             </Text>
-            <Text className="mt-1 text-xs text-green-700">
+            <Text className="text-center text-xs font-semibold text-green-700">
+              + {program.config?.bonusPoints ?? 50} hoş geldin puanı
+            </Text>
+            <Text className="mt-1 text-center text-[10px] text-green-700">
               İlk siparişinde otomatik uygulanır
             </Text>
           </View>
         ) : (
-          <Text className="text-sm text-foreground-muted">
-            Hoş geldin bonusunu kullandın 🎉
+          <Text className="mt-3 text-sm text-foreground-muted">
+            🎉 Hoş geldin bonusunu kullandın
           </Text>
         )}
       </View>
@@ -633,7 +677,7 @@ function WelcomeCard({ program, customer, progress }: any) {
   );
 }
 
-// 8) PRODUCT VIP
+// 8) PRODUCT VIP — Taç + tabak + progress arc
 function ProductVipCard({ program, progress }: any) {
   const color = program.color ?? "#EAB308";
   const target = program.config?.requiredCount ?? 20;
@@ -648,22 +692,26 @@ function ProductVipCard({ program, progress }: any) {
         description={program.description}
         badge={`${total}/${target}`}
       />
-      <View className="p-4">
-        <View className="h-3 overflow-hidden rounded-full bg-gray-200">
+      <View className="p-4 items-center">
+        <ProductCrownVisual count={total} required={target} color={color} />
+        <Text className="mt-3 text-2xl font-extrabold" style={{ color }}>
+          {total} / {target}
+        </Text>
+        <View className="mt-2 self-stretch h-2 overflow-hidden rounded-full bg-gray-200">
           <View
             style={{ width: `${Math.min(100, (total / target) * 100)}%`, backgroundColor: color }}
             className="h-full"
           />
         </View>
         <Text className="mt-2 text-center text-xs text-foreground-muted">
-          {total >= target ? "🎉 Ödül kazandın!" : `${target - total} adet kaldı`}
+          {total >= target ? "🎉 VIP ürün kazandın!" : `${target - total} adet kaldı`}
         </Text>
       </View>
     </>
   );
 }
 
-// 9) HAPPY HOUR
+// 9) HAPPY HOUR — Saat dial
 function HappyHourCard({ program }: any) {
   const color = program.color ?? "#06B6D4";
   const start = program.config?.startHour ?? 14;
@@ -680,13 +728,16 @@ function HappyHourCard({ program }: any) {
         description={`${String(start).padStart(2, "0")}:00 - ${String(end).padStart(2, "0")}:00 arası ${mult}x puan`}
         badge={isActive ? "🟢 ŞU AN" : "💤 Bekliyor"}
       />
-      <View className="p-4">
+      <View className="p-4 items-center">
+        <ClockDialVisual startHour={start} endHour={end} multiplier={mult} color={color} />
         {isActive ? (
-          <Text style={{ color }} className="text-center text-base font-extrabold">
-            🔥 Şu an sipariş ver, {mult}x puan kazan!
-          </Text>
+          <View className="mt-3 self-stretch rounded-xl bg-cyan-50 border-2 border-cyan-300 p-3">
+            <Text style={{ color }} className="text-center text-base font-extrabold">
+              🔥 Şu an sipariş ver, {mult}x puan kazan!
+            </Text>
+          </View>
         ) : (
-          <Text className="text-center text-sm text-foreground-muted">
+          <Text className="mt-3 text-center text-sm text-foreground-muted">
             Sonraki dilim {String(start).padStart(2, "0")}:00'da başlıyor
           </Text>
         )}
@@ -695,36 +746,48 @@ function HappyHourCard({ program }: any) {
   );
 }
 
-// 10) TIER DISCOUNT
+// 10) TIER DISCOUNT — Elmas merdiveni
 function TierDiscountCard({ program, customer }: any) {
   const color = program.color ?? "#0EA5E9";
   const tier = customer.loyaltyTier;
   const discount = tier ? Number(tier.discountPercent ?? 0) : 0;
+  const tierName = (tier?.name ?? "BRONZE").toUpperCase();
   return (
     <>
       <CardHeader
         icon={tier?.icon ?? program.icon ?? "💎"}
         color={color}
         name={program.name}
-        description={tier ? `${tier.name} olarak %${discount} her zaman indirim` : "Bronze - henüz indirim yok"}
+        description={tier ? `${tier.name} seviyendesin` : "Henüz seviye yok"}
+        badge={tierName}
       />
-      {discount > 0 && (
-        <View className="p-4 items-center">
-          <Text style={{ color }} className="text-3xl font-extrabold">
+      <View className="p-4 flex-row items-center">
+        <DiamondTierVisual tier={tierName} color={color} />
+        <View className="flex-1 ml-3">
+          <Text className="text-xs uppercase tracking-widest text-foreground-muted">
+            Senin indirim
+          </Text>
+          <Text style={{ color }} className="text-4xl font-black">
             %{discount}
           </Text>
-          <Text className="text-xs text-foreground-muted">otomatik indirim</Text>
+          <Text className="text-xs text-foreground-muted">her siparişte otomatik</Text>
+          {discount === 0 && (
+            <Text className="mt-2 text-[10px] text-foreground-muted">
+              Daha çok sipariş ver, üst seviyeye yüksel
+            </Text>
+          )}
         </View>
-      )}
+      </View>
     </>
   );
 }
 
-// 11) BASIC POINTS (klasik)
+// 11) BASIC POINTS — Yıldız sayacı
 function BasicPointsCard({ program, customer }: any) {
   const color = program.color ?? "#F59E0B";
   const pointsPerTL = program.config?.pointsPerTL ?? 10;
   const ratio = program.config?.redeemRatio ?? 10;
+  const points = customer.totalPoints ?? 0;
   return (
     <>
       <CardHeader
@@ -732,17 +795,21 @@ function BasicPointsCard({ program, customer }: any) {
         color={color}
         name={program.name}
         description={program.description}
+        badge={`${points} ⭐`}
       />
-      <View className="p-4 gap-2">
-        <RuleRow icon="trending-up-outline" text={`Her ${pointsPerTL}₺ harcamada 1 puan`} />
-        <RuleRow icon="cash-outline" text={`100 puan = ${ratio}₺ indirim`} />
-        <RuleRow icon="information-circle-outline" text={`Min ${program.config?.minRedemption ?? 100} puan kullanılabilir`} />
+      <View className="p-4 items-center">
+        <StarCounterVisual points={points} color={color} />
+        <View className="mt-2 self-stretch gap-1.5">
+          <RuleRow icon="trending-up-outline" text={`Her ${pointsPerTL}₺ harcamada 1 puan`} />
+          <RuleRow icon="cash-outline" text={`100 puan = ${ratio}₺ indirim`} />
+          <RuleRow icon="information-circle-outline" text={`Min ${program.config?.minRedemption ?? 100} puan kullanılabilir`} />
+        </View>
       </View>
     </>
   );
 }
 
-// 12) SOCIAL
+// 12) SOCIAL — Sosyal ikon grid
 function SocialCard({ program }: any) {
   const color = program.color ?? "#A855F7";
   const platforms: any[] = program.config?.platforms ?? [];
@@ -754,18 +821,27 @@ function SocialCard({ program }: any) {
         name={program.name}
         description={program.description}
       />
-      <View className="p-4 gap-2">
-        {platforms.map((p: any, i: number) => (
-          <View
-            key={i}
-            className="flex-row items-center justify-between rounded-xl bg-gray-50 p-3"
-          >
-            <Text className="text-sm font-semibold text-foreground">{p.name}</Text>
-            <Text style={{ color }} className="text-sm font-extrabold">
-              +{p.points} puan
+      <View className="p-4 items-center">
+        <SocialIconsVisual color={color} />
+        <View className="mt-3 self-stretch gap-2">
+          {platforms.length > 0 ? (
+            platforms.map((p: any, i: number) => (
+              <View
+                key={i}
+                className="flex-row items-center justify-between rounded-xl bg-gray-50 p-3"
+              >
+                <Text className="text-sm font-semibold text-foreground">{p.name}</Text>
+                <Text style={{ color }} className="text-sm font-extrabold">
+                  +{p.points} puan
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text className="text-center text-xs text-foreground-muted">
+              Sosyal medyada paylaş, puan kazan
             </Text>
-          </View>
-        ))}
+          )}
+        </View>
       </View>
     </>
   );
