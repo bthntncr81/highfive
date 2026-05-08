@@ -22,6 +22,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const user = useAuth((s) => s.user);
+  const hydrated = useAuth((s) => s.hydrated);
   const loadFavorites = useFavorites((s) => s.load);
   const [appReady, setAppReady] = useState(false);
 
@@ -49,8 +50,9 @@ export default function RootLayout() {
     if (user) loadFavorites();
   }, [user]);
 
-  // App ready değilken branded splash UI
-  if (!appReady) {
+  // App ready değilken VEYA auth hydrate olmadan branded splash UI
+  // (token AsyncStorage'dan okunmadan render edersek 401 alıp logout oluruz)
+  if (!appReady || !hydrated) {
     return (
       <View
         style={{

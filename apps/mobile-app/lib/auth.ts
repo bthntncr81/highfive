@@ -15,6 +15,7 @@ export type AuthUser = {
 type AuthState = {
   user: AuthUser | null;
   token: string | null;
+  hydrated: boolean; // AsyncStorage'dan persist okuması bitti mi
   setSession: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
@@ -49,6 +50,7 @@ export const useAuth = create<AuthState>()(
     (set, get) => ({
       user: null,
       token: null,
+      hydrated: false,
 
       setSession: async (token, user) => {
         await setToken(token);
@@ -171,8 +173,12 @@ export const useAuth = create<AuthState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({ token: s.token, user: s.user }),
       onRehydrateStorage: () => (state) => {
-        // rehydrate sonrası API client'a da token'ı yaz
-        if (state?.token) setToken(state.token);
+        // rehydrate sonrası API client'a da token'ı yaz, sonra hydrated=true
+        (async () => {
+          if (state?.token) await setToken(state.token);
+          // Hydration bitti — UI artık güvenli render edebilir
+          useAuth.setState({ hydrated: true });
+        })();
       },
     },
   ),
