@@ -1,6 +1,5 @@
 import "../global.css";
 import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -14,7 +13,6 @@ import {
 } from "@/lib/push";
 import { useAuth } from "@/lib/auth";
 import { useFavorites } from "@/lib/favorites";
-import { Logo } from "@/components/ui/Logo";
 import { FlyToCartOverlay } from "@/components/ui/FlyToCartOverlay";
 
 // Native splash screen'i kontrollü gizle
@@ -26,61 +24,36 @@ export default function RootLayout() {
   const loadFavorites = useFavorites((s) => s.load);
   const [appReady, setAppReady] = useState(false);
 
-  // Boot
+  // Boot — auth hydrate + push setup tamamlanınca native splash'ı gizle
   useEffect(() => {
-    (async () => {
-      try {
-        // Push notifications setup (non-blocking)
-        initPushNotifications().catch((e) =>
-          console.log("[push] init failed", e),
-        );
-        attachNotificationListeners();
-
-        // Minimum 800ms splash görünsün (kötü UX için kısa flash önle)
-        await new Promise((r) => setTimeout(r, 800));
-      } finally {
-        setAppReady(true);
-        SplashScreen.hideAsync().catch(() => {});
-      }
-    })();
+    initPushNotifications().catch((e) =>
+      console.log("[push] init failed", e),
+    );
+    attachNotificationListeners();
     return () => detachNotificationListeners();
   }, []);
+
+  // Hydration TAMAMLANDIKTAN SONRA splash'ı gizle (single splash, no flash)
+  // Native iOS LaunchScreen.storyboard render olur, biz JS hazır olunca dismiss ederiz
+  useEffect(() => {
+    if (!hydrated) return;
+    // Çok kısa flash önlemek için 400ms minimum bekle
+    const t = setTimeout(() => {
+      setAppReady(true);
+      SplashScreen.hideAsync().catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [hydrated]);
 
   useEffect(() => {
     if (user) loadFavorites();
   }, [user]);
 
-  // App ready değilken VEYA auth hydrate olmadan branded splash UI
-  // (token AsyncStorage'dan okunmadan render edersek 401 alıp logout oluruz)
+  // appReady false iken: native splash (storyboard) görünür, hiçbir React render yok
+  // Bu sayede TEK splash katmanı: kırmızı zemin + beyaz logo (storyboard)
+  // → JS hazır olduğunda Stack render olur, SplashScreen.hideAsync() ile native splash kapanır
   if (!appReady || !hydrated) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#bb1e10",
-        }}
-      >
-        <Logo height={64} variant="white" />
-        <Text
-          style={{
-            marginTop: 18,
-            color: "rgba(255,255,255,0.85)",
-            fontSize: 14,
-            fontWeight: "600",
-            letterSpacing: 1,
-          }}
-        >
-          HIGH FIVE RESTAURANT
-        </Text>
-        <ActivityIndicator
-          color="#fff"
-          style={{ marginTop: 32 }}
-          size="small"
-        />
-      </View>
-    );
+    return null;
   }
 
   return (
