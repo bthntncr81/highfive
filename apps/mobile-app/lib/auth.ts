@@ -30,7 +30,12 @@ type AuthState = {
   // Email OTP (yeni, /api/auth/customer/email/...)
   requestEmailOtp: (
     email: string,
-    name?: string,
+    extra?: {
+      name?: string;
+      phone?: string;
+      gender?: "MALE" | "FEMALE" | "OTHER";
+      birthDate?: string; // ISO YYYY-MM-DD
+    },
   ) => Promise<{ success: true; message: string }>;
   verifyEmailOtp: (
     email: string,
@@ -89,10 +94,24 @@ export const useAuth = create<AuthState>()(
       },
 
       // ----- EMAIL OTP -----
-      requestEmailOtp: async (email: string, name?: string) => {
+      requestEmailOtp: async (
+        email: string,
+        extra?: {
+          name?: string;
+          phone?: string;
+          gender?: "MALE" | "FEMALE" | "OTHER";
+          birthDate?: string;
+        },
+      ) => {
         return api.post<{ success: true; message: string }>(
           "/api/auth/customer/email/request-otp",
-          { email, ...(name ? { name } : {}) },
+          {
+            email,
+            ...(extra?.name ? { name: extra.name } : {}),
+            ...(extra?.phone ? { phone: extra.phone } : {}),
+            ...(extra?.gender ? { gender: extra.gender } : {}),
+            ...(extra?.birthDate ? { birthDate: extra.birthDate } : {}),
+          },
         );
       },
 

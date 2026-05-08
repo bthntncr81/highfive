@@ -269,11 +269,49 @@ export default async function authRoutes(server: FastifyInstance) {
   //     fires a welcome email on first verification, returns a customer JWT.
 
   server.post('/customer/email/request-otp', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { email, name } = request.body as { email?: string; name?: string };
+    const {
+      email,
+      name,
+      phone,
+      gender,
+      birthDate,
+    } = request.body as {
+      email?: string;
+      name?: string;
+      phone?: string;
+      gender?: string;
+      birthDate?: string;
+    };
     if (!email || !isValidEmail(email)) {
       return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
     }
     const cleaned = email.toLowerCase().trim();
+
+    // Validate optional fields
+    let cleanGender: string | null = null;
+    if (gender) {
+      const g = gender.toUpperCase();
+      if (['MALE', 'FEMALE', 'OTHER'].includes(g)) cleanGender = g;
+    }
+    let parsedBirthDate: Date | null = null;
+    if (birthDate) {
+      const d = new Date(birthDate);
+      if (!isNaN(d.getTime()) && d.getFullYear() > 1900 && d < new Date()) {
+        parsedBirthDate = d;
+      }
+    }
+    const cleanPhone = phone ? phone.replace(/\D/g, '').trim() || null : null;
+
+    // Phone uniqueness — başka customer aynı phone ile kullanmasın
+    if (cleanPhone) {
+      const phoneOwner = await prisma.customer.findUnique({ where: { phone: cleanPhone } });
+      if (phoneOwner && phoneOwner.email !== cleaned) {
+        return reply.status(400).send({
+          error: 'Bu telefon başka bir hesaba kayıtlı',
+          code: 'PHONE_EXISTS',
+        });
+      }
+    }
 
     // Find or create. Email is @unique so this is safe.
     let customer = await prisma.customer.findUnique({ where: { email: cleaned } });
@@ -285,6 +323,9 @@ export default async function authRoutes(server: FastifyInstance) {
         data: {
           email: cleaned,
           name: name?.trim() || null,
+          phone: cleanPhone,
+          gender: cleanGender,
+          birthDate: parsedBirthDate,
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
           emailConsent: false, // explicit opt-in later
@@ -296,8 +337,11 @@ export default async function authRoutes(server: FastifyInstance) {
         data: {
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
-          // Update name if it was missing and the request supplies one
+          // Eksik alanları doldur — varsa üzerine yazma
           name: customer.name ?? (name?.trim() || null),
+          phone: customer.phone ?? cleanPhone,
+          gender: customer.gender ?? cleanGender,
+          birthDate: customer.birthDate ?? parsedBirthDate,
         },
       });
     }

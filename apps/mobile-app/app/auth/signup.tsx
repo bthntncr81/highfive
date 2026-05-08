@@ -21,10 +21,15 @@ import { Logo } from "@/components/ui/Logo";
 
 type Step = "info" | "otp";
 
+type Gender = "MALE" | "FEMALE" | "OTHER";
+
 export default function Signup() {
   const [step, setStep] = useState<Step>("info");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
+  const [birthDate, setBirthDate] = useState(""); // YYYY-MM-DD
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
@@ -46,9 +51,23 @@ export default function Signup() {
       Alert.alert("Hata", "Geçerli e-posta adresi gerekli");
       return;
     }
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+      Alert.alert("Hata", "Geçerli telefon numarası gir veya boş bırak");
+      return;
+    }
+    if (birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+      Alert.alert("Hata", "Doğum tarihi YYYY-AA-GG (örn 1990-05-15) formatında olmalı");
+      return;
+    }
     setLoading(true);
     try {
-      await requestEmailOtp(email.trim().toLowerCase(), name.trim());
+      await requestEmailOtp(email.trim().toLowerCase(), {
+        name: name.trim(),
+        phone: phoneDigits || undefined,
+        gender: gender ?? undefined,
+        birthDate: birthDate || undefined,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep("otp");
       setResendIn(60);
@@ -150,6 +169,73 @@ export default function Signup() {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   className="rounded-2xl border border-border px-4 py-3 text-base text-foreground"
+                  editable={!loading}
+                />
+              </Field>
+
+              <Field label="Telefon (kurye için, opsiyonel)">
+                <View className="flex-row items-center rounded-2xl border border-border px-4">
+                  <Text className="mr-2 text-base font-semibold text-foreground">
+                    +90
+                  </Text>
+                  <TextInput
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    placeholder="555 555 55 55"
+                    placeholderTextColor="#9a9a9a"
+                    className="flex-1 py-3 text-base text-foreground"
+                    maxLength={11}
+                    editable={!loading}
+                  />
+                </View>
+              </Field>
+
+              <Field label="Cinsiyet (opsiyonel — sana özel kampanyalar için)">
+                <View className="flex-row gap-2">
+                  {[
+                    { v: "MALE" as const, label: "👨 Erkek" },
+                    { v: "FEMALE" as const, label: "👩 Kadın" },
+                    { v: "OTHER" as const, label: "Diğer" },
+                  ].map((opt) => (
+                    <Pressable
+                      key={opt.v}
+                      onPress={() => setGender(gender === opt.v ? null : opt.v)}
+                      disabled={loading}
+                      className={`flex-1 items-center rounded-2xl border px-3 py-3 ${
+                        gender === opt.v
+                          ? "border-primary-500 bg-primary-50"
+                          : "border-border bg-white"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-semibold ${
+                          gender === opt.v ? "text-primary-600" : "text-foreground-muted"
+                        }`}
+                      >
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </Field>
+
+              <Field label="Doğum tarihi (opsiyonel — sürpriz hediyen için 🎂)">
+                <TextInput
+                  value={birthDate}
+                  onChangeText={(t) => {
+                    // YYYY-MM-DD otomatik tire ekle
+                    const digits = t.replace(/\D/g, "").slice(0, 8);
+                    let formatted = digits;
+                    if (digits.length > 4) formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+                    if (digits.length > 6) formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+                    setBirthDate(formatted);
+                  }}
+                  keyboardType="number-pad"
+                  placeholder="1990-05-15"
+                  placeholderTextColor="#9a9a9a"
+                  className="rounded-2xl border border-border px-4 py-3 text-base text-foreground"
+                  maxLength={10}
                   editable={!loading}
                 />
               </Field>
