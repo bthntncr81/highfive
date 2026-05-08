@@ -1,19 +1,33 @@
+import { useRef } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useCart } from "@/lib/cart";
+import { useFlyCart } from "@/lib/fly-cart";
 import { ApiBundle, imageUrl, parsePrice } from "@/lib/api";
 
 export function BundleCard({ bundle }: { bundle: ApiBundle }) {
   const add = useCart((s) => s.add);
+  const fly = useFlyCart((s) => s.fly);
   const original = parsePrice(bundle.originalPrice);
   const price = parsePrice(bundle.bundlePrice);
   const savings = parsePrice(bundle.savings);
   const img = imageUrl(bundle.image);
 
+  const addBtnRef = useRef<View>(null);
+
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Buton pozisyonunu ölç → bundle sepete uçsun
+    addBtnRef.current?.measureInWindow((x, y, w, h) => {
+      fly({
+        imageUrl: img,
+        emoji: "📦",
+        startX: x + w / 2,
+        startY: y + h / 2,
+      });
+    });
     // Bundle'ı tek bir item olarak ekle (id: bundle:xxx prefix ile)
     add({
       id: `bundle:${bundle.id}`,
@@ -158,6 +172,7 @@ export function BundleCard({ bundle }: { bundle: ApiBundle }) {
             </Text>
           </View>
           <Pressable
+            ref={addBtnRef as any}
             onPress={handleAdd}
             className="flex-row items-center rounded-full bg-amber-500 px-4 py-2.5"
           >

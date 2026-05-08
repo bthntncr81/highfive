@@ -4,10 +4,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import { useMenu } from "@/lib/hooks";
 import { useCart } from "@/lib/cart";
+import { useFlyCart } from "@/lib/fly-cart";
 import { imageUrl, parsePrice } from "@/lib/api";
 
 export default function ProductDetail() {
@@ -15,7 +16,9 @@ export default function ProductDetail() {
   const menu = useMenu();
   const product = menu.data?.items.find((p) => p.id === id);
   const add = useCart((s) => s.add);
+  const fly = useFlyCart((s) => s.fly);
   const [qty, setQty] = useState(1);
+  const addBtnRef = useRef<View>(null);
 
   if (menu.loading && !menu.data) {
     return (
@@ -54,6 +57,17 @@ export default function ProductDetail() {
 
   const handleAdd = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Buton pozisyonunu ölç → ürün sepete uçsun (her qty için bir tane)
+    addBtnRef.current?.measureInWindow((x, y, w, h) => {
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      // Birden fazla ürün varsa kademeli uçur
+      for (let i = 0; i < Math.min(qty, 5); i++) {
+        setTimeout(() => {
+          fly({ imageUrl: img, emoji: "🍽️", startX: cx, startY: cy });
+        }, i * 80);
+      }
+    });
     add(
       {
         id: product.id,
@@ -63,7 +77,8 @@ export default function ProductDetail() {
       },
       qty,
     );
-    router.back();
+    // Animasyon görünsün diye küçük gecikme
+    setTimeout(() => router.back(), 350);
   };
 
   return (
@@ -182,6 +197,7 @@ export default function ProductDetail() {
           </View>
 
           <Pressable
+            ref={addBtnRef as any}
             onPress={handleAdd}
             className="ml-3 flex-1 items-center rounded-full bg-primary-500 py-4"
           >

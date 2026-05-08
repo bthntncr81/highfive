@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,6 +7,7 @@ import { Link } from "expo-router";
 import { useCart } from "@/lib/cart";
 import { useFavorites } from "@/lib/favorites";
 import { useAuth } from "@/lib/auth";
+import { useFlyCart } from "@/lib/fly-cart";
 import { ApiMenuItem, imageUrl, parsePrice } from "@/lib/api";
 
 type Props = {
@@ -54,6 +56,7 @@ function ProductImage({
 
 export function ProductCard({ product, variant = "list" }: Props) {
   const add = useCart((s) => s.add);
+  const fly = useFlyCart((s) => s.fly);
   const isFav = useFavorites((s) => s.ids.includes(product.id));
   const toggleFav = useFavorites((s) => s.toggle);
   const user = useAuth((s) => s.user);
@@ -65,8 +68,19 @@ export function ProductCard({ product, variant = "list" }: Props) {
   const oldPrice = discountPrice ? price : null;
   const primaryBadge = product.badges?.[0];
 
+  const addBtnRef = useRef<View>(null);
+
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Buton pozisyonunu ölç → ürün sepete uçsun
+    addBtnRef.current?.measureInWindow((x, y, w, h) => {
+      fly({
+        imageUrl: imageUrl(product.image),
+        emoji: FALLBACK_EMOJI[product.categoryId] ?? "🍽️",
+        startX: x + w / 2,
+        startY: y + h / 2,
+      });
+    });
     add({
       id: product.id,
       name: product.name,
@@ -135,6 +149,7 @@ export function ProductCard({ product, variant = "list" }: Props) {
                 )}
               </View>
               <Pressable
+                ref={addBtnRef as any}
                 onPress={handleAdd}
                 className="h-7 w-7 items-center justify-center rounded-full bg-primary-500"
               >
@@ -200,6 +215,7 @@ export function ProductCard({ product, variant = "list" }: Props) {
               )}
             </View>
             <Pressable
+              ref={addBtnRef as any}
               onPress={handleAdd}
               className="h-9 w-9 items-center justify-center rounded-full bg-primary-500"
             >

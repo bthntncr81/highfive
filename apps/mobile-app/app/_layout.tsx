@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useFavorites } from "@/lib/favorites";
 import { Logo } from "@/components/ui/Logo";
+import { FlyToCartOverlay } from "@/components/ui/FlyToCartOverlay";
 
 // Native splash screen'i kontrollü gizle
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -170,6 +171,8 @@ export default function RootLayout() {
             options={{ animation: "slide_from_right" }}
           />
         </Stack>
+        {/* Sepete uçan ürün animasyonu (her ekranın üzerinde) */}
+        <FlyToCartOverlay />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
