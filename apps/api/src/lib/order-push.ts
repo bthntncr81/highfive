@@ -81,7 +81,11 @@ async function findCustomerTokensForOrder(
   if (!customerId) return { tokens: [], customerId: null };
 
   const devices = await prisma.deviceToken.findMany({
-    where: { customerId, isActive: true },
+    where: {
+      customerId,
+      isActive: true,
+      NOT: { token: { startsWith: 'nopush-' } },
+    },
     select: { token: true },
   });
 

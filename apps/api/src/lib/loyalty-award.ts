@@ -69,7 +69,11 @@ export async function awardMobileOrderPoints(
   const wantsLoyalty = !prefs || (prefs.pushEnabled && prefs.loyalty);
   if (wantsLoyalty) {
     const devices = await prisma.deviceToken.findMany({
-      where: { customerId: customer.id, isActive: true },
+      where: {
+        customerId: customer.id,
+        isActive: true,
+        NOT: { token: { startsWith: 'nopush-' } },
+      },
       select: { token: true },
     });
     if (devices.length > 0) {
@@ -103,7 +107,11 @@ async function maybeUpgradeTier(prisma: PrismaClient, customerId: string): Promi
 
   // Push: tier upgrade
   const devices = await prisma.deviceToken.findMany({
-    where: { customerId, isActive: true },
+    where: {
+      customerId,
+      isActive: true,
+      NOT: { token: { startsWith: 'nopush-' } },
+    },
     select: { token: true },
   });
   if (devices.length > 0) {

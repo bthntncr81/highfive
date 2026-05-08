@@ -86,7 +86,9 @@ export async function sendCampaignPush(
   const targetIds = args.targetIds ?? [];
 
   // Token listesini topla
-  let where: any = { isActive: true };
+  // 'nopush-' prefixli token'lar Personal Team / simulator placeholder'ları;
+  // gerçek Expo push token'ı değiller, gönderme dışı tutulur.
+  let where: any = { isActive: true, NOT: { token: { startsWith: 'nopush-' } } };
   if (targetType === 'VERIFIED') {
     where.customer = { isVerified: true };
   } else if (targetType === 'CUSTOMER') {

@@ -17,9 +17,14 @@ function generateCouponCode(prefix: string): string {
 }
 
 // Müşterinin telefon push token'larını çek
+// 'nopush-' prefixli placeholder'lar (Personal Team iOS, simulator) hariç
 async function getCustomerPushTokens(prisma: PrismaClient, customerId: string): Promise<string[]> {
   const devices = await prisma.deviceToken.findMany({
-    where: { customerId, isActive: true },
+    where: {
+      customerId,
+      isActive: true,
+      NOT: { token: { startsWith: 'nopush-' } },
+    },
     select: { token: true },
   });
   return devices.map((d) => d.token);
