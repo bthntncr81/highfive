@@ -198,14 +198,38 @@ export async function initPushNotifications() {
   await ensureAndroidChannel();
 
   const granted = await requestPermissions();
-  if (!granted) {
-    console.log("[push] izin verilmedi");
-    return;
+  if (granted) {
+    const token = await getExpoPushToken();
+    if (token) {
+      // Push token alındı → register
+      await registerDevice(token);
+      return;
+    }
   }
 
-  const token = await getExpoPushToken();
-  if (!token) return;
+  // Push olmasa bile cihaz kaydı yap (POS'ta "aktif cihaz" listesi için)
+  // Personal Team iOS build veya simulator gibi push'suz durumlarda da müşteri görünür
+  await registerDeviceWithoutPush();
+}
 
-  // Aynı token tekrar register edilebilir; backend idempotent + lastSeenAt günceller
-  await registerDevice(token);
+// Push token olmadan cihaz kaydı (analytics için)
+async function registerDeviceWithoutPush() {
+  try {
+    // Cihaz unique ID — her install için stabil, AsyncStorage'da sakla
+    let deviceId = await AsyncStorage.getItem("hf_device_id");
+    if (!deviceId) {
+      deviceId = `nopush-${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await AsyncStorage.setItem("hf_device_id", deviceId);
+    }
+    await api.post("/api/mobile/devices/register", {
+      token: deviceId, // unique placeholder
+      platform: Platform.OS,
+      appVersion: Constants.expoConfig?.version,
+      locale: "tr-TR",
+      noPush: true,
+    });
+    console.log("[push] device registered without push token");
+  } catch (e) {
+    console.log("[push] no-push register failed:", e);
+  }
 }
