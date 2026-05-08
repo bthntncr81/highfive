@@ -279,28 +279,28 @@ export default async function authRoutes(server: FastifyInstance) {
       email?: string;
       name?: string;
       phone?: string;
-      gender?: string;
-      birthDate?: string;
+      gender?: string;     // "MALE" | "FEMALE" | "OTHER"
+      birthDate?: string;  // "YYYY-MM-DD"
     };
     if (!email || !isValidEmail(email)) {
       return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
     }
     const cleaned = email.toLowerCase().trim();
 
-    // Validate optional fields
-    let cleanGender: string | null = null;
-    if (gender) {
-      const g = gender.toUpperCase();
-      if (['MALE', 'FEMALE', 'OTHER'].includes(g)) cleanGender = g;
-    }
-    let parsedBirthDate: Date | null = null;
+    // Normalize optional profile fields — tolerate fill-in across multiple requests,
+    // never silently overwrite values the customer has already set.
+    let parsedBirth: Date | undefined;
     if (birthDate) {
       const d = new Date(birthDate);
       if (!isNaN(d.getTime()) && d.getFullYear() > 1900 && d < new Date()) {
-        parsedBirthDate = d;
+        parsedBirth = d;
       }
     }
-    const cleanPhone = phone ? phone.replace(/\D/g, '').trim() || null : null;
+    const allowedGenders = ['MALE', 'FEMALE', 'OTHER'];
+    const normalizedGender = gender && allowedGenders.includes(gender.toUpperCase())
+      ? gender.toUpperCase()
+      : undefined;
+    const cleanPhone = phone ? phone.replace(/\D/g, '').trim() || undefined : undefined;
 
     // Phone uniqueness — başka customer aynı phone ile kullanmasın
     if (cleanPhone) {
@@ -324,8 +324,8 @@ export default async function authRoutes(server: FastifyInstance) {
           email: cleaned,
           name: name?.trim() || null,
           phone: cleanPhone,
-          gender: cleanGender,
-          birthDate: parsedBirthDate,
+          birthDate: parsedBirth,
+          gender: normalizedGender,
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
           emailConsent: false, // explicit opt-in later
@@ -340,8 +340,8 @@ export default async function authRoutes(server: FastifyInstance) {
           // Eksik alanları doldur — varsa üzerine yazma
           name: customer.name ?? (name?.trim() || null),
           phone: customer.phone ?? cleanPhone,
-          gender: customer.gender ?? cleanGender,
-          birthDate: customer.birthDate ?? parsedBirthDate,
+          birthDate: customer.birthDate ?? parsedBirth ?? null,
+          gender: customer.gender ?? normalizedGender ?? null,
         },
       });
     }

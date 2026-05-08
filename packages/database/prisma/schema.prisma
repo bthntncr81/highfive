@@ -607,7 +607,11 @@ model Customer {
   email           String?  @unique // Email-OTP login için ana identifier
   name            String?
   birthDate       DateTime?
+<<<<<<< HEAD
   gender          String?  // "MALE" | "FEMALE" | "OTHER" | null
+=======
+  gender          String?  // "MALE" | "FEMALE" | "OTHER" — kayıtta opsiyonel
+>>>>>>> server/main
   password        String?  // Optional - eski web login (kullanılmıyor)
 
   // Loyalty Info

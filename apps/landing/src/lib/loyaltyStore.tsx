@@ -9,7 +9,11 @@ interface LoyaltyContextType {
   login: (phone: string) => Promise<boolean>
   register: (phone: string, name?: string) => Promise<{ success: boolean; error?: string }>
   // Email + OTP — yeni tercih edilen akış (telefon doğrulamamız yok)
-  requestEmailOtp: (email: string, name?: string) => Promise<{ success: boolean; error?: string }>
+  requestEmailOtp: (
+    email: string,
+    name?: string,
+    profile?: { birthDate?: string; gender?: 'MALE' | 'FEMALE' | 'OTHER' },
+  ) => Promise<{ success: boolean; error?: string }>
   verifyEmailOtp: (email: string, code: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   refreshMember: () => Promise<void>
@@ -100,9 +104,13 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-  const requestEmailOtp = useCallback(async (email: string, name?: string) => {
+  const requestEmailOtp = useCallback(async (
+    email: string,
+    name?: string,
+    profile?: { birthDate?: string; gender?: 'MALE' | 'FEMALE' | 'OTHER' },
+  ) => {
     try {
-      const res = await loyaltyApi.requestEmailOtp(email.trim().toLowerCase(), name?.trim())
+      const res = await loyaltyApi.requestEmailOtp(email.trim().toLowerCase(), name?.trim(), profile)
       if (res.success) return { success: true }
       return { success: false, error: res.error || 'Kod gönderilemedi' }
     } catch {
