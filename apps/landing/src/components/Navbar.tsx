@@ -326,6 +326,8 @@ const LoginModal = ({
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [gender, setGender] = useState<'' | 'MALE' | 'FEMALE' | 'OTHER'>('')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -346,7 +348,10 @@ const LoginModal = ({
     }
     setIsLoading(true)
     setLoginError('')
-    const res = await requestEmailOtp(trimmed, name.trim() || undefined)
+    const res = await requestEmailOtp(trimmed, name.trim() || undefined, {
+      birthDate: birthDate || undefined,
+      gender: gender || undefined,
+    })
     setIsLoading(false)
     if (res.success) {
       setStep('code')
@@ -461,6 +466,38 @@ const LoginModal = ({
                       className="input-field"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Doğum tarihi <span className="text-foreground-subtle text-xs">(ops.)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Cinsiyet <span className="text-foreground-subtle text-xs">(ops.)</span>
+                      </label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value as typeof gender)}
+                        className="input-field"
+                      >
+                        <option value="">Seçilmedi</option>
+                        <option value="FEMALE">Kadın</option>
+                        <option value="MALE">Erkek</option>
+                        <option value="OTHER">Diğer</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-foreground-subtle">
+                    Doğum gününde sürpriz indirim için doğum tarihini bırakabilirsin 🎂
+                  </p>
                 </>
               ) : (
                 <div>

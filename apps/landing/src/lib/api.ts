@@ -367,10 +367,14 @@ export interface LoyaltyCustomer {
 // Loyalty Program API
 export const loyaltyApi = {
   // Email + OTP login (preferred path).
-  requestEmailOtp: (email: string, name?: string) =>
+  requestEmailOtp: (
+    email: string,
+    name?: string,
+    profile?: { birthDate?: string; gender?: 'MALE' | 'FEMALE' | 'OTHER' },
+  ) =>
     api.post<{ success: boolean; message: string }>(
       '/api/auth/customer/email/request-otp',
-      { email, name },
+      { email, name, birthDate: profile?.birthDate, gender: profile?.gender },
     ),
   verifyEmailOtp: (email: string, code: string) =>
     api.post<{

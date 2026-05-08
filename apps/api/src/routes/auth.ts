@@ -269,11 +269,29 @@ export default async function authRoutes(server: FastifyInstance) {
   //     fires a welcome email on first verification, returns a customer JWT.
 
   server.post('/customer/email/request-otp', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { email, name } = request.body as { email?: string; name?: string };
+    const { email, name, birthDate, gender } = request.body as {
+      email?: string;
+      name?: string;
+      birthDate?: string;  // "YYYY-MM-DD"
+      gender?: string;     // "MALE" | "FEMALE" | "OTHER"
+    };
     if (!email || !isValidEmail(email)) {
       return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
     }
     const cleaned = email.toLowerCase().trim();
+
+    // Normalize optional profile fields. We accept them on first signup but
+    // also tolerate them being filled in on a later request — only set if
+    // missing so we don't silently overwrite later edits from the customer.
+    let parsedBirth: Date | undefined;
+    if (birthDate) {
+      const d = new Date(birthDate);
+      if (!isNaN(d.getTime())) parsedBirth = d;
+    }
+    const allowedGenders = ['MALE', 'FEMALE', 'OTHER'];
+    const normalizedGender = gender && allowedGenders.includes(gender.toUpperCase())
+      ? gender.toUpperCase()
+      : undefined;
 
     // Find or create. Email is @unique so this is safe.
     let customer = await prisma.customer.findUnique({ where: { email: cleaned } });
@@ -285,6 +303,8 @@ export default async function authRoutes(server: FastifyInstance) {
         data: {
           email: cleaned,
           name: name?.trim() || null,
+          birthDate: parsedBirth,
+          gender: normalizedGender,
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
           emailConsent: false, // explicit opt-in later
@@ -296,8 +316,10 @@ export default async function authRoutes(server: FastifyInstance) {
         data: {
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
-          // Update name if it was missing and the request supplies one
+          // Only fill missing profile fields — never overwrite existing values
           name: customer.name ?? (name?.trim() || null),
+          birthDate: customer.birthDate ?? parsedBirth ?? null,
+          gender: customer.gender ?? normalizedGender ?? null,
         },
       });
     }
