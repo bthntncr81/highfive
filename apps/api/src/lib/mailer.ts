@@ -10,6 +10,9 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = process.env.HIGHFIVE_MAIL_FROM || 'info@highfivepps.com';
 const FROM_NAME = process.env.HIGHFIVE_MAIL_FROM_NAME || 'High Five';
 const REPLY_TO = process.env.HIGHFIVE_MAIL_REPLY_TO || FROM_EMAIL;
+// Outlook/iCloud SVG'yi render etmiyor — header'da PNG kullanmalıyız.
+// Public asset, açık internet'te (Resend bunu inline çekecek).
+const LOGO_URL = process.env.HIGHFIVE_MAIL_LOGO_URL || 'https://order.highfivepps.com/logow.png';
 
 /**
  * Wrap a single content block in the HighFive email shell. Used by every
@@ -47,11 +50,14 @@ export function renderBrandedEmail(opts: {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.06);">
           <!-- Brand bar -->
           <tr>
-            <td style="background:${accent};padding:28px 32px;text-align:center;">
-              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:2px;">
-                HIGH FIVE
-              </div>
-              <div style="font-size:12px;color:rgba(255,255,255,.85);letter-spacing:1.5px;margin-top:4px;">
+            <td style="background:${accent};padding:24px 32px;text-align:center;">
+              <img
+                src="${LOGO_URL}"
+                alt="High Five"
+                width="160"
+                style="display:inline-block;max-width:160px;height:auto;border:0;outline:none;text-decoration:none;"
+              />
+              <div style="font-size:12px;color:rgba(255,255,255,.85);letter-spacing:1.5px;margin-top:8px;">
                 ${escapeHtml(opts.title.toUpperCase())}
               </div>
             </td>
