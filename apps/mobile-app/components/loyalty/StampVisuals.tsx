@@ -10,11 +10,15 @@ import Svg, {
   G,
   Defs,
   LinearGradient,
+  RadialGradient,
   Stop,
   Rect,
   Polygon,
   ClipPath,
   Line,
+  Ellipse,
+  Filter,
+  FeGaussianBlur,
 } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -69,19 +73,18 @@ export function StampVisual({ count, target, color, visualStyle, categoryHint }:
 }
 
 /* --------------------------------------------------------------- */
-/*                    1) PIZZA — pie wheel                         */
+/*                    1) PIZZA — pie wheel (gerçekçi)              */
 /* --------------------------------------------------------------- */
 function PiePizza({ count, target, color }: { count: number; target: number; color: string }) {
-  const size = 240;
+  const size = 260;
   const cx = size / 2;
   const cy = size / 2;
-  const r = size / 2 - 10;
+  const r = size / 2 - 12;
 
-  // Crust (dış halka) — kahverengi tonu
   const crustOuter = r;
-  const crustInner = r - 10; // Daha kalın crust
+  const crustInner = r - 14; // Kalın gerçekçi kabuk
+  const sauceR = crustInner - 4;
 
-  // Pizza dilimi açıları
   const slices = Array.from({ length: target }, (_, i) => {
     const startAngle = (i * 360) / target - 90;
     const endAngle = ((i + 1) * 360) / target - 90;
@@ -90,77 +93,106 @@ function PiePizza({ count, target, color }: { count: number; target: number; col
   });
 
   return (
-    <View className="items-center" style={{ shadowColor: "#92400e", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
+    <View
+      className="items-center"
+      style={{
+        shadowColor: "#451a03",
+        shadowOpacity: 0.35,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 8 },
+      }}
+    >
       <Svg width={size} height={size}>
         <Defs>
-          {/* Peynir tonu — açık sarı → koyu sarı */}
-          <LinearGradient id="pizzaCheese" x1="0" y1="0" x2="0.6" y2="1">
-            <Stop offset="0" stopColor="#fef3c7" />
-            <Stop offset="0.5" stopColor="#fde047" />
-            <Stop offset="1" stopColor="#f59e0b" />
-          </LinearGradient>
-          {/* Sos — domates kırmızısı */}
-          <LinearGradient id="pizzaSauce" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#ef4444" />
-            <Stop offset="1" stopColor="#991b1b" />
-          </LinearGradient>
-          {/* Crust gradient */}
-          <LinearGradient id="pizzaCrust" x1="0" y1="0" x2="1" y2="1">
+          {/* Crust radyal — orta sıcak sarı, dış kahverengi (3D efekt) */}
+          <RadialGradient id="crustRad" cx="50%" cy="50%" rx="50%" ry="50%">
             <Stop offset="0" stopColor="#fbbf24" />
-            <Stop offset="0.4" stopColor="#d97706" />
-            <Stop offset="1" stopColor="#92400e" />
-          </LinearGradient>
-          {/* Sucuk/pepperoni gradient — koyu kırmızı/kahverengi */}
-          <LinearGradient id="pepperoniGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#dc2626" />
-            <Stop offset="0.7" stopColor="#7f1d1d" />
-            <Stop offset="1" stopColor="#450a0a" />
-          </LinearGradient>
+            <Stop offset="0.5" stopColor="#d97706" />
+            <Stop offset="0.85" stopColor="#92400e" />
+            <Stop offset="1" stopColor="#451a03" />
+          </RadialGradient>
+          {/* Peynir radyal — orta açık, kenarlar koyu kavurma */}
+          <RadialGradient id="cheeseRad" cx="50%" cy="40%" rx="55%" ry="55%">
+            <Stop offset="0" stopColor="#fffbe0" />
+            <Stop offset="0.5" stopColor="#fde047" />
+            <Stop offset="0.9" stopColor="#f59e0b" />
+            <Stop offset="1" stopColor="#b45309" />
+          </RadialGradient>
+          {/* Domates sosu — dilim arası görünebilir */}
+          <RadialGradient id="sauceRad" cx="50%" cy="50%" rx="50%" ry="50%">
+            <Stop offset="0" stopColor="#ef4444" />
+            <Stop offset="1" stopColor="#7f1d1d" />
+          </RadialGradient>
+          {/* Sucuk gradient — gerçek pepperoni rengi */}
+          <RadialGradient id="pepperoniRad" cx="40%" cy="35%" rx="60%" ry="60%">
+            <Stop offset="0" stopColor="#f87171" />
+            <Stop offset="0.4" stopColor="#dc2626" />
+            <Stop offset="1" stopColor="#7f1d1d" />
+          </RadialGradient>
+          {/* Zeytin gradient */}
+          <RadialGradient id="oliveRad" cx="40%" cy="40%" rx="60%" ry="60%">
+            <Stop offset="0" stopColor="#525252" />
+            <Stop offset="1" stopColor="#171717" />
+          </RadialGradient>
+          {/* Mantar gradient */}
+          <RadialGradient id="mushroomRad" cx="50%" cy="40%" rx="60%" ry="60%">
+            <Stop offset="0" stopColor="#fef3c7" />
+            <Stop offset="0.7" stopColor="#e7e5e4" />
+            <Stop offset="1" stopColor="#a8a29e" />
+          </RadialGradient>
         </Defs>
 
-        {/* Crust outer ring (kabuk) */}
-        <Circle cx={cx} cy={cy} r={crustOuter} fill="url(#pizzaCrust)" />
-        {/* İç sınır */}
-        <Circle cx={cx} cy={cy} r={crustInner} fill="#fbbf24" />
+        {/* Tepsi gölgesi (alttan yumuşak halka) */}
+        <Ellipse cx={cx} cy={cy + 8} rx={r + 6} ry={6} fill="#000" opacity={0.18} />
 
-        {/* Slices */}
+        {/* Crust outer (kabuk) — radyal gradient */}
+        <Circle cx={cx} cy={cy} r={crustOuter} fill="url(#crustRad)" />
+
+        {/* Sos halkası (peynir kenarında kırmızı çizgi) */}
+        <Circle cx={cx} cy={cy} r={crustInner} fill="url(#sauceRad)" />
+
+        {/* Peynir merkez (gerçekçi 3D radyal) */}
+        <Circle cx={cx} cy={cy} r={sauceR} fill="url(#cheeseRad)" />
+
+        {/* Slice ayraç çizgileri (peynir üzerinde keskin kesim izleri) */}
         {slices.map((s, i) => {
-          const start = polar(cx, cy, crustInner - 1, s.startAngle);
-          const end = polar(cx, cy, crustInner - 1, s.endAngle);
-          const largeArc = s.endAngle - s.startAngle > 180 ? 1 : 0;
-          const path = `M ${cx} ${cy} L ${start.x} ${start.y} A ${crustInner - 1} ${crustInner - 1} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
-          const midAngle = (s.startAngle + s.endAngle) / 2;
-          const fillColor = s.filled
-            ? "url(#pizzaCheese)"
-            : s.isReward
-            ? "#fef3c7"
-            : "rgba(243,244,246,0.85)"; // boş dilimler hafif gri
+          const p1 = polar(cx, cy, sauceR + 2, s.startAngle);
+          const p2 = polar(cx, cy, 0, 0);
           return (
-            <G key={i}>
+            <Line
+              key={`cut-${i}`}
+              x1={cx}
+              y1={cy}
+              x2={p1.x}
+              y2={p1.y}
+              stroke="rgba(180,83,9,0.45)"
+              strokeWidth={1.2}
+            />
+          );
+        })}
+
+        {/* Boş dilimler için "yenmiş/eksik" kapatıcı (gri saydam) */}
+        {slices.map((s, i) => {
+          if (s.filled) return null;
+          const start = polar(cx, cy, sauceR, s.startAngle);
+          const end = polar(cx, cy, sauceR, s.endAngle);
+          const largeArc = s.endAngle - s.startAngle > 180 ? 1 : 0;
+          const path = `M ${cx} ${cy} L ${start.x} ${start.y} A ${sauceR} ${sauceR} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+          return (
+            <G key={`empty-${i}`}>
               <Path
                 d={path}
-                fill={fillColor}
-                stroke={s.filled ? "#d97706" : "#d1d5db"}
-                strokeWidth={1.5}
-                strokeDasharray={!s.filled && !s.isReward ? "4,3" : ""}
+                fill={s.isReward ? "rgba(252,211,77,0.55)" : "rgba(243,244,246,0.88)"}
+                stroke={s.isReward ? "#f59e0b" : "#d1d5db"}
+                strokeWidth={1.2}
+                strokeDasharray={!s.isReward ? "5,4" : ""}
               />
-              {/* Topping'ler — sadece dolu dilimlerde */}
-              {s.filled && (
-                <PizzaToppings
-                  cx={cx}
-                  cy={cy}
-                  innerR={crustInner - 4}
-                  midAngle={midAngle}
-                  spread={(360 / target) * 0.7}
-                  variant={s.idx % 3}
-                />
-              )}
-              {/* Reward dilimi için yıldız */}
-              {s.isReward && !s.filled && (
+              {/* Reward yıldızı */}
+              {s.isReward && (
                 <Polygon
                   points={starPoints(
-                    polar(cx, cy, crustInner * 0.55, midAngle).x,
-                    polar(cx, cy, crustInner * 0.55, midAngle).y,
+                    polar(cx, cy, sauceR * 0.55, (s.startAngle + s.endAngle) / 2).x,
+                    polar(cx, cy, sauceR * 0.55, (s.startAngle + s.endAngle) / 2).y,
                     14,
                     6,
                     5,
@@ -174,31 +206,67 @@ function PiePizza({ count, target, color }: { count: number; target: number; col
           );
         })}
 
-        {/* Crust kenarındaki yanmış görünüm noktaları */}
-        {Array.from({ length: 24 }).map((_, i) => {
-          const angle = (i * 360) / 24;
-          const p = polar(cx, cy, crustOuter - 3, angle);
-          return <Circle key={`b-${i}`} cx={p.x} cy={p.y} r={1.2} fill="#7c2d12" opacity={0.6} />;
+        {/* Topping'ler — sadece dolu dilimlerde, ZENGİN */}
+        {slices.map((s, i) => {
+          if (!s.filled) return null;
+          const midAngle = (s.startAngle + s.endAngle) / 2;
+          const spread = (360 / target) * 0.75;
+          return (
+            <PizzaToppings
+              key={`top-${i}`}
+              cx={cx}
+              cy={cy}
+              innerR={sauceR - 2}
+              midAngle={midAngle}
+              spread={spread}
+              variant={s.idx % 4}
+            />
+          );
         })}
 
-        {/* Merkez ödül marker'ı */}
+        {/* Crust üzerinde uneven yanmış benekler (gerçekçi pizza kenarı) */}
+        {Array.from({ length: 28 }).map((_, i) => {
+          const angle = (i * 360) / 28 + (i % 3) * 4;
+          const dist = crustOuter - 4 - (i % 4);
+          const p = polar(cx, cy, dist, angle);
+          const sz = 0.8 + ((i * 7) % 3) * 0.6;
+          return (
+            <Circle
+              key={`burn-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r={sz}
+              fill={i % 2 === 0 ? "#451a03" : "#7c2d12"}
+              opacity={0.7}
+            />
+          );
+        })}
+
+        {/* Crust iç kenarında peynir taşması (kabarcıklar) */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          const angle = (i * 360) / 12 + 12;
+          const p = polar(cx, cy, sauceR + 1, angle);
+          return <Circle key={`bub-${i}`} cx={p.x} cy={p.y} r={2} fill="#fef9c3" opacity={0.7} />;
+        })}
+
+        {/* Merkez ödül marker'ı (tüm dilimler dolduğunda) */}
         {count >= target && (
-          <Circle cx={cx} cy={cy} r={32} fill="#10b981" stroke="#fff" strokeWidth={4} />
+          <Circle cx={cx} cy={cy} r={36} fill="#10b981" stroke="#fff" strokeWidth={5} />
         )}
       </Svg>
       {count >= target && (
         <View
           style={{
             position: "absolute",
-            top: size / 2 - 16,
-            left: size / 2 - 16,
-            width: 32,
-            height: 32,
+            top: size / 2 - 18,
+            left: size / 2 - 18,
+            width: 36,
+            height: 36,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text style={{ fontSize: 26 }}>🎉</Text>
+          <Text style={{ fontSize: 28 }}>🎉</Text>
         </View>
       )}
     </View>
@@ -206,8 +274,8 @@ function PiePizza({ count, target, color }: { count: number; target: number; col
 }
 
 /**
- * PizzaToppings — bir dilimin içine sucuk/peynir/zeytin/yeşillik dağılımı
- * variant: 0=sucuk, 1=zeytin, 2=biber/yeşillik (her dilim biraz farklı)
+ * PizzaToppings — bir dilimin içine zengin pizza topping'leri
+ * variant 0..3: farklı dilimler farklı topping kombinasyonları (gerçek bir pizza gibi)
  */
 function PizzaToppings({
   cx,
@@ -224,78 +292,138 @@ function PizzaToppings({
   spread: number;
   variant: number;
 }) {
-  // 3 farklı topping dağılımı:
-  // - Sucuklar: 3 yuvarlak (kenarda + ortada)
-  // - Zeytin: 2-3 koyu daire
-  // - Biber/yeşillik: küçük yeşil noktalar
   const elements: ReactElement[] = [];
 
-  // Her dilime sucuk + 1-2 ek topping ekle (variant'a göre)
-  // Sucuk (pepperoni) yerleşimi — dilimin içinde 3 nokta
-  const pepperoniCoords = [
-    { d: 0.5, a: midAngle - spread * 0.25, r: 7.5 },
-    { d: 0.65, a: midAngle + spread * 0.2, r: 6.5 },
-    { d: 0.8, a: midAngle, r: 6 },
+  // Her dilime: 3-4 büyük sucuk + ek topping (variant'a göre)
+  // Sucuk pozisyonları (mesafe, açı offset, yarıçap)
+  const pepperoni = [
+    { d: 0.45, a: midAngle - spread * 0.3, r: 9 },
+    { d: 0.62, a: midAngle + spread * 0.18, r: 8 },
+    { d: 0.78, a: midAngle - spread * 0.1, r: 7.5 },
+    { d: 0.55, a: midAngle + spread * 0.32, r: 6.5 },
   ];
-  pepperoniCoords.forEach((pc, i) => {
+  pepperoni.forEach((pc, i) => {
     const p = polar(cx, cy, innerR * pc.d, pc.a);
     elements.push(
       <G key={`pep-${i}`}>
-        {/* Sucuk dış (koyu) */}
-        <Circle cx={p.x} cy={p.y} r={pc.r} fill="url(#pepperoniGrad)" />
-        {/* Sucuk yağ benekleri (içte açık) */}
-        <Circle cx={p.x - pc.r * 0.3} cy={p.y - pc.r * 0.2} r={pc.r * 0.15} fill="#fef3c7" opacity={0.7} />
-        <Circle cx={p.x + pc.r * 0.2} cy={p.y + pc.r * 0.3} r={pc.r * 0.12} fill="#fef3c7" opacity={0.6} />
+        {/* Sucuk gölgesi (3D efekt) */}
+        <Circle cx={p.x + 0.8} cy={p.y + 1.2} r={pc.r + 0.5} fill="#000" opacity={0.18} />
+        {/* Sucuk gövdesi */}
+        <Circle cx={p.x} cy={p.y} r={pc.r} fill="url(#pepperoniRad)" />
+        {/* Yağ benekleri (gerçek sucuk gibi) */}
+        <Circle cx={p.x - pc.r * 0.35} cy={p.y - pc.r * 0.3} r={pc.r * 0.18} fill="#fff7ed" opacity={0.85} />
+        <Circle cx={p.x + pc.r * 0.25} cy={p.y + pc.r * 0.35} r={pc.r * 0.13} fill="#fff7ed" opacity={0.7} />
+        <Circle cx={p.x - pc.r * 0.1} cy={p.y + pc.r * 0.4} r={pc.r * 0.1} fill="#fff7ed" opacity={0.6} />
       </G>,
     );
   });
 
-  // Variant 1: zeytin (siyah daireler)
+  // Variant 1: zeytin halkaları (gerçek siyah zeytin görünümü)
   if (variant === 1) {
     const olives = [
-      { d: 0.55, a: midAngle - spread * 0.15 },
-      { d: 0.78, a: midAngle + spread * 0.3 },
+      { d: 0.55, a: midAngle - spread * 0.18, r: 4.5 },
+      { d: 0.72, a: midAngle + spread * 0.3, r: 4 },
+      { d: 0.4, a: midAngle + spread * 0.1, r: 3.5 },
     ];
     olives.forEach((o, i) => {
       const p = polar(cx, cy, innerR * o.d, o.a);
       elements.push(
         <G key={`oli-${i}`}>
-          <Circle cx={p.x} cy={p.y} r={3.5} fill="#1f2937" />
-          <Circle cx={p.x} cy={p.y} r={1.2} fill="#374151" />
+          {/* Zeytin gölgesi */}
+          <Circle cx={p.x + 0.5} cy={p.y + 0.7} r={o.r + 0.3} fill="#000" opacity={0.2} />
+          {/* Zeytin gövdesi (halka) */}
+          <Circle cx={p.x} cy={p.y} r={o.r} fill="url(#oliveRad)" />
+          {/* Zeytin orta deliği (halka için) */}
+          <Circle cx={p.x} cy={p.y} r={o.r * 0.42} fill="#dc2626" opacity={0.5} />
+          {/* Parlak nokta */}
+          <Circle cx={p.x - o.r * 0.3} cy={p.y - o.r * 0.3} r={o.r * 0.18} fill="#fff" opacity={0.4} />
         </G>,
       );
     });
   }
 
-  // Variant 2: biber/maydanoz (küçük yeşil işaretler)
+  // Variant 2: mantar dilimleri (Y şeklinde)
   if (variant === 2) {
-    const greens = [
-      { d: 0.6, a: midAngle + spread * 0.25 },
-      { d: 0.72, a: midAngle - spread * 0.3 },
-      { d: 0.85, a: midAngle - spread * 0.1 },
+    const mushrooms = [
+      { d: 0.6, a: midAngle + spread * 0.22, sz: 6 },
+      { d: 0.5, a: midAngle - spread * 0.28, sz: 5 },
     ];
-    greens.forEach((g, i) => {
-      const p = polar(cx, cy, innerR * g.d, g.a);
+    mushrooms.forEach((m, i) => {
+      const p = polar(cx, cy, innerR * m.d, m.a);
       elements.push(
-        <Polygon
-          key={`grn-${i}`}
-          points={`${p.x - 2.5},${p.y} ${p.x + 2.5},${p.y - 1.5} ${p.x + 1},${p.y + 2} ${p.x - 2},${p.y + 1.5}`}
-          fill="#16a34a"
-        />,
+        <G key={`mush-${i}`}>
+          {/* Mantar şapkası */}
+          <Path
+            d={`M ${p.x - m.sz} ${p.y} Q ${p.x} ${p.y - m.sz * 0.9}, ${p.x + m.sz} ${p.y} Z`}
+            fill="url(#mushroomRad)"
+            stroke="#a8a29e"
+            strokeWidth={0.8}
+          />
+          {/* Mantar sapı */}
+          <Rect
+            x={p.x - m.sz * 0.25}
+            y={p.y}
+            width={m.sz * 0.5}
+            height={m.sz * 0.55}
+            fill="#fafaf9"
+            stroke="#a8a29e"
+            strokeWidth={0.5}
+            rx={1}
+          />
+        </G>,
       );
     });
   }
 
-  // Variant 0 (default): peynir benekleri (açık sarı küçük noktalar)
-  if (variant === 0) {
-    const cheese = [
-      { d: 0.55, a: midAngle + spread * 0.3 },
-      { d: 0.7, a: midAngle - spread * 0.35 },
-      { d: 0.4, a: midAngle + spread * 0.05 },
+  // Variant 3: yeşil fesleğen yaprakları
+  if (variant === 3) {
+    const basil = [
+      { d: 0.55, a: midAngle + spread * 0.25, rot: 30 },
+      { d: 0.7, a: midAngle - spread * 0.2, rot: -45 },
+      { d: 0.42, a: midAngle - spread * 0.12, rot: 15 },
     ];
-    cheese.forEach((c, i) => {
+    basil.forEach((b, i) => {
+      const p = polar(cx, cy, innerR * b.d, b.a);
+      // Oval yaprak şekli
+      elements.push(
+        <G key={`bas-${i}`}>
+          <Ellipse
+            cx={p.x}
+            cy={p.y}
+            rx={4.5}
+            ry={2.2}
+            fill="#16a34a"
+            transform={`rotate(${b.rot}, ${p.x}, ${p.y})`}
+          />
+          <Ellipse
+            cx={p.x}
+            cy={p.y - 0.5}
+            rx={2.5}
+            ry={1}
+            fill="#22c55e"
+            transform={`rotate(${b.rot}, ${p.x}, ${p.y})`}
+            opacity={0.7}
+          />
+        </G>,
+      );
+    });
+  }
+
+  // Variant 0: bonus peynir benekleri (mozzarella parçaları)
+  if (variant === 0) {
+    const cheeseChunks = [
+      { d: 0.5, a: midAngle - spread * 0.4, sz: 3 },
+      { d: 0.66, a: midAngle + spread * 0.4, sz: 2.5 },
+      { d: 0.85, a: midAngle + spread * 0.05, sz: 2 },
+    ];
+    cheeseChunks.forEach((c, i) => {
       const p = polar(cx, cy, innerR * c.d, c.a);
-      elements.push(<Circle key={`ch-${i}`} cx={p.x} cy={p.y} r={2} fill="#fff7ed" opacity={0.85} />);
+      elements.push(
+        <G key={`ch-${i}`}>
+          <Circle cx={p.x} cy={p.y} r={c.sz} fill="#fff" opacity={0.95} />
+          <Circle cx={p.x - c.sz * 0.3} cy={p.y - c.sz * 0.3} r={c.sz * 0.4} fill="#fff" opacity={0.8} />
+        </G>,
+      );
     });
   }
 

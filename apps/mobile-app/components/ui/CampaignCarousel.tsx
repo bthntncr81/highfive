@@ -82,50 +82,105 @@ export function CampaignCarousel({ campaigns }: { campaigns: ApiCampaign[] }) {
                   width: CARD_WIDTH,
                   marginRight: idx === campaigns.length - 1 ? 0 : 12,
                   backgroundColor: palette.from,
+                  height: 180,
                 }}
                 className="overflow-hidden rounded-3xl"
               >
-                <View className="flex-row items-center p-6">
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <View className="self-start rounded-full bg-white/20 px-2.5 py-1">
-                        <Text className="text-[10px] font-bold uppercase tracking-widest text-white">
-                          {c.type === "BUNDLE" ? "Menü" : "Kampanya"}
+                {/* Background image (varsa tam kaplama) */}
+                {img && (
+                  <Image
+                    source={{ uri: img }}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    contentFit="cover"
+                  />
+                )}
+                {/* Dark gradient overlay (okunabilirlik için) */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: img ? "rgba(0,0,0,0.45)" : "transparent",
+                  }}
+                />
+                {/* Sol-alttan koyu gradient (text okunsun) */}
+                {img && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: "70%",
+                      backgroundColor: "transparent",
+                    }}
+                  />
+                )}
+
+                {/* İçerik */}
+                <View className="flex-1 justify-between p-5">
+                  <View className="flex-row items-center gap-2">
+                    <View className="self-start rounded-full bg-white/25 px-2.5 py-1">
+                      <Text className="text-[10px] font-bold uppercase tracking-widest text-white">
+                        {c.type === "BUNDLE" ? "Menü" : "Kampanya"}
+                      </Text>
+                    </View>
+                    {isUpcoming && (
+                      <View className="rounded-full bg-yellow-300 px-2.5 py-1">
+                        <Text className="text-[10px] font-extrabold uppercase tracking-wide text-yellow-900">
+                          ⏰ {daysUntil > 1 ? `${daysUntil} gün sonra` : "Yakında"}
                         </Text>
                       </View>
-                      {isUpcoming && (
-                        <View className="rounded-full bg-yellow-300 px-2.5 py-1">
-                          <Text className="text-[10px] font-extrabold uppercase tracking-wide text-yellow-900">
-                            ⏰ {daysUntil > 1 ? `${daysUntil} gün sonra` : "Yakında"}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text className="mt-3 text-2xl font-extrabold leading-tight text-white" numberOfLines={2}>
+                    )}
+                    {/* Görsel yoksa emoji köşede */}
+                    {!img && (
+                      <View className="ml-auto">
+                        <Text className="text-3xl">{palette.emoji}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View>
+                    <Text
+                      className="text-2xl font-extrabold leading-tight text-white"
+                      numberOfLines={2}
+                      style={{
+                        textShadowColor: img ? "rgba(0,0,0,0.6)" : "transparent",
+                        textShadowOffset: { width: 0, height: 1 },
+                        textShadowRadius: 4,
+                      }}
+                    >
                       {c.name}
                     </Text>
                     {c.description && (
-                      <Text className="mt-1 text-xs text-white/80" numberOfLines={2}>
+                      <Text
+                        className="mt-1 text-xs text-white/90"
+                        numberOfLines={2}
+                        style={{
+                          textShadowColor: img ? "rgba(0,0,0,0.5)" : "transparent",
+                          textShadowOffset: { width: 0, height: 1 },
+                          textShadowRadius: 3,
+                        }}
+                      >
                         {c.description}
                       </Text>
                     )}
-                    <View className="mt-4 flex-row items-center">
-                      <View className="rounded-full bg-white px-4 py-2">
-                        <Text className="text-xs font-bold" style={{ color: palette.from }}>
-                          {priceText}
-                        </Text>
-                      </View>
+                    <View className="mt-3 self-start rounded-full bg-white px-4 py-2">
+                      <Text className="text-xs font-bold" style={{ color: palette.from }}>
+                        {priceText}
+                      </Text>
                     </View>
                   </View>
-                  {img ? (
-                    <Image
-                      source={{ uri: img }}
-                      style={{ width: 96, height: 96, borderRadius: 16 }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <Text className="text-7xl">{palette.emoji}</Text>
-                  )}
                 </View>
               </Pressable>
             </Link>

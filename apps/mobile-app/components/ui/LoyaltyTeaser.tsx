@@ -1,12 +1,15 @@
 // Anasayfa için yatay scroll sadakat program teaser'ı
 // Aktif programları (12 türde) gösterir, basıldığında /loyalty'ye yönlendirir.
+// Login ise: kullanıcının her programdaki gerçek progress'ini çeker.
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useLoyaltyPrograms } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
+import { endpoints } from "@/lib/api";
 import { StampVisual } from "@/components/loyalty/StampVisuals";
 
 const TYPE_BADGES: Record<string, { label: string; color: string; emoji: string }> = {
@@ -27,17 +30,59 @@ const TYPE_BADGES: Record<string, { label: string; color: string; emoji: string 
 export function LoyaltyTeaser() {
   const { data, loading } = useLoyaltyPrograms();
   const programs = useMemo(() => data?.programs ?? [], [data]);
+  const token = useAuth((s) => s.token);
+  const customer = useAuth((s) => s.user);
+
+  // Login varsa: kullanıcının her programdaki progress'ini çek
+  const [progressByProgram, setProgressByProgram] = useState<Record<string, any>>({});
+  const [meCustomer, setMeCustomer] = useState<any>(null);
+  useEffect(() => {
+    if (!token) {
+      setProgressByProgram({});
+      setMeCustomer(null);
+      return;
+    }
+    let cancel = false;
+    (async () => {
+      try {
+        const res = await endpoints.loyaltyProgress();
+        if (cancel) return;
+        const map: Record<string, any> = {};
+        for (const pr of res.progress ?? []) {
+          map[pr.programId] = pr;
+        }
+        setProgressByProgram(map);
+        setMeCustomer(res.customer);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [token]);
 
   if (loading || programs.length === 0) return null;
 
   return (
     <View className="mt-6">
       <View className="mb-3 flex-row items-center justify-between px-5">
-        <Text className="text-lg font-extrabold text-foreground">
-          ✨ Sadakat Programları
-        </Text>
-        <Pressable onPress={() => router.push("/loyalty")}>
+        <View className="flex-row items-center">
+          <Text className="text-lg font-extrabold text-foreground">
+            ✨ Sadakat Programları
+          </Text>
+          <View className="ml-2 rounded-full bg-primary-50 px-2 py-0.5">
+            <Text className="text-[10px] font-bold text-primary-600">
+              {programs.length}
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={() => router.push("/loyalty")}
+          className="flex-row items-center"
+        >
           <Text className="text-sm font-semibold text-primary-500">Tümünü gör</Text>
+          <Ionicons name="chevron-forward" size={14} color="#bb1e10" />
         </Pressable>
       </View>
       <ScrollView
@@ -46,16 +91,35 @@ export function LoyaltyTeaser() {
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
       >
         {programs.map((p) => (
-          <ProgramTeaserCard key={p.id} program={p} />
+          <ProgramTeaserCard
+            key={p.id}
+            program={p}
+            progress={progressByProgram[p.id]}
+            customer={meCustomer ?? customer}
+            isLoggedIn={!!token}
+          />
         ))}
       </ScrollView>
     </View>
   );
 }
 
-function ProgramTeaserCard({ program }: { program: any }) {
+function ProgramTeaserCard({
+  program,
+  progress,
+  customer,
+  isLoggedIn,
+}: {
+  program: any;
+  progress?: any;
+  customer?: any;
+  isLoggedIn: boolean;
+}) {
   const badge = TYPE_BADGES[program.type] ?? { label: program.type, color: "#6b7280", emoji: "✨" };
   const color = program.color ?? badge.color;
+
+  // Progress chip metni — tipe göre
+  const progressInfo = computeProgressChip(program, progress, customer, isLoggedIn);
 
   return (
     <Pressable
@@ -105,9 +169,38 @@ function ProgramTeaserCard({ program }: { program: any }) {
         </View>
       </View>
 
+      {/* Progress chip (login durumuna göre) */}
+      {progressInfo && (
+        <View
+          style={{
+            backgroundColor: progressInfo.bg,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ fontSize: 10, fontWeight: "700", color: progressInfo.fg }}>
+            {progressInfo.label}
+          </Text>
+          {progressInfo.value && (
+            <Text style={{ fontSize: 12, fontWeight: "900", color: progressInfo.fg }}>
+              {progressInfo.value}
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Orta — visual preview */}
       <View style={{ padding: 12, alignItems: "center", height: 130, justifyContent: "center" }}>
-        <ProgramPreview program={program} color={color} />
+        <ProgramPreview
+          program={program}
+          color={color}
+          progress={progress}
+          customer={customer}
+          isLoggedIn={isLoggedIn}
+        />
       </View>
 
       {/* Alt — açıklama / CTA */}
@@ -120,18 +213,104 @@ function ProgramTeaserCard({ program }: { program: any }) {
   );
 }
 
-function ProgramPreview({ program, color }: { program: any; color: string }) {
+/**
+ * Tipe göre kullanıcı durumunu özetleyen küçük chip metni
+ * (login değilse → "Sen de katıl" gibi tease)
+ */
+function computeProgressChip(
+  program: any,
+  progress: any,
+  customer: any,
+  isLoggedIn: boolean,
+): { label: string; value?: string; bg: string; fg: string } | null {
+  if (!isLoggedIn) {
+    return {
+      label: "Üye olduğunda kazanmaya başla",
+      bg: "#fef3c7",
+      fg: "#b45309",
+    };
+  }
+
+  switch (program.type) {
+    case "STAMP_CARD": {
+      const target = Math.max(2, Number(program.config?.stampsRequired ?? 6));
+      const count = Math.min(target, Number(progress?.count ?? 0));
+      const ready = count >= target;
+      return ready
+        ? { label: "🎁 ÖDÜLÜN HAZIR!", value: `${count}/${target}`, bg: "#dcfce7", fg: "#166534" }
+        : { label: `${target - count} sipariş kaldı`, value: `${count}/${target}`, bg: "#fef3c7", fg: "#92400e" };
+    }
+    case "BASIC_POINTS":
+      return {
+        label: "Mevcut puanın",
+        value: `${customer?.totalPoints ?? 0} ⭐`,
+        bg: "#fef3c7",
+        fg: "#92400e",
+      };
+    case "CASHBACK":
+      return {
+        label: "Cüzdanın",
+        value: `${Number(customer?.cashbackBalance ?? 0).toFixed(0)} ₺`,
+        bg: "#dcfce7",
+        fg: "#166534",
+      };
+    case "STREAK":
+      return {
+        label: "Serin",
+        value: `🔥 ${customer?.currentStreak ?? 0}`,
+        bg: "#fee2e2",
+        fg: "#991b1b",
+      };
+    case "REFERRAL":
+      return {
+        label: "Davet ettiklerin",
+        value: `${customer?.referralCount ?? 0} kişi`,
+        bg: "#ede9fe",
+        fg: "#6d28d9",
+      };
+    case "BIRTHDAY":
+      return customer?.birthDate
+        ? { label: "Doğum günün kayıtlı", value: "🎂", bg: "#fce7f3", fg: "#9d174d" }
+        : { label: "Profilden doğum gününü ekle", value: "+", bg: "#fce7f3", fg: "#9d174d" };
+    case "MILESTONE": {
+      const oc = Number(customer?.orderCount ?? 0);
+      return { label: "Toplam siparişin", value: `${oc}`, bg: "#fce7f3", fg: "#9d174d" };
+    }
+    case "WELCOME":
+      return Number(customer?.orderCount ?? 0) === 0
+        ? { label: "İlk siparişe hazır", value: "🎁", bg: "#dbeafe", fg: "#1e40af" }
+        : { label: "Hoş geldin bonusun bekliyor", value: "✓", bg: "#dbeafe", fg: "#1e40af" };
+    default:
+      return null;
+  }
+}
+
+function ProgramPreview({
+  program,
+  color,
+  progress,
+  customer,
+  isLoggedIn,
+}: {
+  program: any;
+  color: string;
+  progress?: any;
+  customer?: any;
+  isLoggedIn?: boolean;
+}) {
   // Her tipe göre farklı önizleme
   switch (program.type) {
     case "STAMP_CARD": {
       const target = Math.max(2, Number(program.config?.stampsRequired ?? 6));
-      // Teaser'da önizleme amaçlı yarı dolu göster — kullanıcı sucuk/peynir görür
-      // (gerçek progress /loyalty sayfasında görünür)
-      const count = Math.max(1, Math.floor((target - 1) / 2));
+      // Login varsa gerçek progress; değilse yarı dolu önizleme (sucuk görünsün)
+      const realCount = Number(progress?.count ?? 0);
+      const count = isLoggedIn
+        ? Math.min(target, realCount)
+        : Math.max(1, Math.floor((target - 1) / 2));
       const visualStyle = program.config?.visualStyle ?? "auto";
       const hint = `${program.name ?? ""} ${program.description ?? ""}`.toLowerCase();
       return (
-        <View style={{ transform: [{ scale: 0.55 }] }}>
+        <View style={{ transform: [{ scale: 0.5 }] }}>
           <StampVisual
             count={count}
             target={target}

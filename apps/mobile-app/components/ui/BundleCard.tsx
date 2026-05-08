@@ -25,32 +25,99 @@ export function BundleCard({ bundle }: { bundle: ApiBundle }) {
 
   return (
     <View className="mb-3 overflow-hidden rounded-2xl border-2 border-amber-300 bg-amber-50">
-      {img && (
-        <Image
-          source={{ uri: img }}
-          style={{ width: "100%", height: 140 }}
-          contentFit="cover"
-          transition={200}
-        />
-      )}
-      <View className="p-3">
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1">
-            <View className="flex-row items-center gap-1.5">
-              <View className="rounded-full bg-amber-500 px-2 py-0.5">
-                <Text className="text-[10px] font-bold text-white">
-                  📦 PAKET
-                </Text>
-              </View>
-              {savings > 0 && (
-                <View className="rounded-full bg-green-500 px-2 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">
-                    {savings.toFixed(0)}₺ TASARRUF
-                  </Text>
-                </View>
-              )}
+      {/* Görsel başlık (varsa arka plan, yoksa amber gradient) */}
+      <View
+        style={{
+          height: img ? 180 : 60,
+          backgroundColor: img ? "transparent" : "#fcd34d",
+          position: "relative",
+        }}
+      >
+        {img && (
+          <Image
+            source={{ uri: img }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+            contentFit="cover"
+            transition={200}
+          />
+        )}
+        {/* Karartma overlay (text okunsun) */}
+        {img && (
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.35)",
+            }}
+          />
+        )}
+
+        {/* Üst-sol badge'ler */}
+        <View className="absolute left-3 top-3 flex-row items-center gap-1.5">
+          <View className="rounded-full bg-amber-500 px-2.5 py-1">
+            <Text className="text-[10px] font-bold text-white">📦 PAKET</Text>
+          </View>
+          {savings > 0 && (
+            <View className="rounded-full bg-green-500 px-2.5 py-1">
+              <Text className="text-[10px] font-bold text-white">
+                {savings.toFixed(0)}₺ TASARRUF
+              </Text>
             </View>
-            <Text className="mt-1.5 text-base font-extrabold text-foreground">
+          )}
+        </View>
+
+        {/* Alt: bundle adı + açıklama (image üzerinde) */}
+        {img && (
+          <View
+            style={{
+              position: "absolute",
+              left: 12,
+              right: 12,
+              bottom: 10,
+            }}
+          >
+            <Text
+              className="text-lg font-extrabold text-white"
+              numberOfLines={2}
+              style={{
+                textShadowColor: "rgba(0,0,0,0.7)",
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 4,
+              }}
+            >
+              {bundle.name}
+            </Text>
+            {bundle.description && (
+              <Text
+                className="mt-0.5 text-xs text-white/90"
+                numberOfLines={1}
+                style={{
+                  textShadowColor: "rgba(0,0,0,0.6)",
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 3,
+                }}
+              >
+                {bundle.description}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View className="p-3">
+        {/* Görsel yoksa adı burada göster */}
+        {!img && (
+          <View>
+            <Text className="text-base font-extrabold text-foreground">
               {bundle.name}
             </Text>
             {bundle.description && (
@@ -59,10 +126,10 @@ export function BundleCard({ bundle }: { bundle: ApiBundle }) {
               </Text>
             )}
           </View>
-        </View>
+        )}
 
         {/* Items list */}
-        <View className="mt-2 rounded-xl bg-white/70 p-2">
+        <View className={img ? "rounded-xl bg-white/80 p-2" : "mt-2 rounded-xl bg-white/70 p-2"}>
           {bundle.items.slice(0, 4).map((it, i) => (
             <View key={i} className="flex-row items-center">
               <Ionicons name="checkmark-circle" size={12} color="#d97706" />
