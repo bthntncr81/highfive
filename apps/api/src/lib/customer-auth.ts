@@ -6,7 +6,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export type CustomerJwtPayload = {
   customerId: string;
-  type: 'customer';
+  type?: 'customer'; // SMS OTP token'ları (legacy)
+  aud?: string;      // Email OTP token'ları aud='customer' kullanır
+  email?: string;
   iat?: number;
   exp?: number;
 };
@@ -16,7 +18,10 @@ export function getCustomerIdFromRequest(request: FastifyRequest): string | null
   if (!auth?.startsWith('Bearer ')) return null;
   try {
     const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as Partial<CustomerJwtPayload>;
-    if (decoded.type !== 'customer' || !decoded.customerId) return null;
+    if (!decoded.customerId) return null;
+    // Token customer için olmalı: ya type='customer' (SMS) ya da aud='customer' (email)
+    const isCustomer = decoded.type === 'customer' || decoded.aud === 'customer';
+    if (!isCustomer) return null;
     return decoded.customerId;
   } catch {
     return null;
