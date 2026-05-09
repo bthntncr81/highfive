@@ -172,14 +172,28 @@ export const useAuth = create<AuthState>()(
       name: "highfive-auth",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({ token: s.token, user: s.user }),
-      onRehydrateStorage: () => (state) => {
-        // rehydrate sonrası API client'a da token'ı yaz, sonra hydrated=true
+      onRehydrateStorage: () => (state, error) => {
+        // rehydrate sonrası API client'a token yaz; her durumda hydrated=true
         (async () => {
-          if (state?.token) await setToken(state.token);
-          // Hydration bitti — UI artık güvenli render edebilir
+          try {
+            if (state?.token) await setToken(state.token);
+          } catch {/* ignore */}
+          // Hydration başarılı veya hatalı, UI artık beklemesin
           useAuth.setState({ hydrated: true });
         })();
+        if (error) {
+          console.log("[auth] persist rehydrate error:", error);
+        }
       },
     },
   ),
 );
+
+// Güvenlik ağı: 3 saniye içinde hydrate olmazsa zorla hydrated=true yap
+// (AsyncStorage takılırsa app sonsuz splash'ta kalmasın)
+setTimeout(() => {
+  if (!useAuth.getState().hydrated) {
+    console.log("[auth] hydrate timeout — forcing hydrated=true");
+    useAuth.setState({ hydrated: true });
+  }
+}, 3000);
