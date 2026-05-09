@@ -6,11 +6,12 @@ import { ApiError } from "./api";
 
 export function handleApiError(e: unknown, opts?: { silent401?: boolean }) {
   if (e instanceof ApiError) {
-    // Auth gereken endpoint'te login değilsen welcome'a yönlendir, Alert açma
+    // AUTH_REQUIRED — sessizce yut. UI zaten user state'ine göre 'üye ol' UI render eder.
+    // Auto-redirect welcome'a yapılmıyor çünkü hydration race condition sırasında yanlış
+    // tetikleniyordu (üye giriş yapmış ama hydration tamamlanmadan fetch fired → 401 →
+    // welcome'a atılıyordu). Calling code istiyorsa kendi explicit yönlendirir.
     if (e.code === "AUTH_REQUIRED") {
-      if (!opts?.silent401) {
-        router.replace("/auth/welcome");
-      }
+      console.log("[handleApiError] AUTH_REQUIRED — silent");
       return;
     }
     // Token süresi dolmuş — kullanıcıya bildir, login'e yönlendir

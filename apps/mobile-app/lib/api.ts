@@ -93,11 +93,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
         `Endpoint bulunamadı: ${path}\n\n` +
         `Sunucu eski sürümde olabilir.`;
     } else if (res.status === 401) {
-      // Token YOK → giriş yapmamış (normal). VAR → süre dolmuş, logout.
+      // Token YOK → giriş yapmamış (normal). VAR → server reddetti.
+      // ESKİDEN: clearSessionLocal token'ı silerdi — hydration race / transient 401
+      // sırasında yanlışlıkla logout yapıyordu. ARTIK: sadece error throw, token korunur.
+      // Calling code 401'i kendisi handle etsin (yumuşak prompt).
       if (token) {
-        await clearSessionLocal();
-        errMsg = "Oturumun süresi doldu, tekrar giriş yap.";
+        errMsg = "Yetki gerekli.";
         errCode = "TOKEN_EXPIRED";
+        console.log(`[api] 401 with token, path=${path} — token KORUNUYOR`);
       } else {
         errMsg = "Bu işlem için giriş yapman gerek.";
         errCode = "AUTH_REQUIRED";

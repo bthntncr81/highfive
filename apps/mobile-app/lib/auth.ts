@@ -173,27 +173,54 @@ export const useAuth = create<AuthState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({ token: s.token, user: s.user }),
       onRehydrateStorage: () => (state, error) => {
-        // rehydrate sonrası API client'a token yaz; her durumda hydrated=true
+        console.log("[auth] onRehydrateStorage fired", {
+          hasState: !!state,
+          hasToken: !!state?.token,
+          hasUser: !!state?.user,
+          error: error ? String(error) : null,
+        });
         (async () => {
           try {
-            if (state?.token) await setToken(state.token);
-          } catch {/* ignore */}
-          // Hydration başarılı veya hatalı, UI artık beklemesin
+            if (state?.token) {
+              await setToken(state.token);
+              console.log("[auth] token written to api client");
+            }
+          } catch (e: any) {
+            console.log("[auth] setToken failed:", e?.message);
+          }
           useAuth.setState({ hydrated: true });
+          console.log("[auth] hydrated=true");
         })();
-        if (error) {
-          console.log("[auth] persist rehydrate error:", error);
-        }
       },
     },
   ),
 );
 
-// Güvenlik ağı: 3 saniye içinde hydrate olmazsa zorla hydrated=true yap
-// (AsyncStorage takılırsa app sonsuz splash'ta kalmasın)
-setTimeout(() => {
-  if (!useAuth.getState().hydrated) {
-    console.log("[auth] hydrate timeout — forcing hydrated=true");
+// EK SAVUNMA: Persist callback ateşlenmezse 3sn'de manuel hydrate
+// + AsyncStorage'dan direkt oku, persist hesabını atla
+setTimeout(async () => {
+  const state = useAuth.getState();
+  if (state.hydrated) return;
+  console.log("[auth] hydrate timeout — manual fallback");
+  try {
+    const raw = await AsyncStorage.getItem("highfive-auth");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const persistedToken = parsed?.state?.token;
+      const persistedUser = parsed?.state?.user;
+      console.log("[auth] manual read:", { hasToken: !!persistedToken, hasUser: !!persistedUser });
+      if (persistedToken) await setToken(persistedToken);
+      useAuth.setState({
+        token: persistedToken ?? null,
+        user: persistedUser ?? null,
+        hydrated: true,
+      });
+    } else {
+      console.log("[auth] no persisted auth data");
+      useAuth.setState({ hydrated: true });
+    }
+  } catch (e: any) {
+    console.log("[auth] manual read failed:", e?.message);
     useAuth.setState({ hydrated: true });
   }
 }, 3000);
