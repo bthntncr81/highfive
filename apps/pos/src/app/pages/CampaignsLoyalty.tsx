@@ -89,6 +89,7 @@ export default function CampaignsLoyalty() {
   const [bundles, setBundles] = useState<BundleDeal[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuCategories, setMenuCategories] = useState<{ id: string; name: string }[]>([]);
   
   // Modal states
   const [showTierModal, setShowTierModal] = useState(false);
@@ -157,6 +158,7 @@ export default function CampaignsLoyalty() {
       setBundles(bundlesRes.bundles || []);
       setCoupons(couponsRes.coupons || []);
       setMenuItems(menuRes.items || []);
+      setMenuCategories(menuRes.categories || []);
 
       // Calculate stats
       const customerList = customersRes.customers || [];
@@ -680,11 +682,12 @@ export default function CampaignsLoyalty() {
       />
 
       {/* Bundle Modal */}
-      <BundleModal 
-        show={showBundleModal} 
-        onClose={() => setShowBundleModal(false)} 
+      <BundleModal
+        show={showBundleModal}
+        onClose={() => setShowBundleModal(false)}
         onSave={fetchData}
         menuItems={menuItems}
+        categories={menuCategories}
         token={token!}
       />
 
@@ -958,14 +961,69 @@ function CampaignModal({
 }
 
 // Bundle Modal Component
-function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolean; onClose: () => void; onSave: () => void; menuItems: any[]; token: string }) {
+type OptionGroupForm = {
+  name: string;
+  pickCount: number;
+  priceMode: 'INCLUDED' | 'ADD_PRICE';
+  categoryId: string; // empty string = no filter (whitelist mode)
+  eligibleItemIds: string[];
+};
+
+function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesProp, token }: { show: boolean; onClose: () => void; onSave: () => void; menuItems: any[]; categories?: { id: string; name: string }[]; token: string }) {
   const [form, setForm] = useState({
     name: '',
     description: '',
     image: '',
     bundlePrice: 0,
     items: [] as { menuItemId: string; quantity: number }[],
+    optionGroups: [] as OptionGroupForm[],
   });
+
+  // Prefer the categories list from the parent (server-shaped). Fall back to
+  // deriving from menuItems if not provided.
+  const categories = React.useMemo(() => {
+    if (categoriesProp && categoriesProp.length > 0) return categoriesProp;
+    const map = new Map<string, string>();
+    for (const m of menuItems) {
+      if (m.categoryId && m.category?.name) map.set(m.categoryId, m.category.name);
+      else if (m.categoryId) map.set(m.categoryId, m.categoryId);
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [menuItems, categoriesProp]);
+
+  const addOptionGroup = () => {
+    setForm((f) => ({
+      ...f,
+      optionGroups: [
+        ...f.optionGroups,
+        { name: '', pickCount: 1, priceMode: 'INCLUDED', categoryId: '', eligibleItemIds: [] },
+      ],
+    }));
+  };
+  const updateOptionGroup = (i: number, patch: Partial<OptionGroupForm>) => {
+    setForm((f) => ({
+      ...f,
+      optionGroups: f.optionGroups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)),
+    }));
+  };
+  const removeOptionGroup = (i: number) => {
+    setForm((f) => ({ ...f, optionGroups: f.optionGroups.filter((_, idx) => idx !== i) }));
+  };
+  const toggleEligibleItem = (groupIdx: number, itemId: string) => {
+    setForm((f) => ({
+      ...f,
+      optionGroups: f.optionGroups.map((g, idx) => {
+        if (idx !== groupIdx) return g;
+        const has = g.eligibleItemIds.includes(itemId);
+        return {
+          ...g,
+          eligibleItemIds: has
+            ? g.eligibleItemIds.filter((x) => x !== itemId)
+            : [...g.eligibleItemIds, itemId],
+        };
+      }),
+    }));
+  };
   const [uploading, setUploading] = useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -1006,15 +1064,39 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
 
   const handleSubmit = async () => {
     try {
+      // Validation: every group must have name + pickCount, and either a
+      // category filter OR at least one whitelisted item.
+      for (const g of form.optionGroups) {
+        if (!g.name.trim()) {
+          alert('Her seçim grubuna isim ver');
+          return;
+        }
+        if (g.pickCount < 1) {
+          alert(`"${g.name}" için seçim sayısı en az 1 olmalı`);
+          return;
+        }
+        if (!g.categoryId && g.eligibleItemIds.length === 0) {
+          alert(`"${g.name}" için ya bir kategori seç ya da ürün listesi gir`);
+          return;
+        }
+      }
       await api.post('/api/bundles', {
         ...form,
         originalPrice,
         savings: originalPrice - form.bundlePrice,
+        optionGroups: form.optionGroups.map((g, i) => ({
+          name: g.name,
+          pickCount: g.pickCount,
+          priceMode: g.priceMode,
+          categoryId: g.categoryId || null,
+          eligibleItemIds: g.eligibleItemIds,
+          sortOrder: i,
+        })),
       }, token);
       onSave();
       onClose();
-    } catch (error) {
-      console.error('Save error:', error);
+    } catch (error: any) {
+      alert('Kaydedilemedi: ' + (error?.message ?? 'hata'));
     }
   };
 
@@ -1124,17 +1206,149 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Paket Fiyatı</label>
+            <label className="block text-sm font-medium mb-1">Paket Fiyatı (taban)</label>
             <input
               type="number"
               value={form.bundlePrice}
               onChange={(e) => setForm({ ...form, bundlePrice: Number(e.target.value) })}
               className="input w-full"
             />
+            <p className="text-xs text-foreground-muted mt-1">
+              Müşteri "Paket fiyatına dahil" gruplardaki ürünler için ekstra ödemez. "Ürün fiyatı eklenir" gruplardaki seçimler bu tutarın üstüne eklenir.
+            </p>
             {form.bundlePrice > 0 && originalPrice > form.bundlePrice && (
               <p className="text-green-600 text-sm mt-1">
-                ₺{originalPrice - form.bundlePrice} tasarruf!
+                Sabit ürünler için ₺{originalPrice - form.bundlePrice} tasarruf
               </p>
+            )}
+          </div>
+
+          {/* Seçim Grupları (müşteri kategori/ürün listesinden seçer) */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <label className="block text-sm font-bold">Seçim Grupları</label>
+                <p className="text-[11px] text-foreground-muted">
+                  Müşteri her gruptan belirttiğin sayıda ürün seçer (örn: "2 Pizza + 2 İçecek")
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addOptionGroup}
+                className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 font-bold hover:bg-purple-200"
+              >
+                + Grup Ekle
+              </button>
+            </div>
+
+            {form.optionGroups.length === 0 ? (
+              <p className="text-xs text-foreground-muted bg-gray-50 rounded-lg p-3 text-center">
+                Seçim grubu eklemezsen sadece sabit içerikli paket olur
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {form.optionGroups.map((g, i) => (
+                  <div key={i} className="bg-purple-50/60 border border-purple-200 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Grup adı (örn: Pizza Seçimi)"
+                        value={g.name}
+                        onChange={(e) => updateOptionGroup(i, { name: e.target.value })}
+                        className="input flex-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeOptionGroup(i)}
+                        className="text-red-500 px-2 text-lg"
+                        title="Grubu sil"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-0.5">
+                          Kaç Tane Seçecek
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={g.pickCount}
+                          onChange={(e) =>
+                            updateOptionGroup(i, { pickCount: Math.max(1, Number(e.target.value)) })
+                          }
+                          className="input w-full text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-0.5">Fiyatlama</label>
+                        <select
+                          value={g.priceMode}
+                          onChange={(e) =>
+                            updateOptionGroup(i, { priceMode: e.target.value as 'INCLUDED' | 'ADD_PRICE' })
+                          }
+                          className="input w-full text-sm"
+                        >
+                          <option value="INCLUDED">Paket fiyatına dahil</option>
+                          <option value="ADD_PRICE">Ürün fiyatı eklenir</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-0.5">
+                        Hangi ürünler seçilebilir
+                      </label>
+                      <select
+                        value={g.categoryId}
+                        onChange={(e) =>
+                          updateOptionGroup(i, {
+                            categoryId: e.target.value,
+                            // kategori seçilince whitelist temizleniyor — ikisi birden olmasın
+                            eligibleItemIds: e.target.value ? [] : g.eligibleItemIds,
+                          })
+                        }
+                        className="input w-full text-sm"
+                      >
+                        <option value="">— Belirli ürünleri seç (aşağıdan)</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            Kategori: {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {!g.categoryId && (
+                      <div>
+                        <p className="text-[11px] font-semibold mb-1">
+                          Seçilebilir ürünler ({g.eligibleItemIds.length})
+                        </p>
+                        <div className="max-h-32 overflow-y-auto bg-white rounded border p-1 space-y-0.5">
+                          {menuItems.map((mi) => {
+                            const checked = g.eligibleItemIds.includes(mi.id);
+                            return (
+                              <label
+                                key={mi.id}
+                                className={`flex items-center gap-2 text-xs px-2 py-1 rounded cursor-pointer hover:bg-gray-50 ${
+                                  checked ? 'bg-purple-50' : ''
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleEligibleItem(i, mi.id)}
+                                />
+                                <span className="flex-1">{mi.name}</span>
+                                <span className="text-gray-500">₺{mi.price}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

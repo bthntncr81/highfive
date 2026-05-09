@@ -32,8 +32,10 @@ export const Order = () => {
   const { trackOrder } = useOrderTracking();
   const {
     items,
+    bundles,
     removeItem,
     updateQuantity,
+    removeBundle,
     clearCart,
     totalItems,
     totalPrice,
@@ -282,11 +284,21 @@ export const Order = () => {
         }
       }
 
-      if (orderItems.length === 0) {
+      // Only block if there are no items AND no bundles — a bundle-only
+      // order is valid (e.g., customer just ordered the Family Combo).
+      if (orderItems.length === 0 && bundles.length === 0) {
         setError('Seçilen ürünler şu anda mevcut değil');
         setIsSubmitting(false);
         return;
       }
+
+      const orderBundles = bundles.map((b) => ({
+        bundleId: b.bundleId,
+        selections: b.selections.map((s) => ({
+          groupId: s.groupId,
+          menuItemIds: s.items.map((i) => i.id),
+        })),
+      }));
 
       // Determine order type
       let orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' = 'TAKEAWAY';
@@ -308,6 +320,7 @@ export const Order = () => {
               : customerAddress)
           : undefined,
         items: orderItems,
+        bundles: orderBundles.length > 0 ? orderBundles : undefined,
         type: orderType,
         notes: orderNotes,
         tip: tipAmount > 0 ? tipAmount : undefined,

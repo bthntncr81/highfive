@@ -132,6 +132,11 @@ export interface OrderItem {
   isCrossSell?: boolean;
 }
 
+export interface OrderBundleSelection {
+  bundleId: string;
+  selections: { groupId: string; menuItemIds: string[] }[];
+}
+
 export interface CreateOrderRequest {
   tableId?: string;
   sessionToken?: string;
@@ -140,6 +145,7 @@ export interface CreateOrderRequest {
   customerEmail?: string;
   customerAddress?: string;
   items: OrderItem[];
+  bundles?: OrderBundleSelection[];
   type: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
   notes?: string;
   tip?: number;

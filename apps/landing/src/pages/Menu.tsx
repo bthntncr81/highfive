@@ -6,6 +6,7 @@ import { useCart } from '../lib/cartStore'
 import { orderApi, happyHourApi, type HappyHour, type Category, type MenuItem as APIMenuItem } from '../lib/api'
 import { SectionContainer } from '../components/SectionContainer'
 import { MenuGridFromAPI } from '../components/MenuGridFromAPI'
+import { BundleSection } from '../components/BundleSection'
 import { RevealOnScroll } from '../components/RevealOnScroll'
 import { useSettings } from '../hooks/useSettings'
 
@@ -359,6 +360,9 @@ export const Menu = () => {
             </motion.div>
           </div>
         )}
+
+        {/* Paket Menüler — kategori filtresi olmadan, üstte */}
+        {!loading && !activeCategory && <BundleSection />}
 
         {/* Grid */}
         {!loading && (
