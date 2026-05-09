@@ -696,8 +696,10 @@ export default async function orderRoutes(server: FastifyInstance) {
       },
     });
 
-    // Ham madde stoklarını düş
-    await deductRawMaterialStock(prisma, items);
+    // Ham madde stoklarını düş — bundle-only siparişlerde items boş olabilir
+    if (Array.isArray(items) && items.length > 0) {
+      await deductRawMaterialStock(prisma, items);
+    }
 
     // Update table status if table order
     if (tableId) {
@@ -807,8 +809,10 @@ export default async function orderRoutes(server: FastifyInstance) {
       },
     });
 
-    // Ham madde stoklarını düş
-    await deductRawMaterialStock(prisma, items);
+    // Ham madde stoklarını düş — bundle-only siparişlerde items boş olabilir
+    if (Array.isArray(items) && items.length > 0) {
+      await deductRawMaterialStock(prisma, items);
+    }
 
     // Update table status if table order
     if (tableId) {
