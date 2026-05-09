@@ -9,8 +9,10 @@ export const Cart = () => {
   const navigate = useNavigate()
   const {
     items,
+    bundles,
     removeItem,
     updateQuantity,
+    removeBundle,
     clearCart,
     addItem,
     totalItems,
@@ -178,7 +180,7 @@ export const Cart = () => {
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-4">
-              {items.length === 0 ? (
+              {items.length === 0 && bundles.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -198,6 +200,63 @@ export const Cart = () => {
                 </motion.div>
               ) : (
                 <div className="space-y-3">
+                  {/* Bundle Lines (Combos / Paket Menüler) */}
+                  {bundles.map((b) => (
+                    <div
+                      key={b.uid}
+                      className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl p-3 border border-accent/30"
+                    >
+                      <div className="flex gap-3">
+                        {b.image ? (
+                          <img
+                            src={b.image}
+                            alt={b.name}
+                            className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-lg bg-accent/20 flex items-center justify-center text-3xl flex-shrink-0">
+                            📦
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wide bg-accent text-white px-2 py-0.5 rounded">
+                              Paket
+                            </span>
+                            <h4 className="font-display font-semibold text-foreground truncate">
+                              {b.name}
+                            </h4>
+                          </div>
+                          <ul className="mt-1 text-xs text-foreground-muted space-y-0.5">
+                            {b.fixedItemNames.map((n, i) => (
+                              <li key={`f${i}`}>• {n}</li>
+                            ))}
+                            {b.selections.flatMap((s) =>
+                              s.items.map((it, i) => (
+                                <li key={`${s.groupId}-${i}`}>
+                                  • <span className="text-foreground-subtle">{s.groupName}:</span>{' '}
+                                  {it.name}
+                                </li>
+                              ))
+                            )}
+                          </ul>
+                          <p className="font-display font-bold text-primary mt-1">
+                            ₺{b.totalPrice}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeBundle(b.uid)}
+                          className="text-foreground-subtle hover:text-primary transition-colors self-start"
+                          aria-label="Paketi kaldır"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
                   <AnimatePresence mode="popLayout">
                     {items.map((cartItem) => (
                       <motion.div
@@ -308,7 +367,7 @@ export const Cart = () => {
             </div>
 
             {/* Footer */}
-            {items.length > 0 && (
+            {(items.length > 0 || bundles.length > 0) && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

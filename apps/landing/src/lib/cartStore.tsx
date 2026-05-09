@@ -17,6 +17,23 @@ export type CartItem = {
   quantity: number
 }
 
+// Bundle/Combo cart entry — separate from regular items because of nested
+// per-group selections + server-side pricing. We snapshot enough to render
+// the cart line without re-fetching the bundle definition.
+export type BundleCartEntry = {
+  uid: string                       // local-only key for editing/removing one of N copies
+  bundleId: string
+  name: string
+  image?: string
+  totalPrice: number                // computed locally for display only — server re-validates
+  selections: {
+    groupId: string
+    groupName: string
+    items: { id: string; name: string; price: number }[] // priced for ADD_PRICE display, server ignores
+  }[]
+  fixedItemNames: string[]          // for display
+}
+
 export type TableSession = {
   id: string
   number: number
@@ -26,10 +43,13 @@ export type TableSession = {
 
 type CartContextValue = {
   items: CartItem[]
+  bundles: BundleCartEntry[]
   addItem: (item: MenuItem) => void
   addItemFromAPI: (apiItem: APIMenuItemForCart) => void // API formatından ekleme
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, quantity: number) => void
+  addBundle: (entry: Omit<BundleCartEntry, 'uid'>) => void
+  removeBundle: (uid: string) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -44,6 +64,7 @@ type CartContextValue = {
 }
 
 const CART_STORAGE_KEY = 'highfive-cart'
+const BUNDLES_STORAGE_KEY = 'highfive-cart-bundles'
 const TABLE_SESSION_KEY = 'highfive-table-session'
 
 const CartContext = createContext<CartContextValue | undefined>(undefined)
@@ -62,6 +83,22 @@ const loadCart = (): CartItem[] => {
 const saveCart = (items: CartItem[]) => {
   if (typeof window === 'undefined') return
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+}
+
+const loadBundles = (): BundleCartEntry[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(BUNDLES_STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as BundleCartEntry[]
+  } catch {
+    return []
+  }
+}
+
+const saveBundles = (entries: BundleCartEntry[]) => {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(BUNDLES_STORAGE_KEY, JSON.stringify(entries))
 }
 
 const loadTableSession = (): TableSession => {
@@ -86,6 +123,7 @@ const saveTableSession = (table: TableSession) => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => loadCart())
+  const [bundles, setBundles] = useState<BundleCartEntry[]>(() => loadBundles())
   const [isOpen, setIsOpen] = useState(false)
   const [tableSession, setTableSessionState] = useState<TableSession>(() => loadTableSession())
 
@@ -93,6 +131,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     saveCart(items)
   }, [items])
+
+  useEffect(() => {
+    saveBundles(bundles)
+  }, [bundles])
 
   const addItem = useCallback((item: MenuItem) => {
     setItems((prev) => {
@@ -151,8 +193,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     )
   }, [])
 
+  const addBundle = useCallback((entry: Omit<BundleCartEntry, 'uid'>) => {
+    const uid = `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    setBundles((prev) => [...prev, { ...entry, uid }])
+  }, [])
+
+  const removeBundle = useCallback((uid: string) => {
+    setBundles((prev) => prev.filter((b) => b.uid !== uid))
+  }, [])
+
   const clearCart = useCallback(() => {
     setItems([])
+    setBundles([])
   }, [])
 
   const openCart = useCallback(() => setIsOpen(true), [])
@@ -170,22 +222,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const totalItems = useMemo(
-    () => items.reduce((sum, ci) => sum + ci.quantity, 0),
-    [items]
+    () => items.reduce((sum, ci) => sum + ci.quantity, 0) + bundles.length,
+    [items, bundles]
   )
 
   const totalPrice = useMemo(
-    () => items.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0),
-    [items]
+    () =>
+      items.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0) +
+      bundles.reduce((sum, b) => sum + b.totalPrice, 0),
+    [items, bundles]
   )
 
   const value = useMemo(
     () => ({
       items,
+      bundles,
       addItem,
       addItemFromAPI,
       removeItem,
       updateQuantity,
+      addBundle,
+      removeBundle,
       clearCart,
       totalItems,
       totalPrice,
@@ -197,7 +254,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTableSession,
       clearTableSession,
     }),
-    [items, addItem, addItemFromAPI, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isOpen, openCart, closeCart, toggleCart, tableSession, setTableSession, clearTableSession]
+    [items, bundles, addItem, addItemFromAPI, removeItem, updateQuantity, addBundle, removeBundle, clearCart, totalItems, totalPrice, isOpen, openCart, closeCart, toggleCart, tableSession, setTableSession, clearTableSession]
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

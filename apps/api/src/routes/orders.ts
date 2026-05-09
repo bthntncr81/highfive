@@ -464,6 +464,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       customerAddress,
       type,
       items,
+      bundles,
       notes,
       tip,
       deliveryFee,
@@ -477,13 +478,20 @@ export default async function orderRoutes(server: FastifyInstance) {
       customerAddress?: string;
       type?: OrderType;
       paymentMethod?: string;
-      items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      items?: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      // Bundles get expanded server-side so frontend can't fake combo pricing
+      bundles?: {
+        bundleId: string;
+        selections: { groupId: string; menuItemIds: string[] }[];
+      }[];
       notes?: string;
       tip?: number;
       deliveryFee?: number;
     };
 
-    if (!items || items.length === 0) {
+    const hasItems = Array.isArray(items) && items.length > 0;
+    const hasBundles = Array.isArray(bundles) && bundles.length > 0;
+    if (!hasItems && !hasBundles) {
       return reply.status(400).send({ error: 'En az bir ürün gerekli' });
     }
 
@@ -530,9 +538,9 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Calculate totals
     let subtotal = 0;
-    const orderItems = [];
+    const orderItems: any[] = [];
 
-    for (const item of items) {
+    for (const item of (items || [])) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
@@ -552,6 +560,93 @@ export default async function orderRoutes(server: FastifyInstance) {
         notes: item.notes,
         modifiers: item.modifiers || [],
       });
+    }
+
+    // Expand bundles. Each bundle becomes:
+    //   - one wrapper line (menuItemId=null) carrying bundlePrice as base fee,
+    //   - lines for fixed BundleItems at unitPrice 0,
+    //   - lines for picked options: 0 if INCLUDED, full menu price if ADD_PRICE.
+    // Server-side expansion stops the customer from manipulating combo totals.
+    for (const bundleReq of bundles || []) {
+      const bundle = await prisma.bundleDeal.findUnique({
+        where: { id: bundleReq.bundleId },
+        include: {
+          items: { include: { menuItem: true } },
+          optionGroups: true,
+        },
+      });
+      if (!bundle || !bundle.isActive) {
+        return reply.status(400).send({ error: `Paket mevcut değil: ${bundleReq.bundleId}` });
+      }
+
+      const selectionsByGroup = new Map<string, string[]>();
+      for (const sel of bundleReq.selections || []) {
+        selectionsByGroup.set(sel.groupId, sel.menuItemIds || []);
+      }
+      for (const group of bundle.optionGroups) {
+        const picked = selectionsByGroup.get(group.id) || [];
+        if (picked.length !== group.pickCount) {
+          return reply.status(400).send({
+            error: `"${group.name}" grubundan tam ${group.pickCount} ürün seçmelisin`,
+          });
+        }
+        let eligibleIds: string[] = group.eligibleItemIds;
+        if ((!eligibleIds || eligibleIds.length === 0) && group.categoryId) {
+          const catItems = await prisma.menuItem.findMany({
+            where: { categoryId: group.categoryId, available: true },
+            select: { id: true },
+          });
+          eligibleIds = catItems.map((c) => c.id);
+        }
+        for (const id of picked) {
+          if (eligibleIds.length > 0 && !eligibleIds.includes(id)) {
+            return reply.status(400).send({
+              error: `"${group.name}" için seçilen ürün geçerli değil`,
+            });
+          }
+        }
+      }
+
+      subtotal += Number(bundle.bundlePrice);
+      orderItems.push({
+        menuItemId: null,
+        menuItemName: `📦 ${bundle.name}`,
+        quantity: 1,
+        unitPrice: bundle.bundlePrice,
+        total: bundle.bundlePrice,
+        notes: 'Paket Menü',
+        modifiers: [],
+      });
+
+      for (const fi of bundle.items) {
+        orderItems.push({
+          menuItemId: fi.menuItemId,
+          quantity: fi.quantity,
+          unitPrice: 0,
+          total: 0,
+          notes: `📦 ${bundle.name}`,
+          modifiers: [],
+        });
+      }
+
+      for (const group of bundle.optionGroups) {
+        const picked = selectionsByGroup.get(group.id) || [];
+        for (const itemId of picked) {
+          const mi = await prisma.menuItem.findUnique({ where: { id: itemId } });
+          if (!mi) continue;
+          const isAddPrice = group.priceMode === 'ADD_PRICE';
+          const unit = isAddPrice ? Number(mi.price) : 0;
+          if (isAddPrice) subtotal += unit;
+          orderItems.push({
+            menuItemId: itemId,
+            quantity: 1,
+            unitPrice: unit,
+            total: unit,
+            notes: `📦 ${bundle.name} — ${group.name}`,
+            modifiers: [],
+          });
+        }
+      }
     }
 
     // Get tax rate from settings

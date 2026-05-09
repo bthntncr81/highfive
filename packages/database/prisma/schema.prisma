@@ -779,6 +779,29 @@ model BundleDeal {
   updatedAt       DateTime @updatedAt
 
   items           BundleItem[]
+  optionGroups    BundleOptionGroup[]
+}
+
+// Müşterinin paket içinde seçim yapacağı gruplar.
+// Örn: "Pizza Seçimi" — pickCount=2, categoryId=Pizza, priceMode=INCLUDED
+//      "Yan Ürün"   — pickCount=1, eligibleItemIds=[..], priceMode=ADD_PRICE
+model BundleOptionGroup {
+  id              String   @id @default(cuid())
+  bundleId        String
+  name            String   // "Pizza Seçimi"
+  pickCount       Int      @default(1) // Müşteri kaç tane seçecek
+  // priceMode: INCLUDED = paket fiyatına dahil (seçim sadece çeşni)
+  //            ADD_PRICE = seçilen ürünün menü fiyatı pakete eklenir
+  priceMode       String   @default("INCLUDED")
+  // Eligibility — yalnızca biri kullanılır:
+  //   categoryId set ise → o kategorideki tüm aktif ürünler seçilebilir
+  //   eligibleItemIds dolu ise → sadece bu menü item'ları
+  categoryId      String?
+  eligibleItemIds String[]
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  bundle          BundleDeal @relation(fields: [bundleId], references: [id], onDelete: Cascade)
 }
 
 // Paket İçindeki Ürünler
