@@ -41,12 +41,8 @@ export default function ProfileScreen() {
     },
     {
       icon: "document-text-outline",
-      label: "Sözleşmeler",
-      action: () =>
-        Alert.alert(
-          "Sözleşmeler",
-          "Kullanım Şartları ve Gizlilik Politikası web sitemizde mevcut: highfivepps.com",
-        ),
+      label: "Sözleşmeler & KVKK",
+      href: "/legal",
     },
   ];
 

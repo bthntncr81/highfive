@@ -622,6 +622,11 @@ model Customer {
   emailConsent    Boolean  @default(false)
   pushConsent     Boolean  @default(false)
 
+  // KVKK / Sözleşme Audit (yasal uyum için kabul tarihleri)
+  termsAcceptedAt    DateTime? // Üyelik sözleşmesi kabul tarihi
+  kvkkAcceptedAt     DateTime? // KVKK aydınlatma metni kabul tarihi
+  marketingConsentAt DateTime? // Açık pazarlama izni (e-posta + SMS) — KVKK gerek
+
   // Status
   isActive        Boolean  @default(true)
   isVerified      Boolean  @default(false) // Email doğrulandı mı

@@ -23,6 +23,7 @@ import { About } from "./pages/About";
 import { Privacy } from "./pages/Privacy";
 import { DeliveryTerms } from "./pages/DeliveryTerms";
 import { DistanceSales } from "./pages/DistanceSales";
+import { TermsOfUse } from "./pages/TermsOfUse";
 import { SafeMenu } from "./pages/SafeMenu";
 import { TableScan } from "./pages/TableScan";
 
@@ -142,6 +143,8 @@ const AnimatedRoutes = () => {
           <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
           <Route path="/delivery-terms" element={<PageTransition><DeliveryTerms /></PageTransition>} />
           <Route path="/distance-sales" element={<PageTransition><DistanceSales /></PageTransition>} />
+          <Route path="/terms-of-use" element={<PageTransition><TermsOfUse /></PageTransition>} />
+          <Route path="/terms" element={<PageTransition><TermsOfUse /></PageTransition>} />
           <Route path="/safemenu" element={<SafeMenu />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/qr" element={<QRCodes />} />

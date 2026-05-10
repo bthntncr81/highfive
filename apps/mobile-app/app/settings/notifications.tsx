@@ -132,6 +132,29 @@ export default function NotificationSettings() {
           />
         </View>
 
+        {/* E-posta + SMS pazarlama izinleri (KVKK ayrı) */}
+        <View className="mt-6 mb-2">
+          <Text className="text-xs uppercase tracking-widest text-foreground-muted">
+            E-posta ve SMS Pazarlama
+          </Text>
+          <Text className="mt-1 text-[11px] text-foreground-muted">
+            Açık rıza ile iletilen kampanya, indirim ve duyuru bildirimleri.
+            Dilediğin zaman geri çekebilirsin.
+          </Text>
+        </View>
+        <View className="overflow-hidden rounded-2xl bg-white border border-border-light">
+          <MarketingPrefRow
+            icon="mail-open"
+            label="E-posta"
+            description="Kampanya ve indirimler e-posta ile gelsin"
+          />
+          <MarketingPrefRow
+            icon="chatbubble-ellipses"
+            label="SMS"
+            description="Önemli kampanyalar SMS ile gelsin"
+          />
+        </View>
+
         {saving && (
           <Text className="mt-3 text-center text-xs text-foreground-muted">
             Kaydediliyor...
@@ -139,6 +162,74 @@ export default function NotificationSettings() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function MarketingPrefRow({
+  icon,
+  label,
+  description,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  description: string;
+}) {
+  const [me, setMe] = useState<{ emailConsent: boolean; smsConsent: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    endpoints
+      .me()
+      .then((res: any) =>
+        setMe({
+          emailConsent: !!res.user.emailConsent,
+          smsConsent: !!res.user.smsConsent,
+        }),
+      )
+      .catch(() => {});
+  }, []);
+
+  if (!me) {
+    return (
+      <View className="flex-row items-center p-4">
+        <Ionicons name={icon} size={20} color="#9a9a9a" />
+        <Text className="ml-3 flex-1 text-sm text-foreground-muted">
+          Yükleniyor...
+        </Text>
+      </View>
+    );
+  }
+
+  const field = label === "E-posta" ? "emailConsent" : "smsConsent";
+  const value = me[field as "emailConsent" | "smsConsent"];
+
+  const onToggle = async (v: boolean) => {
+    setBusy(true);
+    try {
+      await endpoints.updateMe({ [field]: v } as any);
+      setMe({ ...me, [field]: v });
+    } catch (e: any) {
+      Alert.alert("Hata", e?.message ?? "Kaydedilemedi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View className="flex-row items-center p-4 border-b border-border-light last:border-0">
+      <Ionicons name={icon} size={20} color="#bb1e10" />
+      <View className="ml-3 flex-1">
+        <Text className="text-sm font-bold text-foreground">{label}</Text>
+        <Text className="mt-0.5 text-xs text-foreground-muted">{description}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onToggle}
+        disabled={busy}
+        trackColor={{ false: "#e5e7eb", true: "#bb1e10" }}
+        thumbColor="#fff"
+      />
+    </View>
   );
 }
 

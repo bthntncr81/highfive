@@ -247,12 +247,31 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       if (!isCustomer || !decoded.customerId) {
         return reply.status(401).send({ error: 'Geçersiz token' });
       }
-      const { name, email } = (request.body ?? {}) as { name?: string; email?: string };
+      const {
+        name,
+        email,
+        emailConsent,
+        smsConsent,
+      } = (request.body ?? {}) as {
+        name?: string;
+        email?: string;
+        emailConsent?: boolean;
+        smsConsent?: boolean;
+      };
+      const now = new Date();
+      // marketingConsentAt — herhangi biri true'ya geçince güncelle
+      const marketingChange = emailConsent === true || smsConsent === true;
       const customer = await prisma.customer.update({
         where: { id: decoded.customerId },
         data: {
           ...(name !== undefined ? { name } : {}),
           ...(email !== undefined ? { email } : {}),
+          ...(emailConsent !== undefined ? { emailConsent } : {}),
+          ...(smsConsent !== undefined ? { smsConsent } : {}),
+          // Audit timestamp — en az birini açıyorsa şimdi, ikisi de kapalıysa null
+          ...(emailConsent !== undefined || smsConsent !== undefined
+            ? { marketingConsentAt: marketingChange ? now : null }
+            : {}),
         },
       });
       return { user: customer };

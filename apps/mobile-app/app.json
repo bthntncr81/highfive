@@ -8,6 +8,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "primaryColor": "#bb1e10",
+    "privacy": "public",
+    "description": "HighFive Pizza & Makarna — Düzce Akçakoca'da pizza, makarna ve sandviç siparişi. Hızlı teslimat, sadakat puanları, kampanyalar.",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -17,12 +20,18 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.highfive.mobile",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Teslimat adresinizi belirlemek için konumunuza erişmemiz gerekiyor."
+        "NSLocationWhenInUseUsageDescription": "Teslimat adresinizi belirlemek için konumunuza erişmemiz gerekiyor.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.highfive.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#bb1e10"
@@ -30,24 +39,12 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "POST_NOTIFICATIONS",
         "android.permission.POST_NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED",
-        "WAKE_LOCK",
-        "VIBRATE",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "POST_NOTIFICATIONS",
-        "android.permission.POST_NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED",
-        "WAKE_LOCK",
-        "VIBRATE"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {

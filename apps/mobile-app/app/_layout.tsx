@@ -145,6 +145,32 @@ export default function RootLayout() {
             name="profile/edit"
             options={{ animation: "slide_from_right" }}
           />
+
+          {/* LEGAL (KVKK, Sözleşmeler, Gizlilik) */}
+          <Stack.Screen
+            name="legal/index"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="legal/privacy"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="legal/kvkk"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="legal/terms"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="legal/distance-sales"
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="legal/delivery-terms"
+            options={{ animation: "slide_from_right" }}
+          />
         </Stack>
         {/* Sepete uçan ürün animasyonu (her ekranın üzerinde) */}
         <FlyToCartOverlay />

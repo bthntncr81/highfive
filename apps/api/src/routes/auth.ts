@@ -275,12 +275,18 @@ export default async function authRoutes(server: FastifyInstance) {
       phone,
       gender,
       birthDate,
+      termsAccepted,
+      kvkkAccepted,
+      marketingConsent,
     } = request.body as {
       email?: string;
       name?: string;
       phone?: string;
       gender?: string;     // "MALE" | "FEMALE" | "OTHER"
       birthDate?: string;  // "YYYY-MM-DD"
+      termsAccepted?: boolean;
+      kvkkAccepted?: boolean;
+      marketingConsent?: boolean;
     };
     if (!email || !isValidEmail(email)) {
       return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
@@ -318,6 +324,14 @@ export default async function authRoutes(server: FastifyInstance) {
     const code = generateOtp();
     const expiresAt = new Date(Date.now() + CUSTOMER_OTP_TTL_MS);
 
+    // Consent / KVKK timestamps — yalnızca ilk explicit kabul anında kaydet
+    const now = new Date();
+    const setTermsAt = termsAccepted === true ? now : undefined;
+    const setKvkkAt = kvkkAccepted === true ? now : undefined;
+    const setMarketingAt = marketingConsent === true ? now : null; // false ise null (geri çekme)
+    const setEmailMarketing = marketingConsent === true ? true : marketingConsent === false ? false : undefined;
+    const setSmsMarketing = marketingConsent === true ? true : marketingConsent === false ? false : undefined;
+
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
@@ -328,7 +342,11 @@ export default async function authRoutes(server: FastifyInstance) {
           gender: normalizedGender,
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
-          emailConsent: false, // explicit opt-in later
+          emailConsent: setEmailMarketing ?? false,
+          smsConsent: setSmsMarketing ?? false,
+          termsAcceptedAt: setTermsAt,
+          kvkkAcceptedAt: setKvkkAt,
+          marketingConsentAt: marketingConsent === true ? now : null,
         },
       });
     } else {
@@ -342,6 +360,15 @@ export default async function authRoutes(server: FastifyInstance) {
           phone: customer.phone ?? cleanPhone,
           birthDate: customer.birthDate ?? parsedBirth ?? null,
           gender: customer.gender ?? normalizedGender ?? null,
+          // Consent: yalnızca ilk kabulde set, sonra korunur
+          termsAcceptedAt: customer.termsAcceptedAt ?? setTermsAt,
+          kvkkAcceptedAt: customer.kvkkAcceptedAt ?? setKvkkAt,
+          // Marketing — kullanıcı her seferinde değiştirebilir
+          ...(marketingConsent !== undefined ? {
+            emailConsent: setEmailMarketing,
+            smsConsent: setSmsMarketing,
+            marketingConsentAt: setMarketingAt,
+          } : {}),
         },
       });
     }
@@ -391,7 +418,8 @@ export default async function authRoutes(server: FastifyInstance) {
       where: { id: customer.id },
       data: {
         isVerified: true,
-        emailConsent: true, // verifying = implicit opt-in to transactional+marketing
+        // KVKK uyumu: emailConsent yalnızca request-otp'ta marketingConsent=true ile set edilir
+        // Doğrulama otomatik opt-in YAPMAZ
         verificationCode: null,
         verificationCodeExpiresAt: null,
       },

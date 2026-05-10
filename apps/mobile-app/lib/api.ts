@@ -360,8 +360,12 @@ export const endpoints = {
       user: ApiCustomer;
     }>("/api/mobile/auth/verify-otp", { phone, code }),
   me: () => api.get<{ user: ApiCustomer }>("/api/mobile/me"),
-  updateMe: (data: { name?: string; email?: string }) =>
-    api.patch<{ user: ApiCustomer }>("/api/mobile/me", data),
+  updateMe: (data: {
+    name?: string;
+    email?: string;
+    emailConsent?: boolean;
+    smsConsent?: boolean;
+  }) => api.patch<{ user: ApiCustomer }>("/api/mobile/me", data),
 
   // DEVICES (push token)
   registerDevice: (

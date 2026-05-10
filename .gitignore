@@ -51,3 +51,12 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+
+# EAS Submit credentials (NEVER commit)
+google-service-account.json
+*-google-service-account.json
+apple-key-*.p8
+AuthKey_*.p8
+google-services.json
+GoogleService-Info.plist

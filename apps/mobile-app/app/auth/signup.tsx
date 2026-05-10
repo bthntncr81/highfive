@@ -36,6 +36,11 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
 
+  // KVKK / Sözleşme kabul (zorunlu) + pazarlama izni (opsiyonel)
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedKvkk, setAcceptedKvkk] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
   const { requestEmailOtp, verifyEmailOtp } = useAuth();
 
   useEffect(() => {
@@ -62,6 +67,14 @@ export default function Signup() {
       Alert.alert("Hata", "Doğum tarihi YYYY-AA-GG (örn 1990-05-15) formatında olmalı");
       return;
     }
+    if (!acceptedKvkk) {
+      Alert.alert("Onay gerekli", "KVKK Aydınlatma Metni'ni okuyup kabul etmelisin.");
+      return;
+    }
+    if (!acceptedTerms) {
+      Alert.alert("Onay gerekli", "Üyelik Sözleşmesi'ni okuyup kabul etmelisin.");
+      return;
+    }
     setLoading(true);
     try {
       await requestEmailOtp(email.trim().toLowerCase(), {
@@ -69,6 +82,9 @@ export default function Signup() {
         phone: phoneDigits || undefined,
         gender: gender ?? undefined,
         birthDate: birthDate || undefined,
+        termsAccepted: acceptedTerms,
+        kvkkAccepted: acceptedKvkk,
+        marketingConsent,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep("otp");
@@ -285,11 +301,56 @@ export default function Signup() {
                 </Field>
               )}
 
+              {/* KVKK + Sözleşme onayı (zorunlu) + pazarlama izni (opsiyonel) */}
+              <View className="mt-5 gap-2.5">
+                <ConsentCheckbox
+                  checked={acceptedKvkk}
+                  onToggle={() => setAcceptedKvkk((v) => !v)}
+                  required
+                  label={
+                    <Text className="text-xs text-foreground">
+                      <Text className="font-bold">KVKK Aydınlatma Metni</Text>'ni okudum, kişisel verilerimin işlenmesini kabul ediyorum.{" "}
+                      <Text
+                        className="font-bold text-primary-600 underline"
+                        onPress={() => router.push("/legal/kvkk")}
+                      >
+                        Oku
+                      </Text>
+                    </Text>
+                  }
+                />
+                <ConsentCheckbox
+                  checked={acceptedTerms}
+                  onToggle={() => setAcceptedTerms((v) => !v)}
+                  required
+                  label={
+                    <Text className="text-xs text-foreground">
+                      <Text className="font-bold">Üyelik Sözleşmesi</Text>'ni ve Mesafeli Satış Sözleşmesi'ni kabul ediyorum.{" "}
+                      <Text
+                        className="font-bold text-primary-600 underline"
+                        onPress={() => router.push("/legal/terms")}
+                      >
+                        Oku
+                      </Text>
+                    </Text>
+                  }
+                />
+                <ConsentCheckbox
+                  checked={marketingConsent}
+                  onToggle={() => setMarketingConsent((v) => !v)}
+                  label={
+                    <Text className="text-xs text-foreground-muted">
+                      Kampanyalardan, indirimlerden ve duyurulardan haberdar olmak için <Text className="font-semibold text-foreground">e-posta + SMS</Text> almak istiyorum (opsiyonel).
+                    </Text>
+                  }
+                />
+              </View>
+
               <Pressable
-                disabled={loading}
+                disabled={loading || !acceptedTerms || !acceptedKvkk}
                 onPress={handleRequest}
                 className={`mt-6 flex-row items-center justify-center rounded-2xl py-4 ${
-                  loading ? "bg-border" : "bg-primary-500"
+                  loading || !acceptedTerms || !acceptedKvkk ? "bg-border" : "bg-primary-500"
                 }`}
               >
                 {loading && (
@@ -405,5 +466,46 @@ function Field({
       </Text>
       {children}
     </View>
+  );
+}
+
+function ConsentCheckbox({
+  checked,
+  onToggle,
+  label,
+  required,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  label: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onToggle}
+      className="flex-row items-start gap-2.5 rounded-xl bg-surface p-3"
+    >
+      <View
+        className={`mt-0.5 h-5 w-5 items-center justify-center rounded border-2 ${
+          checked ? "border-primary-500 bg-primary-500" : "border-border bg-white"
+        }`}
+      >
+        {checked && (
+          <Text className="text-xs font-black text-white">✓</Text>
+        )}
+      </View>
+      <View className="flex-1">
+        {typeof label === "string" ? (
+          <Text className="text-xs text-foreground">{label}</Text>
+        ) : (
+          label
+        )}
+        {required && (
+          <Text className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-600">
+            * Zorunlu
+          </Text>
+        )}
+      </View>
+    </Pressable>
   );
 }

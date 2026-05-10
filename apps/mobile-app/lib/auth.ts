@@ -36,6 +36,9 @@ type AuthState = {
       phone?: string;
       gender?: "MALE" | "FEMALE" | "OTHER";
       birthDate?: string; // ISO YYYY-MM-DD
+      termsAccepted?: boolean;
+      kvkkAccepted?: boolean;
+      marketingConsent?: boolean;
     },
   ) => Promise<{ success: true; message: string }>;
   verifyEmailOtp: (
@@ -110,6 +113,9 @@ export const useAuth = create<AuthState>()(
           phone?: string;
           gender?: "MALE" | "FEMALE" | "OTHER";
           birthDate?: string;
+          termsAccepted?: boolean;
+          kvkkAccepted?: boolean;
+          marketingConsent?: boolean;
         },
       ) => {
         return api.post<{ success: true; message: string }>(
@@ -120,6 +126,9 @@ export const useAuth = create<AuthState>()(
             ...(extra?.phone ? { phone: extra.phone } : {}),
             ...(extra?.gender ? { gender: extra.gender } : {}),
             ...(extra?.birthDate ? { birthDate: extra.birthDate } : {}),
+            ...(extra?.termsAccepted !== undefined ? { termsAccepted: extra.termsAccepted } : {}),
+            ...(extra?.kvkkAccepted !== undefined ? { kvkkAccepted: extra.kvkkAccepted } : {}),
+            ...(extra?.marketingConsent !== undefined ? { marketingConsent: extra.marketingConsent } : {}),
           },
         );
       },
