@@ -5,7 +5,10 @@ import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 import { PrismaClient } from '@prisma/client';
 
 const expo = new Expo({
-  // EAS access token gerekirse: process.env.EXPO_ACCESS_TOKEN
+  // EAS Access Token — projenin push'a yetkili olması için gerekli
+  // (Expo SDK 49+ project-scoped tokens için zorunlu)
+  accessToken: process.env.EXPO_ACCESS_TOKEN,
+  useFcmV1: true,
 });
 
 export type PushPayload = {
