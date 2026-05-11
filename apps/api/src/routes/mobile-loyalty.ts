@@ -7,6 +7,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
+import { evaluateCartOffers, type CartItem } from '../lib/cart-offers';
 import * as crypto from 'crypto';
 
 /**
@@ -119,6 +120,37 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       programs: await decorateProgramsWithMenuItems(prisma, programs),
       progress,
     };
+  });
+
+  // ==================== CART OFFERS — sepete uygun en avantajlı sadakat ====================
+  // Auth opsiyonel: giriş yapmamış kullanıcı sadece public offer'lar görür
+  // POST body: { items: [{ menuItemId, quantity, unitPrice }] }
+  // Yanıt: { bestOffer, allOffers, subtotal }
+  server.post('/cart/evaluate', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { items } = (request.body ?? {}) as { items?: CartItem[] };
+    if (!Array.isArray(items) || items.length === 0) {
+      return { bestOffer: null, allOffers: [], subtotal: 0 };
+    }
+
+    // Auth optional — token varsa customerId çek
+    let customerId: string | null = null;
+    const auth = request.headers.authorization;
+    if (auth?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(
+          auth.slice(7),
+          process.env.JWT_SECRET || 'your-secret-key',
+        ) as { customerId?: string; type?: string; aud?: string };
+        if (decoded.customerId && (decoded.type === 'customer' || decoded.aud === 'customer')) {
+          customerId = decoded.customerId;
+        }
+      } catch { /* token geçersiz, anonim olarak devam */ }
+    }
+
+    const subtotal = items.reduce((s, it) => s + Number(it.unitPrice) * Number(it.quantity), 0);
+    const { bestOffer, allOffers } = await evaluateCartOffers(prisma, customerId, items);
+    return { bestOffer, allOffers, subtotal };
   });
 
   // ==================== APPLY REFERRAL CODE — yeni kullanıcı kayıt sırasında ====================

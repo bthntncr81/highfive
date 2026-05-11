@@ -478,6 +478,25 @@ export const endpoints = {
       }[];
     }>("/api/mobile/loyalty/programs"),
 
+  // CART OFFERS — sepete uygun en avantajlı sadakat (auth opsiyonel)
+  cartEvaluate: (items: Array<{ menuItemId: string; quantity: number; unitPrice: number }>) =>
+    api.post<{
+      bestOffer: {
+        source: "PROGRAM" | "COUPON" | "TIER";
+        programId?: string;
+        programType?: string;
+        couponId?: string;
+        couponCode?: string;
+        name: string;
+        description?: string;
+        discountType: "PERCENT" | "FIXED";
+        discountValue: number;
+        calculatedDiscount: number;
+      } | null;
+      allOffers: any[];
+      subtotal: number;
+    }>("/api/mobile/loyalty/cart/evaluate", { items }),
+
   // LOYALTY
   loyaltyMe: () =>
     api.get<{

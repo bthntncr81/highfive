@@ -7,6 +7,7 @@ import { Link, router } from "expo-router";
 
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import { useAutoCartOffer, useCartOffer } from "@/lib/cart-offers";
 
 export default function CartScreen() {
   const items = useCart((s) => s.items);
@@ -14,6 +15,16 @@ export default function CartScreen() {
   const clear = useCart((s) => s.clear);
   const total = useCart((s) => s.total());
   const user = useAuth((s) => s.user);
+
+  // Otomatik en avantajlı sadakat (single, no stacking)
+  useAutoCartOffer(items);
+  const bestOffer = useCartOffer((s) => s.bestOffer);
+  const offerDismissed = useCartOffer((s) => s.dismissed);
+  const setOfferDismissed = useCartOffer((s) => s.setDismissed);
+
+  const effectiveDiscount =
+    bestOffer && !offerDismissed ? bestOffer.calculatedDiscount : 0;
+  const finalTotal = Math.max(0, total - effectiveDiscount);
 
   const handleCheckout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -143,6 +154,39 @@ export default function CartScreen() {
           </View>
         ))}
 
+        {/* En avantajlı sadakat banner */}
+        {bestOffer && !offerDismissed && (
+          <View className="mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-3">
+            <View className="flex-row items-start">
+              <Text style={{ fontSize: 22 }}>🎁</Text>
+              <View className="ml-2 flex-1">
+                <Text className="text-xs font-bold text-emerald-900 uppercase tracking-wide">
+                  Otomatik Uygulanan İndirim
+                </Text>
+                <Text className="mt-1 text-sm font-bold text-emerald-900">
+                  {bestOffer.name}
+                </Text>
+                {bestOffer.description && (
+                  <Text className="mt-0.5 text-xs text-emerald-700">
+                    {bestOffer.description}
+                  </Text>
+                )}
+                <Text className="mt-1.5 text-base font-extrabold text-emerald-700">
+                  -{bestOffer.calculatedDiscount.toFixed(2)} ₺{" "}
+                  <Text className="text-xs font-medium text-emerald-700/80">
+                    {bestOffer.discountType === "PERCENT"
+                      ? `(${bestOffer.discountValue}% indirim)`
+                      : `(${bestOffer.discountValue}₺ tutar indirimi)`}
+                  </Text>
+                </Text>
+              </View>
+              <Pressable onPress={() => setOfferDismissed(true)} hitSlop={8}>
+                <Ionicons name="close-circle" size={20} color="#059669" />
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         <View className="mt-2 flex-row items-center rounded-2xl bg-surface p-3">
           <Ionicons name="information-circle" size={18} color="#005387" />
           <Text className="ml-2 flex-1 text-xs text-foreground-muted">
@@ -152,18 +196,40 @@ export default function CartScreen() {
       </ScrollView>
 
       <View className="border-t border-border-light px-5 pb-2 pt-4">
-        <View className="mb-3 flex-row items-center justify-between">
+        <View className="mb-1 flex-row items-center justify-between">
           <Text className="text-sm text-foreground-muted">Ara toplam</Text>
-          <Text className="text-2xl font-extrabold text-foreground">
+          <Text
+            className={`font-bold text-foreground ${
+              effectiveDiscount > 0 ? "text-base line-through opacity-60" : "text-2xl"
+            }`}
+          >
             {total.toFixed(2)} ₺
           </Text>
         </View>
+        {effectiveDiscount > 0 && (
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-emerald-600">
+              İndirim
+            </Text>
+            <Text className="text-sm font-bold text-emerald-700">
+              -{effectiveDiscount.toFixed(2)} ₺
+            </Text>
+          </View>
+        )}
+        {effectiveDiscount > 0 && (
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-sm font-bold text-foreground">Ödenecek</Text>
+            <Text className="text-2xl font-extrabold text-primary-600">
+              {finalTotal.toFixed(2)} ₺
+            </Text>
+          </View>
+        )}
         <Pressable
           onPress={handleCheckout}
           className="items-center rounded-full bg-primary-500 py-4"
         >
           <Text className="text-base font-bold text-white">
-            Ödemeye geç • {total.toFixed(2)} ₺
+            Ödemeye geç • {finalTotal.toFixed(2)} ₺
           </Text>
         </Pressable>
       </View>
