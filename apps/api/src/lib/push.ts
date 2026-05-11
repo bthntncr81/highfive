@@ -8,7 +8,6 @@ const expo = new Expo({
   // EAS Access Token — projenin push'a yetkili olması için gerekli
   // (Expo SDK 49+ project-scoped tokens için zorunlu)
   accessToken: process.env.EXPO_ACCESS_TOKEN,
-  useFcmV1: true,
 });
 
 export type PushPayload = {
