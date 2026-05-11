@@ -44,7 +44,9 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       bundles?: {
         bundleId: string;
         quantity?: number;
-        // Yeni reusable opsiyon grubu seçimleri (BundleOptionGroupAssignment)
+        // Yeni: slot bazlı (assignmentId + slotIndex)
+        selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
+        // Eski: groupId bazlı (geriye uyumluluk)
         assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
       }[];
       notes?: string;
@@ -451,6 +453,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       bundles?: {
         bundleId: string;
         quantity?: number;
+        selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
         assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
       }[];
       notes?: string;

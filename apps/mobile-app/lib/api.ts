@@ -346,8 +346,13 @@ export type ApiBundle = {
   startDate: string | null;
   endDate: string | null;
   items: { quantity: number; menuItem: { id: string; name: string; image: string | null } }[];
-  // Reusable opsiyon grupları (yeni sistem)
-  optionGroupAssignments?: { id: string; sortOrder: number; optionGroup: ApiBundleOptionGroup }[];
+  // Reusable opsiyon grupları (yeni sistem) — her assignment.quantity slot oluşturur
+  optionGroupAssignments?: {
+    id: string;
+    sortOrder: number;
+    quantity: number;
+    optionGroup: ApiBundleOptionGroup;
+  }[];
 };
 
 // ==================== ENDPOINTS ====================
@@ -403,6 +408,9 @@ export const endpoints = {
     bundles?: {
       bundleId: string;
       quantity?: number;
+      // Yeni slot bazlı format (assignment + slotIndex)
+      selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
+      // Geriye uyumluluk
       assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
     }[];
     addressId?: string;
@@ -431,6 +439,7 @@ export const endpoints = {
     bundles?: {
       bundleId: string;
       quantity?: number;
+      selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
       assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
     }[];
     notes?: string;

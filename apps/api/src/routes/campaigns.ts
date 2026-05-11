@@ -226,14 +226,31 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
-        optionGroupAssignments: Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0
-          ? {
+        optionGroupAssignments: (() => {
+          // Yeni format: assignedOptionGroups: [{ groupId, quantity }]
+          if (Array.isArray(data.assignedOptionGroups) && data.assignedOptionGroups.length > 0) {
+            return {
+              create: data.assignedOptionGroups
+                .filter((a: any) => a && a.groupId && (a.quantity ?? 1) > 0)
+                .map((a: any, i: number) => ({
+                  optionGroupId: a.groupId,
+                  quantity: Math.max(1, Number(a.quantity) || 1),
+                  sortOrder: i,
+                })),
+            };
+          }
+          // Eski format: assignedOptionGroupIds: string[]
+          if (Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0) {
+            return {
               create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
                 optionGroupId: groupId,
+                quantity: 1,
                 sortOrder: i,
               })),
-            }
-          : undefined,
+            };
+          }
+          return undefined;
+        })(),
       },
       include: bundleInclude,
     });
@@ -253,7 +270,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     if (data.optionGroups) {
       await prisma.bundleOptionGroup.deleteMany({ where: { bundleId: id } });
     }
-    if (Array.isArray(data.assignedOptionGroupIds)) {
+    if (Array.isArray(data.assignedOptionGroupIds) || Array.isArray(data.assignedOptionGroups)) {
       await prisma.bundleOptionGroupAssignment.deleteMany({ where: { bundleId: id } });
     }
 
@@ -285,14 +302,29 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
-        optionGroupAssignments: Array.isArray(data.assignedOptionGroupIds)
-          ? {
+        optionGroupAssignments: (() => {
+          if (Array.isArray(data.assignedOptionGroups)) {
+            return {
+              create: data.assignedOptionGroups
+                .filter((a: any) => a && a.groupId && (a.quantity ?? 1) > 0)
+                .map((a: any, i: number) => ({
+                  optionGroupId: a.groupId,
+                  quantity: Math.max(1, Number(a.quantity) || 1),
+                  sortOrder: i,
+                })),
+            };
+          }
+          if (Array.isArray(data.assignedOptionGroupIds)) {
+            return {
               create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
                 optionGroupId: groupId,
+                quantity: 1,
                 sortOrder: i,
               })),
-            }
-          : undefined,
+            };
+          }
+          return undefined;
+        })(),
         items: data.items
           ? {
               create: data.items.map((item: any) => ({

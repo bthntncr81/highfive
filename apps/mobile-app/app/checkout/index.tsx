@@ -172,29 +172,34 @@ export default function Checkout() {
     try {
       // Cart items'ı menu item ve bundle olarak ayır
       // Bundle ID formatı: "bundle:<bundleId>" veya "bundle:<bundleId>#<sel>"
+      // CartItemSelectedOption.groupId artık "<assignmentId>:<slotIndex>" formatında
       const menuItemPayload: { menuItemId: string; quantity: number }[] = [];
       const bundlePayload: {
         bundleId: string;
         quantity: number;
-        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+        selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
       }[] = [];
       for (const it of items) {
         if (it.id.startsWith("bundle:")) {
           const bundleId = it.id.replace(/^bundle:/, "").split("#")[0];
-          // selectedOptions'tan groupId'ye göre grupla
-          const byGroup = new Map<string, string[]>();
+          // selectedOptions'tan slot key'e göre grupla (assignmentId:slotIndex)
+          const bySlot = new Map<string, string[]>();
           for (const o of it.selectedOptions ?? []) {
-            const arr = byGroup.get(o.groupId) ?? [];
+            const arr = bySlot.get(o.groupId) ?? [];
             arr.push(o.itemId);
-            byGroup.set(o.groupId, arr);
+            bySlot.set(o.groupId, arr);
           }
           bundlePayload.push({
             bundleId,
             quantity: it.qty,
-            assignedSelections: Array.from(byGroup.entries()).map(([groupId, ids]) => ({
-              optionGroupId: groupId,
-              optionGroupItemIds: ids,
-            })),
+            selections: Array.from(bySlot.entries()).map(([slotKey, ids]) => {
+              const [assignmentId, slotIndex] = slotKey.split(":");
+              return {
+                assignmentId,
+                slotIndex: Number(slotIndex) || 0,
+                optionGroupItemIds: ids,
+              };
+            }),
           });
         } else {
           menuItemPayload.push({ menuItemId: it.id, quantity: it.qty });

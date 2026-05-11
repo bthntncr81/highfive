@@ -1,13 +1,26 @@
 // Reusable bundle expansion helper — mobile-orders + guest order için ortak.
 // Body'den gelen bundles[] dizisini valide eder, orderItems satırlarını
 // üretir, subtotal'a eklenecek tutarı döner.
+//
+// Slot konsepti:
+//   BundleOptionGroupAssignment.quantity > 1 ise aynı grup birden fazla slot
+//   olarak gösterilir. Mobile her slot için ayrı seçim gönderir
+//   (assignmentId + slotIndex anahtarı).
 
 import { PrismaClient } from '@prisma/client';
+
+export type BundleSlotSelection = {
+  assignmentId: string;          // BundleOptionGroupAssignment.id
+  slotIndex: number;             // 0..(quantity-1)
+  optionGroupItemIds: string[];  // bu slottan seçilen ürünler
+};
 
 export type BundleRequest = {
   bundleId: string;
   quantity?: number;
-  // Reusable opsiyon grubu seçimleri (BundleOptionGroupAssignment üzerinden)
+  // Yeni slot bazlı format
+  selections?: BundleSlotSelection[];
+  // Geriye uyumluluk: groupId bazlı (her grup tek slot)
   assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
 };
 
@@ -39,6 +52,7 @@ export async function expandBundles(
       include: {
         items: { include: { menuItem: true } },
         optionGroupAssignments: {
+          orderBy: { sortOrder: 'asc' },
           include: {
             optionGroup: {
               include: { items: { include: { menuItem: true } } },
@@ -51,10 +65,19 @@ export async function expandBundles(
       return { ok: false, error: `Paket mevcut değil: ${bundleReq.bundleId}` };
     }
 
-    // Reusable opsiyon grubu seçimleri
-    const selByGroupId = new Map<string, string[]>();
-    for (const s of bundleReq.assignedSelections || []) {
-      selByGroupId.set(s.optionGroupId, s.optionGroupItemIds || []);
+    // Slot bazlı index (assignmentId:slotIndex → ids)
+    const selBySlot = new Map<string, string[]>();
+    for (const s of bundleReq.selections || []) {
+      selBySlot.set(`${s.assignmentId}:${s.slotIndex}`, s.optionGroupItemIds || []);
+    }
+    // Geri uyumluluk: assignedSelections[].optionGroupId → assignment.id'ye çevir
+    if (bundleReq.assignedSelections && bundleReq.assignedSelections.length > 0) {
+      for (const a of bundle.optionGroupAssignments) {
+        const old = bundleReq.assignedSelections.find(
+          (x) => x.optionGroupId === a.optionGroupId,
+        );
+        if (old) selBySlot.set(`${a.id}:0`, old.optionGroupItemIds);
+      }
     }
 
     let extrasPerUnit = 0;
@@ -64,30 +87,36 @@ export async function expandBundles(
       menuItemName: string;
       extra: number;
       groupName: string;
+      slotLabel: string;
     }[] = [];
 
     for (const a of bundle.optionGroupAssignments) {
       const g = a.optionGroup;
-      const picked = selByGroupId.get(g.id) || [];
-      if (picked.length < g.minSelect || picked.length > g.maxSelect) {
-        return {
-          ok: false,
-          error: `"${g.name}" grubundan ${g.minSelect === g.maxSelect ? `tam ${g.minSelect}` : `${g.minSelect}-${g.maxSelect}`} ürün seç`,
-        };
-      }
-      for (const pickId of picked) {
-        const ogi = g.items.find((it) => it.id === pickId);
-        if (!ogi) {
-          return { ok: false, error: `"${g.name}" için seçilen ürün geçerli değil` };
+      const slotCount = Math.max(1, a.quantity || 1);
+      for (let slot = 0; slot < slotCount; slot++) {
+        const picked = selBySlot.get(`${a.id}:${slot}`) || [];
+        const slotLabel = slotCount > 1 ? `${g.name} #${slot + 1}` : g.name;
+        if (picked.length < g.minSelect || picked.length > g.maxSelect) {
+          return {
+            ok: false,
+            error: `"${slotLabel}" için ${g.minSelect === g.maxSelect ? `tam ${g.minSelect}` : `${g.minSelect}-${g.maxSelect}`} ürün seç`,
+          };
         }
-        extrasPerUnit += Number(ogi.extraPrice);
-        selectedExtraLines.push({
-          itemId: ogi.id,
-          menuItemId: ogi.menuItemId,
-          menuItemName: ogi.menuItem.name,
-          extra: Number(ogi.extraPrice),
-          groupName: g.name,
-        });
+        for (const pickId of picked) {
+          const ogi = g.items.find((it) => it.id === pickId);
+          if (!ogi) {
+            return { ok: false, error: `"${slotLabel}" için seçilen ürün geçerli değil` };
+          }
+          extrasPerUnit += Number(ogi.extraPrice);
+          selectedExtraLines.push({
+            itemId: ogi.id,
+            menuItemId: ogi.menuItemId,
+            menuItemName: ogi.menuItem.name,
+            extra: Number(ogi.extraPrice),
+            groupName: g.name,
+            slotLabel,
+          });
+        }
       }
     }
 
@@ -103,7 +132,7 @@ export async function expandBundles(
       total: unitTotal * qty,
       notes: 'Paket Menü',
       modifiers: selectedExtraLines.map(
-        (l) => `${l.groupName}: ${l.menuItemName}${l.extra > 0 ? ` (+${l.extra}₺)` : ''}`,
+        (l) => `${l.slotLabel}: ${l.menuItemName}${l.extra > 0 ? ` (+${l.extra}₺)` : ''}`,
       ),
     });
 
@@ -126,7 +155,7 @@ export async function expandBundles(
         quantity: qty,
         unitPrice: 0,
         total: 0,
-        notes: `📦 ${bundle.name} — ${sel.groupName}${sel.extra > 0 ? ` (+${sel.extra}₺ dahil)` : ''}`,
+        notes: `📦 ${bundle.name} — ${sel.slotLabel}${sel.extra > 0 ? ` (+${sel.extra}₺ dahil)` : ''}`,
         modifiers: [],
       });
     }

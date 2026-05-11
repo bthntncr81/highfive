@@ -850,6 +850,9 @@ model BundleOptionGroupAssignment {
   id            String   @id @default(cuid())
   bundleId      String
   optionGroupId String
+  // Aynı grup bir bundle'a kaç defa eklendi (kaç slot oluşacak).
+  // Örn: "Pizza Seçimi" grubunu quantity=2 atayınca müşteri 2 ayrı pizza seçer.
+  quantity      Int      @default(1)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())
 

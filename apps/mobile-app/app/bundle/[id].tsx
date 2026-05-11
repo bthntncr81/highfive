@@ -1,6 +1,6 @@
 // Bundle Detail — paket menü detay + opsiyon grubu seçim ekranı.
-// Kullanıcı her opsiyon grubundan min..max kadar ürün seçer, her ürünün
-// extraPrice'i taban fiyatın üstüne eklenir.
+// Her assignment.quantity bir slot oluşturur — aynı grup birden fazla
+// eklenmişse (örn: 2x Pizza Seçimi) müşteri 2 ayrı pizza seçer.
 
 import {
   View,
@@ -20,7 +20,26 @@ import { useState, useMemo, useRef } from "react";
 import { useMenu } from "@/lib/hooks";
 import { useCart, type CartItemSelectedOption } from "@/lib/cart";
 import { useFlyCart } from "@/lib/fly-cart";
-import { imageUrl, parsePrice, type ApiBundleOptionGroup } from "@/lib/api";
+import { imageUrl, parsePrice } from "@/lib/api";
+
+type Slot = {
+  key: string;            // assignmentId:slotIndex
+  assignmentId: string;
+  slotIndex: number;
+  group: {
+    id: string;
+    name: string;
+    description: string | null;
+    minSelect: number;
+    maxSelect: number;
+    items: {
+      id: string;
+      extraPrice: string | number;
+      menuItem: { id: string; name: string };
+    }[];
+  };
+  label: string;          // "Pizza Seçimi #1" or "Pizza Seçimi"
+};
 
 export default function BundleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,8 +49,63 @@ export default function BundleDetail() {
   const fly = useFlyCart((s) => s.fly);
   const addBtnRef = useRef<View>(null);
 
-  // selections[groupId] = OptionGroupItem.id[]
+  // selections[slotKey] = OptionGroupItem.id[]
   const [selections, setSelections] = useState<Record<string, string[]>>({});
+
+  // Slot'ları oluştur (hook erken return'lerden önce çağrılmalı)
+  const slots: Slot[] = useMemo(() => {
+    if (!bundle) return [];
+    const out: Slot[] = [];
+    const sorted = (bundle.optionGroupAssignments ?? [])
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    for (const a of sorted) {
+      const qty = Math.max(1, a.quantity ?? 1);
+      for (let i = 0; i < qty; i++) {
+        out.push({
+          key: `${a.id}:${i}`,
+          assignmentId: a.id,
+          slotIndex: i,
+          group: a.optionGroup,
+          label: qty > 1 ? `${a.optionGroup.name} #${i + 1}` : a.optionGroup.name,
+        });
+      }
+    }
+    return out;
+  }, [bundle]);
+
+  // Validasyon (early return'den önce)
+  const validation = useMemo(() => {
+    for (const s of slots) {
+      const sel = selections[s.key] ?? [];
+      if (sel.length < s.group.minSelect) {
+        return {
+          ok: false,
+          message: `"${s.label}" için en az ${s.group.minSelect} ürün seç`,
+        };
+      }
+      if (sel.length > s.group.maxSelect) {
+        return {
+          ok: false,
+          message: `"${s.label}" için en fazla ${s.group.maxSelect} ürün seçebilirsin`,
+        };
+      }
+    }
+    return { ok: true, message: "" };
+  }, [slots, selections]);
+
+  // Toplam ek fiyat (early return'den önce)
+  const extrasTotal = useMemo(() => {
+    let sum = 0;
+    for (const s of slots) {
+      const sel = selections[s.key] ?? [];
+      for (const itemId of sel) {
+        const it = s.group.items.find((i) => i.id === itemId);
+        if (it) sum += Number(it.extraPrice);
+      }
+    }
+    return sum;
+  }, [slots, selections]);
 
   if (menu.loading && !menu.data) {
     return (
@@ -63,68 +137,27 @@ export default function BundleDetail() {
   const original = parsePrice(bundle.originalPrice);
   const savings = parsePrice(bundle.savings);
   const img = imageUrl(bundle.image);
-  const groups: ApiBundleOptionGroup[] = (bundle.optionGroupAssignments ?? [])
-    .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((a) => a.optionGroup);
 
-  // Seçim ekleme/çıkarma
-  const toggleItem = (group: ApiBundleOptionGroup, itemId: string) => {
+  const toggleItem = (slot: Slot, itemId: string) => {
     setSelections((cur) => {
-      const arr = cur[group.id] ?? [];
+      const arr = cur[slot.key] ?? [];
       if (arr.includes(itemId)) {
-        // remove
-        return { ...cur, [group.id]: arr.filter((x) => x !== itemId) };
+        return { ...cur, [slot.key]: arr.filter((x) => x !== itemId) };
       }
-      // ekle — maxSelect dolu mu kontrol et
-      if (group.maxSelect === 1) {
-        // single select → değiştir
-        return { ...cur, [group.id]: [itemId] };
+      if (slot.group.maxSelect === 1) {
+        return { ...cur, [slot.key]: [itemId] };
       }
-      if (arr.length >= group.maxSelect) {
+      if (arr.length >= slot.group.maxSelect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           "Limit dolu",
-          `${group.name} grubundan en fazla ${group.maxSelect} ürün seçebilirsin.`,
+          `${slot.label} için en fazla ${slot.group.maxSelect} ürün seçebilirsin.`,
         );
         return cur;
       }
-      return { ...cur, [group.id]: [...arr, itemId] };
+      return { ...cur, [slot.key]: [...arr, itemId] };
     });
   };
-
-  // Validasyon
-  const validation = useMemo(() => {
-    for (const g of groups) {
-      const sel = selections[g.id] ?? [];
-      if (sel.length < g.minSelect) {
-        return {
-          ok: false,
-          message: `"${g.name}" grubundan en az ${g.minSelect} ürün seç`,
-        };
-      }
-      if (sel.length > g.maxSelect) {
-        return {
-          ok: false,
-          message: `"${g.name}" grubundan en fazla ${g.maxSelect} ürün seçebilirsin`,
-        };
-      }
-    }
-    return { ok: true, message: "" };
-  }, [groups, selections]);
-
-  // Toplam ek fiyat
-  const extrasTotal = useMemo(() => {
-    let sum = 0;
-    for (const g of groups) {
-      const sel = selections[g.id] ?? [];
-      for (const itemId of sel) {
-        const it = g.items.find((i) => i.id === itemId);
-        if (it) sum += Number(it.extraPrice);
-      }
-    }
-    return sum;
-  }, [groups, selections]);
 
   const finalPrice = basePrice + extrasTotal;
 
@@ -136,16 +169,18 @@ export default function BundleDetail() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Tüm seçimleri flat liste haline getir
+    // Tüm seçimleri flat liste haline getir (cart'a kaydedilecek)
     const selectedOptions: CartItemSelectedOption[] = [];
-    for (const g of groups) {
-      const sel = selections[g.id] ?? [];
+    for (const s of slots) {
+      const sel = selections[s.key] ?? [];
       for (const itemId of sel) {
-        const it = g.items.find((i) => i.id === itemId);
+        const it = s.group.items.find((i) => i.id === itemId);
         if (!it) continue;
         selectedOptions.push({
-          groupId: g.id,
-          groupName: g.name,
+          // CartItemSelectedOption.groupId artık slot.key (assignmentId:slotIndex)
+          // — backend'e gönderirken bu key'den parse edilir
+          groupId: s.key,
+          groupName: s.label,
           itemId: it.id,
           menuItemId: it.menuItem.id,
           menuItemName: it.menuItem.name,
@@ -154,12 +189,8 @@ export default function BundleDetail() {
       }
     }
 
-    // Cart item ID — bundle:bundleId#hash(seçimler) ile aynı seçim
-    // tekrar eklenirse merge edilsin, farklıysa ayrı satır olsun.
-    const selKey = selectedOptions
-      .map((o) => o.itemId)
-      .sort()
-      .join("|");
+    // Cart item ID — bundle:bundleId#hash(seçimler)
+    const selKey = selectedOptions.map((o) => `${o.groupId}=${o.itemId}`).sort().join("|");
     const cartId = `bundle:${bundle.id}${selKey ? "#" + selKey : ""}`;
 
     addBtnRef.current?.measureInWindow((x, y, w, h) => {
@@ -250,21 +281,21 @@ export default function BundleDetail() {
             </View>
           )}
 
-          {/* Opsiyon Grupları */}
-          {groups.length > 0 && (
+          {/* Slot'lar */}
+          {slots.length > 0 && (
             <View className="mt-5 space-y-4">
-              {groups.map((g) => {
-                const sel = selections[g.id] ?? [];
-                const isSingle = g.maxSelect === 1;
+              {slots.map((slot) => {
+                const sel = selections[slot.key] ?? [];
+                const g = slot.group;
                 return (
                   <View
-                    key={g.id}
+                    key={slot.key}
                     className="rounded-2xl border-2 border-amber-200 bg-white p-3"
                   >
                     <View className="flex-row items-start justify-between">
                       <View className="flex-1">
                         <Text className="text-base font-bold text-foreground">
-                          📋 {g.name}
+                          📋 {slot.label}
                         </Text>
                         {g.description && (
                           <Text className="text-xs text-foreground-muted">
@@ -274,9 +305,7 @@ export default function BundleDetail() {
                       </View>
                       <View
                         className={`rounded-full px-2.5 py-1 ${
-                          sel.length >= g.minSelect
-                            ? "bg-green-500"
-                            : "bg-red-500"
+                          sel.length >= g.minSelect ? "bg-green-500" : "bg-red-500"
                         }`}
                       >
                         <Text className="text-[10px] font-bold text-white">
@@ -300,7 +329,7 @@ export default function BundleDetail() {
                         return (
                           <Pressable
                             key={it.id}
-                            onPress={() => toggleItem(g, it.id)}
+                            onPress={() => toggleItem(slot, it.id)}
                             className={`flex-row items-center rounded-xl border p-2.5 ${
                               checked
                                 ? "border-amber-500 bg-amber-50"
@@ -315,11 +344,7 @@ export default function BundleDetail() {
                               }`}
                             >
                               {checked && (
-                                <Ionicons
-                                  name={isSingle ? "checkmark" : "checkmark"}
-                                  size={14}
-                                  color="#fff"
-                                />
+                                <Ionicons name="checkmark" size={14} color="#fff" />
                               )}
                             </View>
                             <View className="flex-1">
