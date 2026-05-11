@@ -10,6 +10,7 @@ import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
 import { expandBundles } from '../lib/bundle-expansion';
+import { evaluateCartOffers } from '../lib/cart-offers';
 
 const DELIVERY_FEE = 29; // Sabit (CUSTOMER_API.md ile uyumlu)
 
@@ -186,7 +187,39 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       ? subtotal * (Number(customer.loyaltyTier.discountPercent) / 100)
       : 0;
 
-    const totalDiscount = pointsDiscount + couponDiscount + tierDiscount;
+    // Otomatik en avantajlı sadakat offer'ı (puan/kupon kullanılmadıysa)
+    // — UI'de sepette gösterilen 🎁 banner indirimi backend'de re-evaluate edilerek
+    //   güvenli şekilde uygulanır. Kullanıcı kupon veya puan kullanmadıysa devreye girer.
+    let autoOfferDiscount = 0;
+    let autoOfferLabel: string | null = null;
+    if (couponDiscount === 0 && pointsDiscount === 0) {
+      const cartItemsForOffer = orderItems
+        .filter((oi) => oi.menuItemId)
+        .map((oi) => ({
+          menuItemId: oi.menuItemId as string,
+          quantity: oi.quantity,
+          unitPrice: Number(oi.unitPrice),
+        }));
+      // Bundle wrapper line'ları da subtotal'a dahil etmek için fake menuItemId ile ekle
+      for (const oi of orderItems.filter((x) => !x.menuItemId)) {
+        cartItemsForOffer.push({
+          menuItemId: 'bundle-line',
+          quantity: oi.quantity,
+          unitPrice: Number(oi.unitPrice),
+        });
+      }
+      try {
+        const offerRes = await evaluateCartOffers(prisma, customerId, cartItemsForOffer);
+        if (offerRes.bestOffer && offerRes.bestOffer.calculatedDiscount > 0) {
+          autoOfferDiscount = offerRes.bestOffer.calculatedDiscount;
+          autoOfferLabel = offerRes.bestOffer.name;
+        }
+      } catch {
+        // offer hesabı patlarsa siparişi durdurmayalım
+      }
+    }
+
+    const totalDiscount = pointsDiscount + couponDiscount + tierDiscount + autoOfferDiscount;
     const tipAmount = Math.max(0, body.tip || 0);
     const deliveryAmount = body.type === 'DELIVERY' ? DELIVERY_FEE : 0;
     const finalTotal = Math.max(0, subtotal + tax + tipAmount + deliveryAmount - totalDiscount);
@@ -285,6 +318,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
           points: pointsDiscount,
           coupon: couponDiscount,
           tier: tierDiscount,
+          autoOffer: autoOfferDiscount,
+          autoOfferLabel,
         },
       },
     };

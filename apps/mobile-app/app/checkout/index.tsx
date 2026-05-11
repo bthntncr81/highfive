@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import { useAutoCartOffer, useCartOffer } from "@/lib/cart-offers";
 import {
   endpoints,
   ApiAddress,
@@ -33,6 +34,13 @@ export default function Checkout() {
   const items = useCart((s) => s.items);
   const cartTotal = useCart((s) => s.total());
   const clearCart = useCart((s) => s.clear);
+
+  // Otomatik en avantajlı sadakat (sepetteki banner ile aynı kaynaktan)
+  // Backend siparişte couponCode + points kullanılmazsa otomatik apply eder.
+  useAutoCartOffer(items);
+  const bestOffer = useCartOffer((s) => s.bestOffer);
+  const offerDismissed = useCartOffer((s) => s.dismissed);
+  const clearOfferStore = useCartOffer((s) => s.reset);
 
   const user = useAuth((s) => s.user);
   const refreshMe = useAuth((s) => s.refreshMe);
@@ -137,7 +145,16 @@ export default function Checkout() {
       ? Math.max(0, Number(tipCustom))
       : tip;
   const deliveryFee = orderType === "DELIVERY" ? DELIVERY_FEE : 0;
-  const totalDiscount = pointsDiscount + couponDiscount;
+  // Auto offer sadece kupon + puan kullanılmamışsa devreye girer (backend ile aynı kural)
+  const autoOfferActive =
+    !!bestOffer &&
+    !offerDismissed &&
+    !couponDiscount &&
+    !pointsDiscount;
+  const autoOfferDiscount = autoOfferActive
+    ? Number(bestOffer!.calculatedDiscount)
+    : 0;
+  const totalDiscount = pointsDiscount + couponDiscount + autoOfferDiscount;
   const subtotal = cartTotal;
   const finalTotal = Math.max(
     0,
@@ -269,6 +286,7 @@ export default function Checkout() {
         });
       } else {
         clearCart();
+        clearOfferStore();
         router.replace(`/orders/${createdOrder.id}`);
       }
     } catch (e: any) {
@@ -780,6 +798,13 @@ export default function Checkout() {
               <Row
                 label="Kupon indirimi"
                 value={`-${couponDiscount.toFixed(2)}₺`}
+                positive
+              />
+            )}
+            {autoOfferActive && (
+              <Row
+                label={`🎁 ${bestOffer?.name ?? "Otomatik indirim"}`}
+                value={`-${autoOfferDiscount.toFixed(2)}₺`}
                 positive
               />
             )}
