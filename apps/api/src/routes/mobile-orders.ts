@@ -9,6 +9,7 @@ import { PrismaClient, OrderStatus, OrderType, PaymentStatus, PaymentMethod } fr
 import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
+import { expandBundles } from '../lib/bundle-expansion';
 
 const DELIVERY_FEE = 29; // Sabit (CUSTOMER_API.md ile uyumlu)
 
@@ -40,6 +41,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       customerName?: string;                                    // override; yoksa Customer.name
       customerPhone?: string;                                   // override; yoksa Customer.phone
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      bundles?: {
+        bundleId: string;
+        quantity?: number;
+        // Yeni reusable opsiyon grubu seçimleri (BundleOptionGroupAssignment)
+        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+      }[];
       notes?: string;
       tip?: number;                                             // bahşiş
       pointsToRedeem?: number;                                  // puanla indirim
@@ -47,8 +54,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';        // ONLINE = iyzico 3DS akışı
     };
 
-    if (!body.items || body.items.length === 0) {
-      return reply.status(400).send({ error: 'En az bir ürün gerekli' });
+    if ((!body.items || body.items.length === 0) && (!body.bundles || body.bundles.length === 0)) {
+      return reply.status(400).send({ error: 'En az bir ürün veya paket gerekli' });
     }
     if (!body.type || !['TAKEAWAY', 'DELIVERY'].includes(body.type)) {
       return reply.status(400).send({ error: 'Geçersiz sipariş tipi' });
@@ -105,7 +112,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Items + subtotal
     let subtotal = 0;
     const orderItems: any[] = [];
-    for (const item of body.items) {
+    for (const item of body.items || []) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
@@ -127,6 +134,14 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         notes: item.notes,
         modifiers: item.modifiers || [],
       });
+    }
+
+    // Bundle expansion: paket fiyatı + reusable opsiyon grupları seçimleri
+    if (body.bundles && body.bundles.length > 0) {
+      const res = await expandBundles(prisma, body.bundles);
+      if (!res.ok) return reply.status(400).send({ error: res.error });
+      subtotal += res.subtotalDelta;
+      for (const oi of res.orderItems) orderItems.push(oi);
     }
 
     // Tax
@@ -433,6 +448,11 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       customerLatitude?: number;
       customerLongitude?: number;
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      bundles?: {
+        bundleId: string;
+        quantity?: number;
+        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+      }[];
       notes?: string;
       tip?: number;
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';
@@ -441,8 +461,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     if (!body.customerName?.trim() || !body.customerPhone?.trim()) {
       return reply.status(400).send({ error: 'Ad ve telefon gerekli' });
     }
-    if (!body.items || body.items.length === 0) {
-      return reply.status(400).send({ error: 'En az bir ürün gerekli' });
+    if ((!body.items || body.items.length === 0) && (!body.bundles || body.bundles.length === 0)) {
+      return reply.status(400).send({ error: 'En az bir ürün veya paket gerekli' });
     }
     if (!body.type || !['TAKEAWAY', 'DELIVERY'].includes(body.type)) {
       return reply.status(400).send({ error: 'Geçersiz sipariş tipi' });
@@ -486,7 +506,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Items + subtotal
     let subtotal = 0;
     const orderItems: any[] = [];
-    for (const item of body.items) {
+    for (const item of body.items || []) {
       const menuItem = await prisma.menuItem.findUnique({ where: { id: item.menuItemId } });
       if (!menuItem || !menuItem.available) {
         return reply.status(400).send({ error: `Ürün mevcut değil: ${item.menuItemId}` });
@@ -505,6 +525,13 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         notes: item.notes,
         modifiers: item.modifiers || [],
       });
+    }
+    // Bundle expansion (guest)
+    if (body.bundles && body.bundles.length > 0) {
+      const res = await expandBundles(prisma, body.bundles);
+      if (!res.ok) return reply.status(400).send({ error: res.error });
+      subtotal += res.subtotalDelta;
+      for (const oi of res.orderItems) orderItems.push(oi);
     }
 
     const restaurantSettings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });

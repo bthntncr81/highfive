@@ -114,8 +114,23 @@ export default function CartScreen() {
                 {it.name}
               </Text>
               <Text className="mt-0.5 text-xs text-foreground-muted">
-                {it.price} ₺ / adet
+                {(Number(it.price) + Number(it.extrasTotal ?? 0)).toFixed(2)} ₺ / adet
+                {it.extrasTotal && it.extrasTotal > 0
+                  ? ` (taban ${Number(it.price).toFixed(2)} + ek ${Number(it.extrasTotal).toFixed(2)})`
+                  : ""}
               </Text>
+
+              {/* Seçilen opsiyonlar (bundle için) */}
+              {it.selectedOptions && it.selectedOptions.length > 0 && (
+                <View className="mt-1.5 rounded-lg bg-amber-50 p-1.5">
+                  {it.selectedOptions.map((o, i) => (
+                    <Text key={i} className="text-[10px] text-amber-900">
+                      • {o.groupName}: {o.menuItemName}
+                      {o.extraPrice > 0 ? ` (+${o.extraPrice.toFixed(2)}₺)` : ""}
+                    </Text>
+                  ))}
+                </View>
+              )}
 
               <View className="mt-2 flex-row items-center justify-between">
                 <View className="flex-row items-center rounded-full bg-surface">
@@ -147,7 +162,7 @@ export default function CartScreen() {
                 </View>
 
                 <Text className="text-base font-extrabold text-primary-600">
-                  {(it.price * it.qty).toFixed(2)} ₺
+                  {((Number(it.price) + Number(it.extrasTotal ?? 0)) * it.qty).toFixed(2)} ₺
                 </Text>
               </View>
             </View>

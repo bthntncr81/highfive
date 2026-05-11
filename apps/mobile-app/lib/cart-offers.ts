@@ -38,10 +38,14 @@ export const useCartOffer = create<Store>((set) => ({
 }));
 
 /**
- * Hook: sepetteki ürünler değiştikçe otomatik en avantajlı offer'ı çağırır
+ * Hook: sepetteki ürünler değiştikçe otomatik en avantajlı offer'ı çağırır.
+ * Bundle ek opsiyon fiyatları (extrasTotal) unitPrice'a dahil edilir
+ * — sadakat indirimi düzgün hesaplansın.
  * @param items cart items
  */
-export function useAutoCartOffer(items: { id: string; price: number; qty: number }[]) {
+export function useAutoCartOffer(
+  items: { id: string; price: number; qty: number; extrasTotal?: number }[],
+) {
   const setOffer = useCartOffer((s) => s.setOffer);
   const setLoading = useCartOffer((s) => s.setLoading);
 
@@ -51,11 +55,11 @@ export function useAutoCartOffer(items: { id: string; price: number; qty: number
       setOffer(null);
       return;
     }
-    // Bundle ID prefix'lerini ayıkla (backend menu item olmayan ID'leri görmesin)
+    // Bundle ID prefix'lerini ayıkla; bundle:xxx#sel formatından sadece bundle ID kalsın
     const evalItems = items.map((it) => ({
-      menuItemId: it.id.replace(/^bundle:/, ""),
+      menuItemId: it.id.replace(/^bundle:/, "").split("#")[0],
       quantity: it.qty,
-      unitPrice: it.price,
+      unitPrice: Number(it.price) + Number(it.extrasTotal ?? 0),
     }));
 
     // Debounce 500ms — hızlı qty değişiminde gereksiz network önle
@@ -72,5 +76,9 @@ export function useAutoCartOffer(items: { id: string; price: number; qty: number
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(items.map((i) => `${i.id}:${i.qty}:${i.price}`))]);
+  }, [
+    JSON.stringify(
+      items.map((i) => `${i.id}:${i.qty}:${i.price}:${i.extrasTotal ?? 0}`),
+    ),
+  ]);
 }

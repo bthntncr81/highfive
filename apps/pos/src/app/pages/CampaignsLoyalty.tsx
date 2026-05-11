@@ -977,7 +977,26 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
     bundlePrice: 0,
     items: [] as { menuItemId: string; quantity: number }[],
     optionGroups: [] as OptionGroupForm[],
+    assignedOptionGroupIds: [] as string[],
   });
+
+  // Reusable option groups (yeni sistem) — POS'tan ayrı sayfada oluşturulmuş gruplar
+  const [reusableGroups, setReusableGroups] = useState<{ id: string; name: string; minSelect: number; maxSelect: number; items: { id: string; menuItem: { name: string }; extraPrice: number | string }[] }[]>([]);
+  React.useEffect(() => {
+    if (!show) return;
+    api.get('/api/option-groups', token)
+      .then((r) => setReusableGroups(r.groups ?? []))
+      .catch(() => setReusableGroups([]));
+  }, [show, token]);
+
+  const toggleAssignedGroup = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      assignedOptionGroupIds: f.assignedOptionGroupIds.includes(id)
+        ? f.assignedOptionGroupIds.filter((g) => g !== id)
+        : [...f.assignedOptionGroupIds, id],
+    }));
+  };
 
   // Prefer the categories list from the parent (server-shaped). Fall back to
   // deriving from menuItems if not provided.
@@ -1092,6 +1111,7 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
           eligibleItemIds: g.eligibleItemIds,
           sortOrder: i,
         })),
+        assignedOptionGroupIds: form.assignedOptionGroupIds,
       }, token);
       onSave();
       onClose();
@@ -1348,6 +1368,48 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reusable Opsiyon Grupları (yeni sistem) */}
+          <div className="border-t pt-4">
+            <div className="mb-2">
+              <label className="block text-sm font-bold">📋 Hazır Opsiyon Grupları</label>
+              <p className="text-[11px] text-foreground-muted">
+                Opsiyon Grupları sayfasında oluşturduğun hazır gruplardan seç (örn: Pizza Seçimi). Her ürünün ek fiyatı paket tabanına eklenir.
+              </p>
+            </div>
+            {reusableGroups.length === 0 ? (
+              <div className="text-xs text-foreground-muted bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                Henüz hazır grup yok. <a href="/option-groups" className="text-amber-700 font-bold underline">Opsiyon Grupları</a> sayfasından oluşturabilirsin.
+              </div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto bg-white rounded-lg border border-amber-200 p-1 space-y-0.5">
+                {reusableGroups.map((rg) => {
+                  const checked = form.assignedOptionGroupIds.includes(rg.id);
+                  return (
+                    <label
+                      key={rg.id}
+                      className={`flex items-start gap-2 text-xs px-2 py-2 rounded cursor-pointer hover:bg-amber-50 ${
+                        checked ? 'bg-amber-50 border border-amber-300' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAssignedGroup(rg.id)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <p className="font-bold text-amber-900">{rg.name}</p>
+                        <p className="text-[10px] text-foreground-muted">
+                          🎯 {rg.minSelect === rg.maxSelect ? `${rg.minSelect} seçim` : `${rg.minSelect}-${rg.maxSelect} seçim`} · 📦 {rg.items.length} ürün
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>

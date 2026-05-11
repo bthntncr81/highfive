@@ -170,6 +170,37 @@ export default function Checkout() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
+      // Cart items'ı menu item ve bundle olarak ayır
+      // Bundle ID formatı: "bundle:<bundleId>" veya "bundle:<bundleId>#<sel>"
+      const menuItemPayload: { menuItemId: string; quantity: number }[] = [];
+      const bundlePayload: {
+        bundleId: string;
+        quantity: number;
+        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+      }[] = [];
+      for (const it of items) {
+        if (it.id.startsWith("bundle:")) {
+          const bundleId = it.id.replace(/^bundle:/, "").split("#")[0];
+          // selectedOptions'tan groupId'ye göre grupla
+          const byGroup = new Map<string, string[]>();
+          for (const o of it.selectedOptions ?? []) {
+            const arr = byGroup.get(o.groupId) ?? [];
+            arr.push(o.itemId);
+            byGroup.set(o.groupId, arr);
+          }
+          bundlePayload.push({
+            bundleId,
+            quantity: it.qty,
+            assignedSelections: Array.from(byGroup.entries()).map(([groupId, ids]) => ({
+              optionGroupId: groupId,
+              optionGroupItemIds: ids,
+            })),
+          });
+        } else {
+          menuItemPayload.push({ menuItemId: it.id, quantity: it.qty });
+        }
+      }
+
       let createdOrder: { id: string; total: string | number };
       if (isGuest) {
         // Guest endpoint
@@ -181,10 +212,8 @@ export default function Checkout() {
             orderType === "DELIVERY" ? manualAddress.trim() : undefined,
           customerLatitude: manualLat ?? undefined,
           customerLongitude: manualLng ?? undefined,
-          items: items.map((it) => ({
-            menuItemId: it.id,
-            quantity: it.qty,
-          })),
+          items: menuItemPayload,
+          bundles: bundlePayload.length > 0 ? bundlePayload : undefined,
           notes: notes.trim() || undefined,
           tip: tipNumber || undefined,
           paymentMethod,
@@ -201,10 +230,8 @@ export default function Checkout() {
       } else {
         const res = await endpoints.createOrder({
           type: orderType,
-          items: items.map((it) => ({
-            menuItemId: it.id,
-            quantity: it.qty,
-          })),
+          items: menuItemPayload,
+          bundles: bundlePayload.length > 0 ? bundlePayload : undefined,
           ...(orderType === "DELIVERY"
             ? addressId
               ? { addressId }

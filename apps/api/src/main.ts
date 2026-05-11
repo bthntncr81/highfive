@@ -27,6 +27,7 @@ import locationRoutes from './routes/location';
 import loyaltyRoutes from './routes/loyalty';
 import loyaltyProgramsRoutes from './routes/loyalty-programs';
 import campaignsRoutes from './routes/campaigns';
+import optionGroupsRoutes from './routes/option-groups';
 import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
@@ -102,6 +103,7 @@ server.register(locationRoutes, { prefix: '/api' }); // /api/locations
 server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
 server.register(loyaltyProgramsRoutes, { prefix: '/api/loyalty/programs' }); // Loyalty Programs (12 tür)
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
+server.register(optionGroupsRoutes, { prefix: '/api/option-groups' }); // Reusable bundle opsiyon grupları
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API

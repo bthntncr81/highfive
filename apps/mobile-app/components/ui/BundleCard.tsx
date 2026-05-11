@@ -3,6 +3,7 @@ import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useCart } from "@/lib/cart";
 import { useFlyCart } from "@/lib/fly-cart";
 import { ApiBundle, imageUrl, parsePrice } from "@/lib/api";
@@ -15,10 +16,17 @@ export function BundleCard({ bundle }: { bundle: ApiBundle }) {
   const savings = parsePrice(bundle.savings);
   const img = imageUrl(bundle.image);
 
+  // Hazır opsiyon grubu atanmış mı? Varsa direkt seçim ekranına gönder.
+  const hasOptionGroups = (bundle.optionGroupAssignments?.length ?? 0) > 0;
+
   const addBtnRef = useRef<View>(null);
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hasOptionGroups) {
+      router.push(`/bundle/${bundle.id}`);
+      return;
+    }
     // Buton pozisyonunu ölç → bundle sepete uçsun
     addBtnRef.current?.measureInWindow((x, y, w, h) => {
       fly({
@@ -176,8 +184,10 @@ export function BundleCard({ bundle }: { bundle: ApiBundle }) {
             onPress={handleAdd}
             className="flex-row items-center rounded-full bg-amber-500 px-4 py-2.5"
           >
-            <Ionicons name="cart" size={16} color="#fff" />
-            <Text className="ml-1.5 text-sm font-bold text-white">Sepete ekle</Text>
+            <Ionicons name={hasOptionGroups ? "list" : "cart"} size={16} color="#fff" />
+            <Text className="ml-1.5 text-sm font-bold text-white">
+              {hasOptionGroups ? "Seç ve ekle" : "Sepete ekle"}
+            </Text>
           </Pressable>
         </View>
       </View>

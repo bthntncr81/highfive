@@ -125,6 +125,21 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   const bundleInclude = {
     items: { include: { menuItem: true } },
     optionGroups: { orderBy: { sortOrder: 'asc' as const } },
+    optionGroupAssignments: {
+      orderBy: { sortOrder: 'asc' as const },
+      include: {
+        optionGroup: {
+          include: {
+            items: {
+              orderBy: { sortOrder: 'asc' as const },
+              include: {
+                menuItem: { select: { id: true, name: true, price: true, image: true } },
+              },
+            },
+          },
+        },
+      },
+    },
   };
 
   // Get all bundles
@@ -211,6 +226,14 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
+        optionGroupAssignments: Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0
+          ? {
+              create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
+                optionGroupId: groupId,
+                sortOrder: i,
+              })),
+            }
+          : undefined,
       },
       include: bundleInclude,
     });
@@ -229,6 +252,9 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     }
     if (data.optionGroups) {
       await prisma.bundleOptionGroup.deleteMany({ where: { bundleId: id } });
+    }
+    if (Array.isArray(data.assignedOptionGroupIds)) {
+      await prisma.bundleOptionGroupAssignment.deleteMany({ where: { bundleId: id } });
     }
 
     const bundle = await prisma.bundleDeal.update({
@@ -256,6 +282,14 @@ export default async function campaignsRoutes(server: FastifyInstance) {
                 categoryId: g.categoryId || null,
                 eligibleItemIds: Array.isArray(g.eligibleItemIds) ? g.eligibleItemIds : [],
                 sortOrder: g.sortOrder ?? i,
+              })),
+            }
+          : undefined,
+        optionGroupAssignments: Array.isArray(data.assignedOptionGroupIds)
+          ? {
+              create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
+                optionGroupId: groupId,
+                sortOrder: i,
               })),
             }
           : undefined,

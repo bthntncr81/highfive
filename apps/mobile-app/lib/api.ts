@@ -319,6 +319,20 @@ export type ApiNotificationPreferences = {
   quietHoursEnd: string | null;
 };
 
+export type ApiBundleOptionGroup = {
+  id: string;
+  name: string;
+  description: string | null;
+  minSelect: number;
+  maxSelect: number;
+  items: {
+    id: string;
+    extraPrice: string | number;
+    isDefault: boolean;
+    menuItem: { id: string; name: string; price: string | number; image: string | null };
+  }[];
+};
+
 export type ApiBundle = {
   id: string;
   name: string;
@@ -332,6 +346,8 @@ export type ApiBundle = {
   startDate: string | null;
   endDate: string | null;
   items: { quantity: number; menuItem: { id: string; name: string; image: string | null } }[];
+  // Reusable opsiyon grupları (yeni sistem)
+  optionGroupAssignments?: { id: string; sortOrder: number; optionGroup: ApiBundleOptionGroup }[];
 };
 
 // ==================== ENDPOINTS ====================
@@ -384,6 +400,11 @@ export const endpoints = {
   createOrder: (data: {
     type: OrderType;
     items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+    bundles?: {
+      bundleId: string;
+      quantity?: number;
+      assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+    }[];
     addressId?: string;
     customerAddress?: string;
     customerLatitude?: number;
@@ -407,6 +428,11 @@ export const endpoints = {
     customerLatitude?: number;
     customerLongitude?: number;
     items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+    bundles?: {
+      bundleId: string;
+      quantity?: number;
+      assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+    }[];
     notes?: string;
     tip?: number;
     paymentMethod?: "CASH" | "ONLINE" | "CREDIT_CARD";

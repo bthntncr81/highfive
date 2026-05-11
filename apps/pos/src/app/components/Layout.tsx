@@ -64,6 +64,7 @@ export default function Layout() {
     { to: '/happy-hour', icon: ClipboardList, label: 'Happy Hour', emoji: '🍹' },
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
     { to: '/loyalty-programs', icon: ClipboardList, label: 'Sadakat Programları', emoji: '✨' },
+    { to: '/option-groups', icon: ClipboardList, label: 'Opsiyon Grupları', emoji: '📋' },
     { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },
