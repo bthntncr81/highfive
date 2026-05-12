@@ -36,6 +36,7 @@ import mobileAuthRoutes from './routes/mobile-auth';
 import devicesRoutes from './routes/devices';
 import notificationRoutes, { processScheduledNotifications } from './routes/notifications';
 import { processBirthdayPrograms } from './lib/loyalty-engine';
+import { startDailyCloseScheduler } from './lib/daily-close';
 import mobileOrdersRoutes from './routes/mobile-orders';
 import mobileLoyaltyRoutes from './routes/mobile-loyalty';
 import mobileAddressesRoutes from './routes/mobile-addresses';
@@ -146,6 +147,10 @@ const start = async () => {
     setTimeout(() => {
       processBirthdayPrograms(prisma).catch(() => {});
     }, 60_000);
+
+    // Gün sonu auto-close — her gece 00:00'da açık siparişleri COMPLETED yap,
+    // masaları FREE'ye çek (servisin garson "ödendi" basmayı unutmasına karşı).
+    startDailyCloseScheduler(prisma);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
