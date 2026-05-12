@@ -1122,7 +1122,12 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Ürünler</label>
+            <label className="block text-sm font-medium mb-1">
+              Sabit Ürünler <span className="text-foreground-muted font-normal">(opsiyonel)</span>
+            </label>
+            <p className="text-[11px] text-foreground-muted mb-2">
+              Pakete eklemek istediğin sabit ürünler varsa seç. Boş bırakırsan sadece opsiyon gruplarından seçim yapılır.
+            </p>
             <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
               {menuItems.map((item) => (
                 <button

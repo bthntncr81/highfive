@@ -183,10 +183,13 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     // Need a name + price + (fixed items OR option groups). Pure-fixed bundles
     // and pure-customizable combos are both valid; an empty bundle is not.
     const hasFixedItems = Array.isArray(data.items) && data.items.length > 0;
-    const hasGroups = Array.isArray(data.optionGroups) && data.optionGroups.length > 0;
-    if (!data.name || data.bundlePrice == null || (!hasFixedItems && !hasGroups)) {
+    const hasLegacyGroups = Array.isArray(data.optionGroups) && data.optionGroups.length > 0;
+    const hasReusableGroups =
+      (Array.isArray(data.assignedOptionGroups) && data.assignedOptionGroups.length > 0) ||
+      (Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0);
+    if (!data.name || data.bundlePrice == null || (!hasFixedItems && !hasLegacyGroups && !hasReusableGroups)) {
       return reply.status(400).send({
-        error: 'Ad, fiyat ve en az bir sabit ürün veya seçim grubu gerekli',
+        error: 'Ad, fiyat ve en az bir sabit ürün ya da opsiyon grubu gerekli',
       });
     }
 
@@ -214,7 +217,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
-        optionGroups: hasGroups
+        optionGroups: hasLegacyGroups
           ? {
               create: data.optionGroups.map((g: any, i: number) => ({
                 name: g.name,

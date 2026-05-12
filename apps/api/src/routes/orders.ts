@@ -573,18 +573,34 @@ export default async function orderRoutes(server: FastifyInstance) {
         include: {
           items: { include: { menuItem: true } },
           optionGroups: true,
+          optionGroupAssignments: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              optionGroup: { include: { items: { include: { menuItem: true } } } },
+            },
+          },
         },
       });
       if (!bundle || !bundle.isActive) {
         return reply.status(400).send({ error: `Paket mevcut değil: ${bundleReq.bundleId}` });
       }
 
-      const selectionsByGroup = new Map<string, string[]>();
+      // Landing iki tip selection gönderebilir:
+      //   - Legacy: groupId = BundleOptionGroup.id, menuItemIds = MenuItem.id[]
+      //   - Reusable slot: groupId = "<assignmentId>:<slotIndex>", menuItemIds = OptionGroupItem.id[]
+      const legacySelections = new Map<string, string[]>();
+      const slotSelections = new Map<string, string[]>();
       for (const sel of bundleReq.selections || []) {
-        selectionsByGroup.set(sel.groupId, sel.menuItemIds || []);
+        if (sel.groupId.includes(':')) {
+          slotSelections.set(sel.groupId, sel.menuItemIds || []);
+        } else {
+          legacySelections.set(sel.groupId, sel.menuItemIds || []);
+        }
       }
+
+      // ---- LEGACY (BundleOptionGroup) validasyon ----
       for (const group of bundle.optionGroups) {
-        const picked = selectionsByGroup.get(group.id) || [];
+        const picked = legacySelections.get(group.id) || [];
         if (picked.length !== group.pickCount) {
           return reply.status(400).send({
             error: `"${group.name}" grubundan tam ${group.pickCount} ürün seçmelisin`,
@@ -607,17 +623,53 @@ export default async function orderRoutes(server: FastifyInstance) {
         }
       }
 
-      subtotal += Number(bundle.bundlePrice);
+      // ---- REUSABLE (BundleOptionGroupAssignment) validasyon + extras ----
+      let reusableExtras = 0;
+      const reusableLines: { itemId: string; menuItemId: string; menuItemName: string; extra: number; slotLabel: string }[] = [];
+      for (const a of bundle.optionGroupAssignments) {
+        const g = a.optionGroup;
+        const slotCount = Math.max(1, a.quantity || 1);
+        for (let slot = 0; slot < slotCount; slot++) {
+          const picked = slotSelections.get(`${a.id}:${slot}`) || [];
+          const slotLabel = slotCount > 1 ? `${g.name} #${slot + 1}` : g.name;
+          if (picked.length < g.minSelect || picked.length > g.maxSelect) {
+            return reply.status(400).send({
+              error: `"${slotLabel}" için ${g.minSelect === g.maxSelect ? `tam ${g.minSelect}` : `${g.minSelect}-${g.maxSelect}`} ürün seç`,
+            });
+          }
+          for (const pickId of picked) {
+            const ogi = g.items.find((it) => it.id === pickId);
+            if (!ogi) {
+              return reply.status(400).send({ error: `"${slotLabel}" için seçilen ürün geçerli değil` });
+            }
+            reusableExtras += Number(ogi.extraPrice);
+            reusableLines.push({
+              itemId: ogi.id,
+              menuItemId: ogi.menuItemId,
+              menuItemName: ogi.menuItem.name,
+              extra: Number(ogi.extraPrice),
+              slotLabel,
+            });
+          }
+        }
+      }
+
+      // Wrapper line: base + reusable extras (legacy ADD_PRICE'lar aşağıda ayrıca eklenir)
+      const wrapperUnit = Number(bundle.bundlePrice) + reusableExtras;
+      subtotal += wrapperUnit;
       orderItems.push({
         menuItemId: null,
         menuItemName: `📦 ${bundle.name}`,
         quantity: 1,
-        unitPrice: bundle.bundlePrice,
-        total: bundle.bundlePrice,
+        unitPrice: wrapperUnit,
+        total: wrapperUnit,
         notes: 'Paket Menü',
-        modifiers: [],
+        modifiers: reusableLines.map(
+          (l) => `${l.slotLabel}: ${l.menuItemName}${l.extra > 0 ? ` (+${l.extra}₺)` : ''}`,
+        ),
       });
 
+      // Sabit ürünler (fiyat 0)
       for (const fi of bundle.items) {
         orderItems.push({
           menuItemId: fi.menuItemId,
@@ -629,8 +681,9 @@ export default async function orderRoutes(server: FastifyInstance) {
         });
       }
 
+      // Legacy seçimler — INCLUDED 0₺, ADD_PRICE menuItem.price subtotal'a eklenir
       for (const group of bundle.optionGroups) {
-        const picked = selectionsByGroup.get(group.id) || [];
+        const picked = legacySelections.get(group.id) || [];
         for (const itemId of picked) {
           const mi = await prisma.menuItem.findUnique({ where: { id: itemId } });
           if (!mi) continue;
@@ -646,6 +699,18 @@ export default async function orderRoutes(server: FastifyInstance) {
             modifiers: [],
           });
         }
+      }
+
+      // Reusable seçim satırları — fiyatı wrapper'a dahil edildi, burada 0 line
+      for (const sel of reusableLines) {
+        orderItems.push({
+          menuItemId: sel.menuItemId,
+          quantity: 1,
+          unitPrice: 0,
+          total: 0,
+          notes: `📦 ${bundle.name} — ${sel.slotLabel}${sel.extra > 0 ? ` (+${sel.extra}₺ dahil)` : ''}`,
+          modifiers: [],
+        });
       }
     }
 
