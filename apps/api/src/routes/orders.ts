@@ -730,7 +730,24 @@ export default async function orderRoutes(server: FastifyInstance) {
     const tipAmount = tip || 0;
     const deliveryAmount = deliveryFee || 0;
     const finalTotal = total + tipAmount + deliveryAmount;
-    
+
+    // Landing iki format gönderebilir:
+    //   - 'cash' / 'card' (eski landing UI)
+    //   - 'CASH' / 'CREDIT_CARD' / 'ONLINE' (Prisma enum doğrudan)
+    // Card seçilince iyzico 3DS akışı kullanılıyor → ONLINE.
+    let normalizedPM: PaymentMethod | null = null;
+    if (paymentMethod) {
+      const pm = paymentMethod.toLowerCase();
+      if (pm === 'cash') normalizedPM = PaymentMethod.CASH;
+      else if (pm === 'card') normalizedPM = PaymentMethod.ONLINE;
+      else if (pm === 'credit_card' || pm === 'creditcard') normalizedPM = PaymentMethod.CREDIT_CARD;
+      else if (pm === 'online') normalizedPM = PaymentMethod.ONLINE;
+      else if (pm === 'debit_card') normalizedPM = PaymentMethod.DEBIT_CARD;
+      else if (Object.values(PaymentMethod).includes(paymentMethod.toUpperCase() as PaymentMethod)) {
+        normalizedPM = paymentMethod.toUpperCase() as PaymentMethod;
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         tableId,
@@ -740,6 +757,8 @@ export default async function orderRoutes(server: FastifyInstance) {
         customerAddress,
         type: orderType,
         status: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.PENDING,
+        paymentMethod: normalizedPM,
         subtotal,
         tax,
         total: finalTotal,

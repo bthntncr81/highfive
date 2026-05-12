@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, OrderStatus, OrderType } from '@prisma/client';
+import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createHash } from 'crypto';
 import { verifyApiKey, requirePermission } from '../middleware/api-key';
 import { broadcastNewOrder } from '../websocket';
@@ -222,6 +222,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         deliveryFee,
         locationId,
         discount,
+        paymentMethod,
       } = request.body as {
         externalOrderId: string;
         type?: string;
@@ -240,6 +241,7 @@ export default async function externalRoutes(server: FastifyInstance) {
         deliveryFee?: number;
         locationId?: string;
         discount?: number;
+        paymentMethod?: string;
       };
 
       // Validations
@@ -374,6 +376,19 @@ export default async function externalRoutes(server: FastifyInstance) {
         }
       }
 
+      // PaymentMethod normalize — N8N / WhatsApp bot 'cash', 'card', 'CASH', 'ONLINE' vb. gönderebilir
+      let normalizedPM: PaymentMethod | null = null;
+      if (paymentMethod) {
+        const pm = paymentMethod.toLowerCase();
+        if (pm === 'cash' || pm === 'nakit') normalizedPM = PaymentMethod.CASH;
+        else if (pm === 'card' || pm === 'kart' || pm === 'online') normalizedPM = PaymentMethod.ONLINE;
+        else if (pm === 'credit_card' || pm === 'creditcard') normalizedPM = PaymentMethod.CREDIT_CARD;
+        else if (pm === 'debit_card') normalizedPM = PaymentMethod.DEBIT_CARD;
+        else if (Object.values(PaymentMethod).includes(paymentMethod.toUpperCase() as PaymentMethod)) {
+          normalizedPM = paymentMethod.toUpperCase() as PaymentMethod;
+        }
+      }
+
       // Create order
       const order = await prisma.order.create({
         data: {
@@ -384,6 +399,8 @@ export default async function externalRoutes(server: FastifyInstance) {
           customerAddress: customerAddress || null,
           type: orderType,
           status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.PENDING,
+          paymentMethod: normalizedPM,
           subtotal,
           tax,
           total,
