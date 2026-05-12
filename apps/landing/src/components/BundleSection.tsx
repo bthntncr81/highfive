@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { orderApi, loyaltyApi } from '../lib/api'
 import { useCart } from '../lib/cartStore'
@@ -335,12 +336,14 @@ const BundlePickerModal = ({
     setTimeout(() => openCart(), 200)
   }
 
-  return (
+  // Modal'ı body'ye portal et — sticky kategori bar'ın stacking context'inden
+  // bağımsız olsun, hep en üstte render olsun.
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -598,6 +601,7 @@ const BundlePickerModal = ({
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
