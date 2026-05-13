@@ -469,6 +469,192 @@ export default async function gamesRoutes(server: FastifyInstance) {
     return { reward: updated };
   });
 
+  // ==================== MYSTERY BOX ====================
+  // Listele
+  server.get('/mysterybox/list', async () => {
+    const boxes = await prisma.mysteryBoxConfig.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        emoji: true,
+        pointsCost: true,
+        prizes: true,
+      },
+    });
+    // Prize weight'lerini gizle (yalnızca etiketler önceden görünsün)
+    return {
+      boxes: boxes.map((b) => ({
+        ...b,
+        prizes: ((b.prizes as any[]) ?? []).map((p: any) => ({
+          label: p.label,
+          type: p.type,
+          emoji: p.emoji ?? null,
+        })),
+      })),
+    };
+  });
+
+  // Aç (puan harca + server outcome)
+  server.post('/mysterybox/:id/open', { preHandler: verifyCustomerAuth }, async (
+    req: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    const customerId = (req as any).customerId as string;
+    const { id } = req.params as { id: string };
+
+    const box = await prisma.mysteryBoxConfig.findUnique({ where: { id } });
+    if (!box || !box.isActive) return reply.status(404).send({ error: 'Kutu bulunamadı' });
+
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { totalPoints: true },
+    });
+    if (!customer) return reply.status(404).send({ error: 'Müşteri yok' });
+    if (customer.totalPoints < box.pointsCost) {
+      return reply.status(400).send({
+        error: 'Yetersiz puan',
+        required: box.pointsCost,
+        have: customer.totalPoints,
+      });
+    }
+
+    const prizes = box.prizes as unknown as Slice[];
+    if (!Array.isArray(prizes) || prizes.length === 0) {
+      return reply.status(500).send({ error: 'Kutu prizleri tanımsız' });
+    }
+
+    const prizeIndex = weightedPick(prizes);
+    const winning = prizes[prizeIndex];
+
+    // Ödüle göre işlem
+    let couponId: string | null = null;
+    let pointsAwarded = 0;
+
+    if (winning.type === 'DISCOUNT_PERCENT' || winning.type === 'DISCOUNT_FIXED') {
+      const code = generateCouponCode('MYSTERY');
+      const c = await prisma.coupon.create({
+        data: {
+          code,
+          name: `Mystery Box: ${winning.label}`,
+          description: 'Sürpriz kutu ödülü',
+          discountType: winning.type === 'DISCOUNT_PERCENT' ? 'PERCENT' : 'FIXED',
+          discountValue: winning.value,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          usageLimit: 1,
+          usagePerCustomer: 1,
+          isActive: true,
+        },
+      });
+      couponId = c.id;
+    } else if (winning.type === 'POINTS' && winning.value > 0) {
+      pointsAwarded = Math.floor(winning.value);
+    }
+
+    // Atomic: puan harca + (varsa) puan ver + audit
+    const ops: any[] = [
+      prisma.customer.update({
+        where: { id: customerId },
+        data: {
+          totalPoints: { decrement: box.pointsCost },
+        },
+      }),
+      prisma.pointsTransaction.create({
+        data: {
+          customerId,
+          points: -box.pointsCost,
+          type: 'SPEND',
+          description: `Sürpriz Kutu açıldı: ${box.name}`,
+        },
+      }),
+    ];
+    if (pointsAwarded > 0) {
+      ops.push(
+        prisma.customer.update({
+          where: { id: customerId },
+          data: {
+            totalPoints: { increment: pointsAwarded },
+            lifetimePoints: { increment: pointsAwarded },
+          },
+        }),
+        prisma.pointsTransaction.create({
+          data: {
+            customerId,
+            points: pointsAwarded,
+            type: 'BONUS',
+            description: `Sürpriz Kutu ödülü: ${winning.label}`,
+          },
+        }),
+      );
+    }
+
+    await prisma.$transaction(ops);
+
+    const open = await prisma.mysteryBoxOpen.create({
+      data: {
+        customerId,
+        configId: box.id,
+        pointsSpent: box.pointsCost,
+        prizeIndex,
+        prizeLabel: winning.label,
+        prizeType: winning.type,
+        prizeValue: winning.value,
+        couponId,
+      },
+    });
+
+    return {
+      open: {
+        id: open.id,
+        pointsSpent: box.pointsCost,
+        prizeIndex,
+        prizeLabel: winning.label,
+        prizeType: winning.type,
+        prizeValue: winning.value,
+        couponId,
+        pointsAwarded,
+      },
+    };
+  });
+
+  // Admin: mystery box oluştur/güncelle
+  server.post('/mysterybox/config', { preHandler: verifyAdmin }, async (req, reply) => {
+    const body = req.body as any;
+    if (!body.name || !body.pointsCost || !Array.isArray(body.prizes) || body.prizes.length < 2) {
+      return reply.status(400).send({ error: 'name, pointsCost ve en az 2 prize gerekli' });
+    }
+    if (body.id) {
+      const b = await prisma.mysteryBoxConfig.update({
+        where: { id: body.id },
+        data: {
+          name: body.name,
+          description: body.description ?? null,
+          emoji: body.emoji ?? '📦',
+          pointsCost: body.pointsCost,
+          prizes: body.prizes,
+          isActive: body.isActive ?? true,
+          sortOrder: body.sortOrder ?? 0,
+        },
+      });
+      return { box: b };
+    }
+    const b = await prisma.mysteryBoxConfig.create({
+      data: {
+        name: body.name,
+        description: body.description ?? null,
+        emoji: body.emoji ?? '📦',
+        pointsCost: body.pointsCost,
+        prizes: body.prizes,
+        isActive: body.isActive ?? true,
+        sortOrder: body.sortOrder ?? 0,
+      },
+    });
+    return { box: b };
+  });
+
   // ==================== LEADERBOARD ====================
   // Bu haftanın en çok puan kazanan top 10 müşterisi (anonim isim).
   server.get('/leaderboard', async (req: FastifyRequest) => {

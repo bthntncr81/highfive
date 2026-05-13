@@ -635,6 +635,32 @@ export const endpoints = {
       };
     }>(`/api/games/scratch/${id}/scratch`, {}),
 
+  gameMysteryBoxList: () =>
+    api.get<{
+      boxes: Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        emoji: string;
+        pointsCost: number;
+        prizes: Array<{ label: string; type: string; emoji: string | null }>;
+      }>;
+    }>("/api/games/mysterybox/list"),
+
+  gameMysteryBoxOpen: (id: string) =>
+    api.post<{
+      open: {
+        id: string;
+        pointsSpent: number;
+        prizeIndex: number;
+        prizeLabel: string;
+        prizeType: string;
+        prizeValue: number | null;
+        couponId: string | null;
+        pointsAwarded: number;
+      };
+    }>(`/api/games/mysterybox/${id}/open`, {}),
+
   gameLeaderboard: () =>
     api.get<{
       weekStart: string;

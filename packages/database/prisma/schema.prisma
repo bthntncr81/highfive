@@ -667,6 +667,7 @@ model Customer {
   spinAttempts        SpinAttempt[]
   achievements        CustomerAchievement[]
   scratchRewards      ScratchReward[]
+  mysteryBoxOpens     MysteryBoxOpen[]
 
   @@index([phone])
   @@index([email])
@@ -929,6 +930,7 @@ model Coupon {
   // Gamification back-relations
   spinAttempts    SpinAttempt[]
   scratchRewards  ScratchReward[] @relation("ScratchCoupon")
+  mysteryBoxOpens MysteryBoxOpen[] @relation("MysteryBoxCoupon")
 }
 
 // Kupon Kullanımları
@@ -1289,4 +1291,45 @@ model ScratchReward {
   coupon      Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "ScratchCoupon")
 
   @@index([customerId, scratchedAt])
+}
+
+// ============================================================================
+// MYSTERY BOX — Puan harcayarak açılan sürpriz kutu
+// ============================================================================
+// Admin birden fazla kutu tanımlayabilir (Bronze 100 puan, Silver 500 puan vb.)
+// Her kutu kendi prize tablosuyla server outcome'lu açılır.
+model MysteryBoxConfig {
+  id          String   @id @default(cuid())
+  name        String   // "Bronze Kutu"
+  description String?
+  emoji       String   @default("📦")
+  // Açmak için harcanacak puan
+  pointsCost  Int
+  // Prize slices (Spin Wheel ile aynı yapı)
+  prizes      Json     // [{ label, weight, type, value, emoji }, ...]
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  opens       MysteryBoxOpen[]
+}
+
+model MysteryBoxOpen {
+  id          String   @id @default(cuid())
+  customerId  String
+  configId    String
+  pointsSpent Int
+  prizeIndex  Int
+  prizeLabel  String
+  prizeType   String   // DISCOUNT_PERCENT, POINTS, FREE_ITEM, NOTHING
+  prizeValue  Decimal? @db.Decimal(10, 2)
+  couponId    String?
+  createdAt   DateTime @default(now())
+
+  customer    Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  config      MysteryBoxConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  coupon      Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "MysteryBoxCoupon")
+
+  @@index([customerId, createdAt])
 }
