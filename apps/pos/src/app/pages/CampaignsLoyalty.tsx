@@ -961,16 +961,27 @@ function CampaignModal({
 }
 
 // Bundle Modal Component
-function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolean; onClose: () => void; onSave: () => void; menuItems: any[]; categories?: { id: string; name: string }[]; token: string }) {
+function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesProp, token }: { show: boolean; onClose: () => void; onSave: () => void; menuItems: any[]; categories?: { id: string; name: string }[]; token: string }) {
   const [form, setForm] = useState({
     name: '',
     description: '',
     image: '',
     bundlePrice: 0,
+    categoryId: '' as string, // boş = "Paket Menüler" default başlığı
     items: [] as { menuItemId: string; quantity: number }[],
     // Yeni: assignedOptionGroups: [{ groupId, quantity }]
     assignedOptionGroups: [] as { groupId: string; quantity: number }[],
   });
+
+  // Kategori listesi parent'tan; yoksa menuItems'tan türet
+  const categories = React.useMemo(() => {
+    if (categoriesProp && categoriesProp.length > 0) return categoriesProp;
+    const map = new Map<string, string>();
+    for (const m of menuItems) {
+      if (m.categoryId && m.category?.name) map.set(m.categoryId, m.category.name);
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [categoriesProp, menuItems]);
 
   // Reusable option groups (yeni sistem) — POS'tan ayrı sayfada oluşturulmuş gruplar
   const [reusableGroups, setReusableGroups] = useState<{ id: string; name: string; minSelect: number; maxSelect: number; items: { id: string; menuItem: { name: string }; extraPrice: number | string }[] }[]>([]);
@@ -1040,6 +1051,7 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
         description: form.description,
         image: form.image,
         bundlePrice: form.bundlePrice,
+        categoryId: form.categoryId || null,
         items: form.items,
         originalPrice,
         savings: originalPrice - form.bundlePrice,
@@ -1079,6 +1091,29 @@ function BundleModal({ show, onClose, onSave, menuItems, token }: { show: boolea
             className="input w-full"
             rows={2}
           />
+
+          {/* Kategori — hangi başlık altında görünecek */}
+          <div>
+            <label className="block text-sm font-semibold mb-1">
+              📂 Kategori <span className="text-foreground-muted font-normal">(opsiyonel)</span>
+            </label>
+            <p className="text-[11px] text-foreground-muted mb-2">
+              Boş bırakırsan ana sayfada "📦 Paket Menüler" başlığı altında görünür.
+              Bir kategori seçersen o kategori başlığı altında listelenir (örn. Pizza, Makarna).
+            </p>
+            <select
+              value={form.categoryId}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+              className="input w-full"
+            >
+              <option value="">— Paket Menüler (default) —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Kapak fotoğrafı */}
           <div>

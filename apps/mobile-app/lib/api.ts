@@ -382,6 +382,7 @@ export type ApiBundle = {
   name: string;
   description: string | null;
   image: string | null;
+  categoryId: string | null;
   originalPrice: string;
   bundlePrice: string;
   savings: string;

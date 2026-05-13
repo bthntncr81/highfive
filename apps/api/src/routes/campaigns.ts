@@ -198,6 +198,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         name: data.name,
         description: data.description,
         image: data.image,
+        categoryId: data.categoryId || null,
         originalPrice: data.originalPrice ?? 0,
         bundlePrice: data.bundlePrice,
         savings: data.savings ?? Math.max(0, (data.originalPrice ?? 0) - data.bundlePrice),
@@ -283,6 +284,9 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         name: data.name,
         description: data.description,
         image: data.image,
+        // categoryId açık olarak null gönderilmezse mevcut değer korunur;
+        // undefined → no-op, null → "Paket Menüler" default'a dön
+        categoryId: data.categoryId === undefined ? undefined : data.categoryId || null,
         originalPrice: data.originalPrice,
         bundlePrice: data.bundlePrice,
         savings: data.savings,

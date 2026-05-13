@@ -38,6 +38,17 @@ export default function Home() {
     return items.filter((p) => p.categoryId === selectedCat);
   }, [selectedCat, items]);
 
+  // Kategoriye atanmış bundle'lar — seçili kategoride veya "all" değerinde göster
+  const bundlesForCategory = useMemo(() => {
+    if (selectedCat === "all") {
+      return bundles.filter((b) => !b.categoryId); // sadece kategorisizler "all"'da top-level
+    }
+    return bundles.filter((b) => b.categoryId === selectedCat);
+  }, [selectedCat, bundles]);
+
+  // "All"'da gösterilen top-level paketler için başlık
+  const hasUncategorizedBundles = bundles.some((b) => !b.categoryId);
+
   const refreshing = menu.loading || campaigns.loading;
 
   return (
@@ -102,20 +113,22 @@ export default function Home() {
           )}
         </View>
 
-        {/* Paket Menüler (varsa) */}
-        {bundles.length > 0 && (
+        {/* Kategorisiz "Paket Menüler" (artık kompakt, sadece kategoriye atanmamış paketler) */}
+        {selectedCat === "all" && hasUncategorizedBundles && (
           <View className="mt-6 px-5">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-lg font-extrabold text-foreground">
                 📦 Paket Menüler
               </Text>
               <Text className="text-xs text-foreground-muted">
-                {bundles.length} paket
+                {bundles.filter((b) => !b.categoryId).length} paket
               </Text>
             </View>
-            {bundles.map((b) => (
-              <BundleCard key={b.id} bundle={b} />
-            ))}
+            {bundles
+              .filter((b) => !b.categoryId)
+              .map((b) => (
+                <BundleCard key={b.id} bundle={b} />
+              ))}
           </View>
         )}
 
@@ -140,6 +153,23 @@ export default function Home() {
           selectedId={selectedCat}
           onSelect={setSelectedCat}
         />
+
+        {/* Kategoriye atanmış paketler (kategori seçildiğinde) */}
+        {selectedCat !== "all" && bundlesForCategory.length > 0 && (
+          <View className="mt-6 px-5">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-lg font-extrabold text-foreground">
+                📦 {categories.find((c) => c.id === selectedCat)?.name ?? ""} Paketleri
+              </Text>
+              <Text className="text-xs text-foreground-muted">
+                {bundlesForCategory.length} paket
+              </Text>
+            </View>
+            {bundlesForCategory.map((b) => (
+              <BundleCard key={b.id} bundle={b} />
+            ))}
+          </View>
+        )}
 
         {/* Öne çıkanlar */}
         <View className="mt-7 flex-row items-center justify-between px-5 pb-3">

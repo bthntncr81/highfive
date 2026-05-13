@@ -140,7 +140,8 @@ model Category {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  items MenuItem[]
+  items   MenuItem[]
+  bundles BundleDeal[]
 }
 
 // Alerjen Enum
@@ -777,12 +778,18 @@ model BundleDeal {
   isActive        Boolean  @default(true)
   featured        Boolean  @default(false) // Öne çıkan mı
   sortOrder       Int      @default(0)
-  
+
+  // Kategori — paket'in menüde hangi başlık altında görüneceği.
+  // null ise "Paket Menüler" default başlığı altında görünür.
+  categoryId      String?
+
   // Analytics
   soldCount       Int      @default(0)
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   items           BundleItem[]
   optionGroups    BundleOptionGroup[]
