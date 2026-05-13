@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { endpoints } from "@/lib/api";
 import {
   ScrollView,
   View,
@@ -12,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 
 import { useMenu, useCampaigns } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
 import { CampaignCarousel } from "@/components/ui/CampaignCarousel";
 import { CategoryStrip } from "@/components/ui/CategoryStrip";
 import { ProductCard } from "@/components/ui/ProductCard";
@@ -19,10 +21,29 @@ import { Logo } from "@/components/ui/Logo";
 import { ActiveOrderCard } from "@/components/ui/ActiveOrderCard";
 import { BundleCard } from "@/components/ui/BundleCard";
 import { LoyaltyTeaser } from "@/components/ui/LoyaltyTeaser";
+import { SpinWheelCard } from "@/components/SpinWheelCard";
+import { StreakWidget } from "@/components/StreakWidget";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
   const menu = useMenu();
+  const user = useAuth((s) => s.user);
+  const [streak, setStreak] = useState<{ current: number; longest: number } | null>(null);
+
+  // Streak verisini lazy çek (kullanıcı giriş yapmışsa)
+  useEffect(() => {
+    if (!user) {
+      setStreak(null);
+      return;
+    }
+    endpoints
+      .loyaltyProgress()
+      .then((res) => {
+        const c = res.customer;
+        if (c) setStreak({ current: c.currentStreak ?? 0, longest: c.longestStreak ?? 0 });
+      })
+      .catch(() => {});
+  }, [user]);
   const campaigns = useCampaigns();
 
   const categories = menu.data?.categories?.filter((c) => c.active) ?? [];
@@ -112,6 +133,16 @@ export default function Home() {
             </View>
           )}
         </View>
+
+        {/* Şans Çarkı kartı + Streak Widget (kullanıcı giriş yapmışsa) */}
+        {user && (
+          <>
+            <SpinWheelCard />
+            {streak && streak.current > 0 && (
+              <StreakWidget currentStreak={streak.current} longestStreak={streak.longest} />
+            )}
+          </>
+        )}
 
         {/* Kategorisiz "Paket Menüler" (artık kompakt, sadece kategoriye atanmamış paketler) */}
         {selectedCat === "all" && hasUncategorizedBundles && (

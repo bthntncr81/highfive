@@ -558,6 +558,81 @@ export const endpoints = {
       }[];
     }>("/api/mobile/loyalty/programs"),
 
+  // GAMES — Spin wheel, achievements, scratch card
+  gameSpinConfig: () =>
+    api.get<{
+      config: {
+        id: string;
+        name: string;
+        description: string | null;
+        cooldownHours: number;
+        minCartTotal: number;
+        slices: Array<{
+          label: string;
+          type: string;
+          value: number;
+          color: string;
+          emoji: string | null;
+        }>;
+      } | null;
+    }>("/api/games/spin/config"),
+
+  gameSpinPlay: () =>
+    api.post<{
+      attempt: {
+        id: string;
+        prizeIndex: number;
+        prizeLabel: string;
+        prizeType: string;
+        prizeValue: number | null;
+        couponId: string | null;
+        pointsAwarded: number;
+      };
+    }>("/api/games/spin/play", {}),
+
+  gameAchievementsMe: () =>
+    api.get<{
+      achievements: Array<{
+        id: string;
+        key: string;
+        name: string;
+        description: string;
+        icon: string;
+        type: string;
+        rewardPoints: number;
+        unlocked: boolean;
+        unlockedAt: string | null;
+        seenAt: string | null;
+      }>;
+    }>("/api/games/achievements/me"),
+
+  gameAchievementSeen: (id: string) =>
+    api.post<{ updated: number }>(`/api/games/achievements/${id}/seen`, {}),
+
+  gameScratchIssue: (orderId: string) =>
+    api.post<{
+      reward: {
+        id: string;
+        prizeType: string;
+        prizeLabel: string;
+        prizeValue: number | null;
+        couponId: string | null;
+        scratchedAt: string | null;
+      } | null;
+    }>(`/api/games/scratch/issue/${orderId}`, {}),
+
+  gameScratchOpen: (id: string) =>
+    api.post<{
+      reward: {
+        id: string;
+        prizeType: string;
+        prizeLabel: string;
+        prizeValue: number | null;
+        couponId: string | null;
+        scratchedAt: string | null;
+      };
+    }>(`/api/games/scratch/${id}/scratch`, {}),
+
   // CART OFFERS — sepete uygun en avantajlı sadakat (auth opsiyonel)
   cartEvaluate: (items: Array<{ menuItemId: string; quantity: number; unitPrice: number }>) =>
     api.post<{

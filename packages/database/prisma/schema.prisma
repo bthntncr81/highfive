@@ -640,6 +640,8 @@ model Customer {
   lastOrderAt     DateTime?
   // Win-back kampanyası — son gönderim tarihi (cooldown için)
   lastWinbackAt   DateTime?
+  // Spin wheel — günde 1x cooldown için
+  lastSpinAt      DateTime?
 
   loyaltyTier     LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id])
   // Cashback bakiyesi (TL cinsinden — 1 cashback unit = 1 TL)
@@ -661,6 +663,10 @@ model Customer {
   favorites       FavoriteItem[]
   notificationPrefs NotificationPreference?
   loyaltyProgress CustomerLoyaltyProgress[]
+  // Gamification
+  spinAttempts        SpinAttempt[]
+  achievements        CustomerAchievement[]
+  scratchRewards      ScratchReward[]
 
   @@index([phone])
   @@index([email])
@@ -920,6 +926,9 @@ model Coupon {
   updatedAt       DateTime @updatedAt
 
   usages          CouponUsage[]
+  // Gamification back-relations
+  spinAttempts    SpinAttempt[]
+  scratchRewards  ScratchReward[] @relation("ScratchCoupon")
 }
 
 // Kupon Kullanımları
@@ -1168,4 +1177,116 @@ model NotificationPreference {
   updatedAt     DateTime @updatedAt
 
   customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// GAMIFICATION — Spin Wheel + Scratch Card + Achievements
+// ============================================================================
+
+// Yöneticinin tanımladığı şans çarkı konfigi. Tek aktif konfig yeterli (isActive=true).
+// Her dilim weight'le birlikte tanımlanır; backend bu weight'lere göre weighted random
+// outcome üretir (client'a SADECE prize index döner; tüm güvenlik server-side).
+model SpinWheelConfig {
+  id          String   @id @default(cuid())
+  name        String   @default("Şans Çarkı")
+  description String?
+  // Günlük cooldown saati (24 = günde 1 kere)
+  cooldownHours Int    @default(24)
+  // Min sepet tutarı (TL) — bu altında çark açılmaz
+  minCartTotal  Decimal @default(0) @db.Decimal(10, 2)
+  // Dilim tanımları (JSON):
+  // [{ "label": "%10 İndirim", "weight": 30, "type": "DISCOUNT_PERCENT", "value": 10, "color": "#ef4444", "emoji": "🎁" }, ...]
+  // type: DISCOUNT_PERCENT | DISCOUNT_FIXED | POINTS | FREE_ITEM | TRY_AGAIN | NOTHING
+  slices      Json
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attempts    SpinAttempt[]
+}
+
+// Kullanıcı her çark çevirme denemesi audit kaydı. Cooldown ve kötüye kullanım takibi.
+model SpinAttempt {
+  id          String   @id @default(cuid())
+  customerId  String
+  configId    String
+  // Hangi dilim seçildi (0-indexed slice array index'i)
+  prizeIndex  Int
+  // Snapshot — çark değişse bile ödülün ne olduğu kaydedildi
+  prizeLabel  String
+  prizeType   String   // DISCOUNT_PERCENT, POINTS, FREE_ITEM, TRY_AGAIN, NOTHING
+  prizeValue  Decimal? @db.Decimal(10, 2)
+  // Bağlı kupon (kazanılan ödül kupon ise)
+  couponId    String?
+  redeemed    Boolean  @default(false)
+  redeemedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  config      SpinWheelConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  coupon      Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+}
+
+// Achievement (rozet) tanımı — admin tarafından oluşturulur.
+// type: ORDER_COUNT | TOTAL_SPENT | STREAK | CATEGORY_MASTER | TIME_BASED
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String   @unique  // "first_order", "pizza_kralı_10", "morning_bird"
+  name        String           // "İlk Sipariş"
+  description String           // "Hesap açtıktan sonra ilk siparişini ver"
+  icon        String           // emoji
+  type        String           // ORDER_COUNT, TOTAL_SPENT, STREAK, CATEGORY_MASTER, TIME_BASED
+  // Tetiklenme kriterleri (type'a göre değişir, JSON)
+  // ORDER_COUNT: { threshold: 1 } / { threshold: 100 }
+  // TOTAL_SPENT: { threshold: 1000 } (TL)
+  // STREAK: { days: 7 }
+  // CATEGORY_MASTER: { categoryId: 'cat-pizza', count: 10 }
+  // TIME_BASED: { hourStart: 6, hourEnd: 11, count: 5 } (sabah kuşu)
+  criteria    Json
+  // Açılınca verilen ödül (opsiyonel — sadece kutlama da olabilir)
+  rewardPoints Int     @default(0)
+  rewardCouponCode String?  // Otomatik üretilecek kupon (varsa)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customerAchievements CustomerAchievement[]
+}
+
+// Kullanıcının kazandığı rozetler
+model CustomerAchievement {
+  id            String   @id @default(cuid())
+  customerId    String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  seenAt        DateTime?  // Müşteri rozeti gördü mü (modal kapatınca set edilir)
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, achievementId])
+  @@index([customerId])
+}
+
+// Scratch card — kullanıcı sipariş sonrası kazıyıp ödül alır
+model ScratchReward {
+  id          String   @id @default(cuid())
+  customerId  String
+  orderId     String?  // Bağlı sipariş (opsiyonel)
+  // Prize snapshot
+  prizeType   String   // DISCOUNT_PERCENT, POINTS, FREE_ITEM, NOTHING
+  prizeLabel  String
+  prizeValue  Decimal? @db.Decimal(10, 2)
+  couponId    String?
+  scratchedAt DateTime?  // Müşteri gerçekten kazıdıysa
+  redeemed    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon      Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "ScratchCoupon")
+
+  @@index([customerId, scratchedAt])
 }
