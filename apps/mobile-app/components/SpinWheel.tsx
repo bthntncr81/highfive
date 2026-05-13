@@ -38,7 +38,19 @@ type Config = {
   cooldownHours: number;
   minCartTotal: number;
   slices: Slice[];
+  canSpin?: boolean;
+  nextSpinAt?: string | null;
 };
+
+function formatRemaining(ms: number): string {
+  if (ms <= 0) return "Şimdi açılabilir";
+  const totalSec = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSec / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  if (hours >= 1) return `${hours} saat ${minutes} dakika`;
+  if (minutes >= 1) return `${minutes} dakika`;
+  return "Birkaç saniye";
+}
 
 const WHEEL_SIZE = 280;
 const RADIUS = WHEEL_SIZE / 2;
@@ -173,6 +185,36 @@ export function SpinWheel({
             <Text className="my-10 text-center text-white">
               Şu an çark aktif değil.
             </Text>
+          ) : config.canSpin === false && config.nextSpinAt ? (
+            // Cooldown — kullanıcı bugün çevirmiş
+            <View className="my-8 items-center">
+              <Text style={{ fontSize: 56 }}>⏳</Text>
+              <Text className="mt-3 text-center text-xl font-extrabold text-white">
+                Bugünkü hakkını kullandın!
+              </Text>
+              <Text className="mt-2 text-center text-sm text-white/85">
+                Bir sonraki çark:
+              </Text>
+              <Text className="mt-1 text-center text-base font-bold text-white">
+                {new Date(config.nextSpinAt).toLocaleString("tr-TR", {
+                  weekday: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+              <Text className="mt-2 text-center text-xs text-white/70">
+                {formatRemaining(
+                  new Date(config.nextSpinAt).getTime() - Date.now(),
+                )}{" "}
+                sonra tekrar gel
+              </Text>
+              <Pressable
+                onPress={onClose}
+                className="mt-5 rounded-full bg-white px-6 py-3"
+              >
+                <Text className="text-base font-bold text-amber-700">Tamam</Text>
+              </Pressable>
+            </View>
           ) : result ? (
             // Sonuç ekranı
             <View className="my-6 items-center">

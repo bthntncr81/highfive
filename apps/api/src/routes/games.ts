@@ -38,7 +38,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
   const prisma = (server as any).prisma as PrismaClient;
 
   // ==================== SPIN WHEEL — admin config ====================
-  server.get('/spin/config', async () => {
+  server.get('/spin/config', async (req: FastifyRequest) => {
     const config = await prisma.spinWheelConfig.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
@@ -52,6 +52,40 @@ export default async function gamesRoutes(server: FastifyInstance) {
       color: s.color,
       emoji: s.emoji ?? null,
     }));
+
+    // Auth varsa kullanıcının cooldown durumunu da gönder
+    let nextSpinAt: string | null = null;
+    let canSpin = true;
+    const auth = req.headers.authorization;
+    if (auth?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(
+          auth.slice(7),
+          process.env.JWT_SECRET || 'your-secret-key',
+        ) as { customerId?: string; type?: string; aud?: string };
+        const cid = decoded.customerId;
+        if (cid && (decoded.type === 'customer' || decoded.aud === 'customer')) {
+          const c = await prisma.customer.findUnique({
+            where: { id: cid },
+            select: { lastSpinAt: true },
+          });
+          if (c?.lastSpinAt) {
+            const ms = Date.now() - new Date(c.lastSpinAt).getTime();
+            const cooldownMs = config.cooldownHours * 60 * 60 * 1000;
+            if (ms < cooldownMs) {
+              nextSpinAt = new Date(
+                new Date(c.lastSpinAt).getTime() + cooldownMs,
+              ).toISOString();
+              canSpin = false;
+            }
+          }
+        }
+      } catch {
+        // sessiz — auth geçersiz olsa bile public config döner
+      }
+    }
+
     return {
       config: {
         id: config.id,
@@ -60,6 +94,8 @@ export default async function gamesRoutes(server: FastifyInstance) {
         cooldownHours: config.cooldownHours,
         minCartTotal: Number(config.minCartTotal),
         slices,
+        canSpin,
+        nextSpinAt,
       },
     };
   });
@@ -265,6 +301,14 @@ export default async function gamesRoutes(server: FastifyInstance) {
       data: { seenAt: new Date() },
     });
     return { updated: updated.count };
+  });
+
+  // Admin: tüm achievement'ları listele (POS yönetim ekranı için)
+  server.get('/achievements', { preHandler: verifyAdmin }, async () => {
+    const all = await prisma.achievement.findMany({
+      orderBy: { sortOrder: 'asc' },
+    });
+    return { achievements: all };
   });
 
   // Admin: achievement oluştur / güncelle

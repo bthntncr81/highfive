@@ -574,6 +574,8 @@ export const endpoints = {
           color: string;
           emoji: string | null;
         }>;
+        canSpin?: boolean;
+        nextSpinAt?: string | null;
       } | null;
     }>("/api/games/spin/config"),
 
