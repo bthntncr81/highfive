@@ -11,8 +11,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router, useFocusEffect } from "expo-router";
 
+import * as Haptics from "expo-haptics";
+
 import { endpoints, ApiOrder, OrderStatus, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { handleApiError } from "@/lib/error-handler";
 
 const STATUS_META: Record<
@@ -244,6 +247,43 @@ export default function OrdersScreen() {
                     Kurye: {o.courier.name}
                   </Text>
                 </View>
+              )}
+
+              {/* Tekrarla butonu — bitmiş/iptal siparişlerde aynı ürünleri sepete koyar */}
+              {(o.status === "DELIVERED" ||
+                o.status === "COMPLETED" ||
+                o.status === "SERVED" ||
+                o.status === "CANCELLED") && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    let added = 0;
+                    for (const it of o.items ?? []) {
+                      if (!it.menuItem || !it.menuItem.id) continue;
+                      useCart.getState().add(
+                        {
+                          id: it.menuItem.id,
+                          name: it.menuItem.name ?? "Ürün",
+                          price: Number((it as any).unitPrice ?? (it.menuItem as any).price ?? 0),
+                          imageUrl: (it.menuItem as any).image ?? undefined,
+                        },
+                        it.quantity ?? 1,
+                      );
+                      added++;
+                    }
+                    if (added > 0) {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      router.push("/(tabs)/cart");
+                    }
+                  }}
+                  className="mt-3 flex-row items-center justify-center rounded-full bg-primary-500 px-4 py-2.5"
+                >
+                  <Ionicons name="refresh" size={16} color="#fff" />
+                  <Text className="ml-2 text-sm font-bold text-white">
+                    🔄 Tekrar Sipariş Ver
+                  </Text>
+                </Pressable>
               )}
             </Pressable>
           ))

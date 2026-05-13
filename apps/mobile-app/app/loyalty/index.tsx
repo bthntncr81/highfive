@@ -34,6 +34,7 @@ import {
   StarCounterVisual,
   SocialIconsVisual,
 } from "@/components/loyalty/CardVisuals";
+import { TierUnlockCelebration } from "@/components/TierUnlockCelebration";
 
 type ProgramType =
   | "BASIC_POINTS" | "STAMP_CARD" | "BIRTHDAY" | "WELCOME"
@@ -119,6 +120,14 @@ export default function LoyaltyHub() {
       >
         {/* HERO — Tier + puan */}
         <HeroCard customer={c} />
+
+        {/* Tier unlock celebration — yeni tier'a yükselince 1 kere gösterilir */}
+        <TierUnlockCelebration
+          currentTierKey={c.loyaltyTier?.name ?? null}
+          currentTierColor={c.loyaltyTier?.color ?? null}
+          currentTierIcon={c.loyaltyTier?.icon ?? null}
+          currentTierDiscount={c.loyaltyTier?.discountPercent ?? null}
+        />
 
         {/* Aktif programlar — kart deck */}
         {programs.length === 0 ? (

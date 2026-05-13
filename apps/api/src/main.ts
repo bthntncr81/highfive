@@ -37,6 +37,7 @@ import devicesRoutes from './routes/devices';
 import notificationRoutes, { processScheduledNotifications } from './routes/notifications';
 import { processBirthdayPrograms } from './lib/loyalty-engine';
 import { startDailyCloseScheduler } from './lib/daily-close';
+import { startWinbackScheduler } from './lib/winback';
 import mobileOrdersRoutes from './routes/mobile-orders';
 import mobileLoyaltyRoutes from './routes/mobile-loyalty';
 import mobileAddressesRoutes from './routes/mobile-addresses';
@@ -151,6 +152,10 @@ const start = async () => {
     // Gün sonu auto-close — her gece 00:00'da açık siparişleri COMPLETED yap,
     // masaları FREE'ye çek (servisin garson "ödendi" basmayı unutmasına karşı).
     startDailyCloseScheduler(prisma);
+
+    // Win-back kampanyası — sabah 10:00'da uzun süredir sipariş geçmeyen
+    // pushConsent açık müşterilere %15 indirim teklifi push'u gönderir.
+    startWinbackScheduler(prisma);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

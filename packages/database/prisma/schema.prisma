@@ -638,6 +638,8 @@ model Customer {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   lastOrderAt     DateTime?
+  // Win-back kampanyası — son gönderim tarihi (cooldown için)
+  lastWinbackAt   DateTime?
 
   loyaltyTier     LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id])
   // Cashback bakiyesi (TL cinsinden — 1 cashback unit = 1 TL)
