@@ -170,33 +170,70 @@ export default function PaymentScreen() {
     }
   };
 
-  // WebView navigation: callback URL'e yönlendiğinde polling'e veya direkt iptal/fail'e geç
+  // WebView navigation: callback URL'e yönlendiğinde polling'e veya direkt iptal/fail'e geç.
+  // KRİTİK: URL'i parse et + hostname whitelist; aksi halde saldırgan WebView'i fake bir
+  // success sayfasına yönlendirip ödeme yapılmamışken "ödendi" UI tetikleyebilir.
+  const TRUSTED_CALLBACK_HOSTS = [
+    "api.highfivepps.com",
+    "highfivepps.com",
+    "www.iyzipay.com",
+    "sandbox-api.iyzipay.com",
+    "api.iyzipay.com",
+    "iyzipay.com",
+  ];
+
   const handleNavStateChange = (navState: { url: string }) => {
-    const url = navState.url || "";
-    // Bankanın iptal/cancel/abort sayfası — pollig beklemeden direkt cancelled
+    const raw = navState.url || "";
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      return;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    const isTrusted =
+      TRUSTED_CALLBACK_HOSTS.includes(host) ||
+      host.endsWith(".iyzipay.com") ||
+      host.endsWith(".highfivepps.com");
+
+    if (!isTrusted) {
+      // Untrusted origin — bank'ın 3DS sayfası olabilir, parametre okuma
+      return;
+    }
+
+    const params = parsed.searchParams;
+    const status = (
+      params.get("status") ||
+      params.get("payment") ||
+      ""
+    ).toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+
+    // CANCELLED
     if (
-      url.includes("payment=cancel") ||
-      url.includes("status=cancelled") ||
-      url.includes("/3ds-cancel") ||
-      url.includes("abort") ||
-      url.includes("vazgec")
+      status === "cancel" ||
+      status === "cancelled" ||
+      path.includes("/3ds-cancel") ||
+      params.has("abort") ||
+      params.has("vazgec")
     ) {
       cancelOrderAndShow();
       return;
     }
-    // Banka başarısızlık döndürdüyse — pollig beklemeden direkt failed
-    if (url.includes("payment=failed") || url.includes("status=failure")) {
+
+    // FAILED
+    if (status === "failed" || status === "failure") {
       if (pollRef.current) clearInterval(pollRef.current);
       setPhase("failed");
       setPollError("Bankanız ödemeyi onaylamadı.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    // Başarılı görünüyor — polling ile finalize et
-    if (
-      url.includes("/3ds-callback") ||
-      url.includes("payment=success")
-    ) {
+
+    // SUCCESS — backend callback URL'i veya iyzico success param
+    if (path.includes("/3ds-callback") || status === "success") {
+      // UI sadece polling phase'ine geçer; gerçek doğrulama backend polling ile yapılır.
       setPhase("polling");
     }
   };
@@ -235,7 +272,23 @@ export default function PaymentScreen() {
     const decodedHtml = looksLikeHtml
       ? htmlContent
       : base64ToUtf8(htmlContent);
-    const webviewSource = { html: decodedHtml, baseUrl: API_URL };
+    // KRİTİK: HTML'i CSP meta ile wrap'le — sadece iyzipay.com origin'inden script
+    // yüklensin. baseUrl 'about:blank' yapılınca relative URL'ler API domain'inden
+    // çözülmez (eski baseUrl: API_URL XSS yüzeyi yaratıyordu).
+    const wrappedHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.iyzipay.com https://api.iyzipay.com https://sandbox-api.iyzipay.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.iyzipay.com; style-src 'self' 'unsafe-inline' https://*.iyzipay.com; frame-src https://*.iyzipay.com; img-src 'self' data: https:; connect-src https://*.iyzipay.com">
+<title>3DS</title>
+</head>
+<body>
+${decodedHtml}
+</body>
+</html>`;
+    const webviewSource = { html: wrappedHtml, baseUrl: "about:blank" };
 
     return (
       <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
@@ -272,8 +325,17 @@ export default function PaymentScreen() {
           onMessage={handleMessage}
           startInLoadingState
           javaScriptEnabled
-          domStorageEnabled
-          mixedContentMode="always"
+          domStorageEnabled={false}
+          // KRİTİK: HTTPS-only. 'always' MITM saldırılarına izin veriyordu.
+          mixedContentMode="never"
+          // iOS dataDetector kapatma — kart input field'ında yanlış otomatik dönüşüm olmasın
+          dataDetectorTypes={["none"]}
+          // Cookie isolation — kullanıcı kendi profilinde kalsın
+          thirdPartyCookiesEnabled={false}
+          // Cache kapalı — kart verisi cache'de kalmasın
+          cacheEnabled={false}
+          // Form save dialog — kart bilgisi kaydedilmesin
+          saveFormDataDisabled={true}
           renderLoading={() => (
             <View className="flex-1 items-center justify-center">
               <ActivityIndicator color="#bb1e10" size="large" />

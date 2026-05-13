@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 const extra = Constants.expoConfig?.extra as
   | { apiUrl?: string; wsUrl?: string }
@@ -24,15 +25,58 @@ export function parsePrice(p: string | number | null | undefined): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
+// KRİTİK: JWT token expo-secure-store'a (iOS Keychain / Android Keystore) taşındı.
+// Eski AsyncStorage anahtarı 'hf_auth_token' migration için tutuluyor:
+// uygulama ilk açılışta varsa SecureStore'a kopyalanır + AsyncStorage'tan silinir.
 const TOKEN_KEY = "hf_auth_token";
+const LEGACY_TOKEN_KEY = "hf_auth_token";
 
-export async function getToken() {
-  return AsyncStorage.getItem(TOKEN_KEY);
+export async function getToken(): Promise<string | null> {
+  try {
+    const t = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (t) return t;
+  } catch {
+    // SecureStore okunamadıysa AsyncStorage fallback'i dene
+  }
+
+  // Migration: legacy AsyncStorage'da kalan token varsa SecureStore'a taşı
+  try {
+    const legacy = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
+    if (legacy) {
+      try {
+        await SecureStore.setItemAsync(TOKEN_KEY, legacy);
+      } catch {}
+      try {
+        await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
+      } catch {}
+      return legacy;
+    }
+  } catch {}
+
+  return null;
 }
 
-export async function setToken(token: string | null) {
-  if (token === null) await AsyncStorage.removeItem(TOKEN_KEY);
-  else await AsyncStorage.setItem(TOKEN_KEY, token);
+export async function setToken(token: string | null): Promise<void> {
+  if (token === null) {
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } catch {}
+    try {
+      await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
+    } catch {}
+    return;
+  }
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch {
+    // SecureStore başarısız olursa AsyncStorage'a yaz (graceful degrade,
+    // ama log'la — sandbox/simulator dışında bu olmamalı)
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn("[api] SecureStore.setItemAsync failed, falling back to AsyncStorage");
+    }
+    await AsyncStorage.setItem(LEGACY_TOKEN_KEY, token);
+  }
 }
 
 export class ApiError extends Error {

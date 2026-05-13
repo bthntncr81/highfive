@@ -135,6 +135,33 @@ async function registerDevice(token: string) {
   }
 }
 
+// KRİTİK: Push notification payload backend'den gelir, ama compromise / spoof
+// senaryosunda saldırgan rastgele route gönderebilir. Sadece güvenli prefix'lere izin ver.
+const ALLOWED_ROUTE_PREFIXES = [
+  "/",            // root (home)
+  "/menu",
+  "/orders",
+  "/bundle/",
+  "/loyalty",
+  "/campaign/",
+  "/product/",
+  "/legal/",
+  "/profile",
+  "/addresses",
+  "/favorites",
+  "/settings",
+];
+
+function isAllowedRoute(route: string): boolean {
+  // /auth/*, /checkout/*, harici domain'ler reddedilir
+  if (route.startsWith("//")) return false; // protocol-relative attack
+  if (/^https?:/i.test(route)) return false; // external URL
+  // Tam eşleşme veya prefix
+  return ALLOWED_ROUTE_PREFIXES.some(
+    (p) => route === p || route.startsWith(p),
+  );
+}
+
 // Bildirime tıklanınca yönlendirme
 function handleNotificationTap(data: any) {
   if (!data) return;
@@ -149,14 +176,27 @@ function handleNotificationTap(data: any) {
 
   // Internal route (e.g. "/menu", "/campaign/c1", "/product/p1")
   try {
+    let normalized: string | null = null;
     if (route.startsWith("/")) {
-      router.push(route as any);
+      normalized = route;
     } else if (route.startsWith("highfive://")) {
-      const path = route.replace("highfive://", "/");
-      router.push(path as any);
+      normalized = "/" + route.replace("highfive://", "").replace(/^\/+/, "");
     }
+
+    if (!normalized || !isAllowedRoute(normalized)) {
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.warn("[push] route not whitelisted:", route);
+      }
+      return;
+    }
+
+    router.push(normalized as any);
   } catch (e) {
-    console.log("[push] navigate failed:", e);
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log("[push] navigate failed:", e);
+    }
   }
 }
 

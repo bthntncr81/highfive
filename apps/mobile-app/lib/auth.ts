@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setToken, api } from "./api";
+import { setToken, getToken, api } from "./api";
 
 export type AuthUser = {
   id: string;
@@ -180,25 +180,27 @@ export const useAuth = create<AuthState>()(
     {
       name: "highfive-auth",
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ token: s.token, user: s.user }),
+      // KRİTİK: token artık zustand persist'e DEĞİL, SecureStore'a (api.setToken)
+      // yazılıyor. Burada partialize sadece user'ı kaydeder (UI için PII değil — id+name).
+      // Token ayrıca getToken() ile SecureStore'dan okunup state'e yansıtılır.
+      partialize: (s) => ({ user: s.user }),
       onRehydrateStorage: () => (state, error) => {
-        console.log("[auth] onRehydrateStorage fired", {
-          hasState: !!state,
-          hasToken: !!state?.token,
-          hasUser: !!state?.user,
-          error: error ? String(error) : null,
-        });
+        if (__DEV__ && error) {
+          // eslint-disable-next-line no-console
+          console.log("[auth] onRehydrateStorage error", String(error));
+        }
         (async () => {
           try {
-            if (state?.token) {
-              await setToken(state.token);
-              console.log("[auth] token written to api client");
-            }
-          } catch (e: any) {
-            console.log("[auth] setToken failed:", e?.message);
+            // Token'ı SecureStore'dan oku (legacy AsyncStorage migration api.ts içinde)
+            const token = await getToken();
+            useAuth.setState({
+              token: token ?? null,
+              user: state?.user ?? null,
+              hydrated: true,
+            });
+          } catch {
+            useAuth.setState({ hydrated: true });
           }
-          useAuth.setState({ hydrated: true });
-          console.log("[auth] hydrated=true");
         })();
       },
     },
@@ -206,30 +208,25 @@ export const useAuth = create<AuthState>()(
 );
 
 // EK SAVUNMA: Persist callback ateşlenmezse 3sn'de manuel hydrate
-// + AsyncStorage'dan direkt oku, persist hesabını atla
 setTimeout(async () => {
   const state = useAuth.getState();
   if (state.hydrated) return;
-  console.log("[auth] hydrate timeout — manual fallback");
   try {
+    const token = await getToken(); // SecureStore + legacy migration
     const raw = await AsyncStorage.getItem("highfive-auth");
+    let persistedUser: AuthUser | null = null;
     if (raw) {
-      const parsed = JSON.parse(raw);
-      const persistedToken = parsed?.state?.token;
-      const persistedUser = parsed?.state?.user;
-      console.log("[auth] manual read:", { hasToken: !!persistedToken, hasUser: !!persistedUser });
-      if (persistedToken) await setToken(persistedToken);
-      useAuth.setState({
-        token: persistedToken ?? null,
-        user: persistedUser ?? null,
-        hydrated: true,
-      });
-    } else {
-      console.log("[auth] no persisted auth data");
-      useAuth.setState({ hydrated: true });
+      try {
+        const parsed = JSON.parse(raw);
+        persistedUser = parsed?.state?.user ?? null;
+      } catch {}
     }
-  } catch (e: any) {
-    console.log("[auth] manual read failed:", e?.message);
+    useAuth.setState({
+      token: token ?? null,
+      user: persistedUser,
+      hydrated: true,
+    });
+  } catch {
     useAuth.setState({ hydrated: true });
   }
 }, 3000);
