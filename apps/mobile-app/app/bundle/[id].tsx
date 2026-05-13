@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 import { useMenu } from "@/lib/hooks";
 import { useCart, type CartItemSelectedOption } from "@/lib/cart";
@@ -35,7 +35,7 @@ type Slot = {
     items: {
       id: string;
       extraPrice: string | number;
-      menuItem: { id: string; name: string };
+      menuItem: { id: string; name: string; image?: string | null };
     }[];
   };
   label: string;          // "Pizza Seçimi #1" or "Pizza Seçimi"
@@ -48,6 +48,13 @@ export default function BundleDetail() {
   const add = useCart((s) => s.add);
   const fly = useFlyCart((s) => s.fly);
   const addBtnRef = useRef<View>(null);
+  // ScrollView ve slot ref'leri — auto-scroll için
+  const scrollRef = useRef<ScrollView>(null);
+  const slotPositions = useRef<Record<string, number>>({});
+  // Confetti tetikleyici — tüm slotlar dolduğunda 1x patlatılır
+  const [confettiKey, setConfettiKey] = useState<number | null>(null);
+  // Daha önce tüm-tamam patlattık mı? (her seçim toggle'da tekrar patlamasın)
+  const wasAllComplete = useRef(false);
 
   // selections[slotKey] = OptionGroupItem.id[]
   const [selections, setSelections] = useState<Record<string, string[]>>({});
@@ -138,26 +145,74 @@ export default function BundleDetail() {
   const savings = parsePrice(bundle.savings);
   const img = imageUrl(bundle.image);
 
+  // Slot'un dolu (geçerli) olup olmadığını kontrol et — auto-scroll için
+  const isSlotValid = (slot: Slot, currentSelections: Record<string, string[]>) => {
+    const sel = currentSelections[slot.key] ?? [];
+    return sel.length >= slot.group.minSelect && sel.length <= slot.group.maxSelect;
+  };
+
   const toggleItem = (slot: Slot, itemId: string) => {
     setSelections((cur) => {
       const arr = cur[slot.key] ?? [];
+      let next: string[];
+      let nowComplete = false;
+
       if (arr.includes(itemId)) {
-        return { ...cur, [slot.key]: arr.filter((x) => x !== itemId) };
-      }
-      if (slot.group.maxSelect === 1) {
-        return { ...cur, [slot.key]: [itemId] };
-      }
-      if (arr.length >= slot.group.maxSelect) {
+        next = arr.filter((x) => x !== itemId);
+      } else if (slot.group.maxSelect === 1) {
+        next = [itemId];
+        nowComplete = true; // tek seçimlik slot doldu
+      } else if (arr.length >= slot.group.maxSelect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           "Limit dolu",
           `${slot.label} için en fazla ${slot.group.maxSelect} ürün seçebilirsin.`,
         );
         return cur;
+      } else {
+        next = [...arr, itemId];
+        nowComplete = next.length >= slot.group.minSelect &&
+                      next.length === slot.group.maxSelect;
       }
-      return { ...cur, [slot.key]: [...arr, itemId] };
+
+      const updated = { ...cur, [slot.key]: next };
+
+      // Bu slot doldu mu? → bir sonraki dolmamış slot'a kaydır
+      if (nowComplete) {
+        Haptics.selectionAsync();
+        const slotIdx = slots.findIndex((s) => s.key === slot.key);
+        const nextSlot = slots
+          .slice(slotIdx + 1)
+          .find((s) => !isSlotValid(s, updated));
+        if (nextSlot) {
+          const y = slotPositions.current[nextSlot.key];
+          if (typeof y === "number") {
+            // Küçük gecikme — state update + render bitsin
+            setTimeout(() => {
+              scrollRef.current?.scrollTo({ y: Math.max(0, y - 60), animated: true });
+            }, 120);
+          }
+        }
+      }
+
+      return updated;
     });
   };
+
+  // Tüm slot'lar dolduğunda celebration banner tetikle (1x)
+  useEffect(() => {
+    const allDone = slots.length > 0 && slots.every((s) => isSlotValid(s, selections));
+    if (allDone && !wasAllComplete.current) {
+      wasAllComplete.current = true;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setConfettiKey(Date.now());
+      // 2.5 saniye sonra otomatik kaldır
+      setTimeout(() => setConfettiKey(null), 2500);
+    } else if (!allDone) {
+      wasAllComplete.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selections, slots]);
 
   const finalPrice = basePrice + extrasTotal;
 
@@ -228,7 +283,11 @@ export default function BundleDetail() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 140 }}
+      >
         {/* Bundle görseli */}
         {img && (
           <Image
@@ -281,6 +340,33 @@ export default function BundleDetail() {
             </View>
           )}
 
+          {/* Step indicator — kaç slot tamamlandı */}
+          {slots.length > 1 && (
+            <View className="mt-5 rounded-2xl bg-amber-50 border border-amber-200 px-3 py-2.5">
+              <View className="flex-row items-center justify-between mb-1.5">
+                <Text className="text-xs font-bold text-amber-900">
+                  🎯 Seçim İlerlemen
+                </Text>
+                <Text className="text-xs font-bold text-amber-800">
+                  {slots.filter((s) => isSlotValid(s, selections)).length} / {slots.length}
+                </Text>
+              </View>
+              <View className="flex-row gap-1">
+                {slots.map((s) => {
+                  const done = isSlotValid(s, selections);
+                  return (
+                    <View
+                      key={s.key}
+                      className={`h-1.5 flex-1 rounded-full ${
+                        done ? "bg-green-500" : "bg-amber-200"
+                      }`}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
           {/* Slot'lar */}
           {slots.length > 0 && (
             <View className="mt-5 space-y-4">
@@ -290,7 +376,14 @@ export default function BundleDetail() {
                 return (
                   <View
                     key={slot.key}
-                    className="rounded-2xl border-2 border-amber-200 bg-white p-3"
+                    onLayout={(e) => {
+                      slotPositions.current[slot.key] = e.nativeEvent.layout.y;
+                    }}
+                    className={`rounded-2xl border-2 bg-white p-3 ${
+                      isSlotValid(slot, selections)
+                        ? "border-green-400"
+                        : "border-amber-200"
+                    }`}
                   >
                     <View className="flex-row items-start justify-between">
                       <View className="flex-1">
@@ -326,6 +419,7 @@ export default function BundleDetail() {
                       {g.items.map((it) => {
                         const checked = sel.includes(it.id);
                         const extra = Number(it.extraPrice);
+                        const thumb = imageUrl(it.menuItem.image ?? null);
                         return (
                           <Pressable
                             key={it.id}
@@ -347,6 +441,22 @@ export default function BundleDetail() {
                                 <Ionicons name="checkmark" size={14} color="#fff" />
                               )}
                             </View>
+                            {/* Ürün thumbnail (varsa) */}
+                            {thumb ? (
+                              <Image
+                                source={{ uri: thumb }}
+                                style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }}
+                                contentFit="cover"
+                                transition={120}
+                              />
+                            ) : (
+                              <View
+                                style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }}
+                                className="items-center justify-center bg-surface"
+                              >
+                                <Text className="text-base">🍽️</Text>
+                              </View>
+                            )}
                             <View className="flex-1">
                               <Text className="text-sm font-semibold text-foreground">
                                 {it.menuItem.name}
@@ -372,6 +482,26 @@ export default function BundleDetail() {
           )}
         </View>
       </ScrollView>
+
+      {/* Completion banner — tüm slot'lar dolduğunda 2.5sn görünür */}
+      {confettiKey !== null && (
+        <View
+          pointerEvents="none"
+          className="absolute left-4 right-4 bottom-28 rounded-2xl bg-emerald-500 px-4 py-3 shadow-lg"
+          style={{ elevation: 8 }}
+        >
+          <View className="flex-row items-center justify-center gap-2">
+            <Text className="text-2xl">🎉</Text>
+            <Text className="text-base font-extrabold text-white">
+              Mükemmel kombinasyon!
+            </Text>
+            <Text className="text-2xl">✨</Text>
+          </View>
+          <Text className="mt-1 text-center text-xs text-white/90">
+            Sepete eklemeye hazır
+          </Text>
+        </View>
+      )}
 
       {/* Footer CTA */}
       <View
