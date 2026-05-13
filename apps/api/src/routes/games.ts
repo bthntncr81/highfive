@@ -424,4 +424,126 @@ export default async function gamesRoutes(server: FastifyInstance) {
     });
     return { reward: updated };
   });
+
+  // ==================== LEADERBOARD ====================
+  // Bu haftanın en çok puan kazanan top 10 müşterisi (anonim isim).
+  server.get('/leaderboard', async (req: FastifyRequest) => {
+    const now = new Date();
+    // Haftanın pazartesi 00:00'ı
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay() || 7; // Pazar = 0 → 7
+    startOfWeek.setDate(startOfWeek.getDate() - (day - 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Bu hafta içinde kazanılan toplam EARN puanlarını topla, top 10
+    const grouped = await prisma.pointsTransaction.groupBy({
+      by: ['customerId'],
+      where: {
+        type: 'EARN',
+        createdAt: { gte: startOfWeek },
+        points: { gt: 0 },
+      },
+      _sum: { points: true },
+      orderBy: { _sum: { points: 'desc' } },
+      take: 10,
+    });
+
+    const customerIds = grouped.map((g) => g.customerId);
+    if (customerIds.length === 0) {
+      return { leaderboard: [], weekStart: startOfWeek.toISOString() };
+    }
+
+    const customers = await prisma.customer.findMany({
+      where: { id: { in: customerIds } },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        loyaltyTier: { select: { name: true, icon: true, color: true } },
+      },
+    });
+    const map = new Map(customers.map((c) => [c.id, c]));
+
+    // Anonim isim: ilk harf + son rakam (örn. "A***1")
+    const anonName = (name: string | null, phone: string) => {
+      const baseName = (name ?? "").trim();
+      const initial = baseName ? baseName[0].toUpperCase() : "M";
+      const lastDigit = phone.replace(/\D/g, '').slice(-1) || "0";
+      return `${initial}*** ${lastDigit}`;
+    };
+
+    // İsteyen kullanıcı kendi sırasını görsün (auth varsa)
+    let myRank: number | null = null;
+    let myPoints = 0;
+    const auth = req.headers.authorization;
+    if (auth?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(
+          auth.slice(7),
+          process.env.JWT_SECRET || 'your-secret-key',
+        ) as { customerId?: string; type?: string; aud?: string };
+        const cid = decoded.customerId;
+        if (cid && (decoded.type === 'customer' || decoded.aud === 'customer')) {
+          const idx = grouped.findIndex((g) => g.customerId === cid);
+          if (idx >= 0) {
+            myRank = idx + 1;
+            myPoints = grouped[idx]._sum.points ?? 0;
+          } else {
+            // Top 10'da değilse rank'i ayrıca hesapla
+            const mine = await prisma.pointsTransaction.aggregate({
+              where: {
+                customerId: cid,
+                type: 'EARN',
+                createdAt: { gte: startOfWeek },
+                points: { gt: 0 },
+              },
+              _sum: { points: true },
+            });
+            const myPts = mine._sum.points ?? 0;
+            if (myPts > 0) {
+              myPoints = myPts;
+              // Daha yüksek puanlı kaç müşteri var?
+              const higher = await prisma.pointsTransaction.groupBy({
+                by: ['customerId'],
+                where: {
+                  type: 'EARN',
+                  createdAt: { gte: startOfWeek },
+                  points: { gt: 0 },
+                  NOT: { customerId: cid },
+                },
+                _sum: { points: true },
+                having: { points: { _sum: { gt: myPts } } },
+              });
+              myRank = higher.length + 1;
+            }
+          }
+        }
+      } catch {
+        // sessiz
+      }
+    }
+
+    return {
+      weekStart: startOfWeek.toISOString(),
+      myRank,
+      myPoints,
+      leaderboard: grouped.map((g, i) => {
+        const c = map.get(g.customerId);
+        return {
+          rank: i + 1,
+          name: c ? anonName(c.name, c.phone ?? '') : `M*** ${i}`,
+          points: g._sum.points ?? 0,
+          tier: c?.loyaltyTier
+            ? {
+                name: c.loyaltyTier.name,
+                icon: c.loyaltyTier.icon,
+                color: c.loyaltyTier.color,
+              }
+            : null,
+          isMe: false, // anonimleştirme
+        };
+      }),
+    };
+  });
 }

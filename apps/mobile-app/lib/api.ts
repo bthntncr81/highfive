@@ -633,6 +633,20 @@ export const endpoints = {
       };
     }>(`/api/games/scratch/${id}/scratch`, {}),
 
+  gameLeaderboard: () =>
+    api.get<{
+      weekStart: string;
+      myRank: number | null;
+      myPoints: number;
+      leaderboard: Array<{
+        rank: number;
+        name: string;
+        points: number;
+        tier: { name: string; icon: string | null; color: string | null } | null;
+        isMe: boolean;
+      }>;
+    }>("/api/games/leaderboard"),
+
   // CART OFFERS — sepete uygun en avantajlı sadakat (auth opsiyonel)
   cartEvaluate: (items: Array<{ menuItemId: string; quantity: number; unitPrice: number }>) =>
     api.post<{

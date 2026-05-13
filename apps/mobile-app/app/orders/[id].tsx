@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 
 import { endpoints, ApiOrder, OrderStatus, imageUrl } from "@/lib/api";
 import { useOrderSocket } from "@/lib/ws";
+import { ScratchCard } from "@/components/ScratchCard";
 
 type Step = {
   status: OrderStatus;
@@ -242,6 +243,14 @@ export default function OrderDetail() {
             })}
           </View>
         )}
+
+        {/* Kazı Kazan kartı — sipariş tamamlandığında + 100₺+ ise göster */}
+        {(order.status === "DELIVERED" ||
+          order.status === "COMPLETED" ||
+          order.status === "SERVED") &&
+          Number(order.total) >= 100 && (
+            <ScratchCard orderId={order.id} />
+          )}
 
         {/* Kurye kartı */}
         {order.courier && (order.status === "OUT_FOR_DELIVERY" || order.status === "DELIVERED") && (

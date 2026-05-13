@@ -29,6 +29,7 @@ export default function ProfileScreen() {
     { icon: "heart-outline", label: "Favorilerim", href: "/favorites" },
     { icon: "star-outline", label: "Sadakat puanları", href: "/loyalty" },
     { icon: "ribbon-outline", label: "Rozetlerim", href: "/achievements" },
+    { icon: "trophy-outline", label: "🏆 Haftalık Liderlik", href: "/leaderboard" },
     {
       icon: "notifications-outline",
       label: "Bildirim tercihleri",

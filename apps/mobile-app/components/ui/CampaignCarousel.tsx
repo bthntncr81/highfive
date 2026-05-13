@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,51 @@ const BG_PALETTE = [
 
 function pickColor(idx: number) {
   return BG_PALETTE[idx % BG_PALETTE.length];
+}
+
+/** Countdown formatı (kalan süreye göre): X gün / X saat / X dakika */
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "Süresi doldu";
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  if (days >= 1) return `${days} gün ${hours} sa kaldı`;
+  if (hours >= 1) return `${hours} sa ${minutes} dk kaldı`;
+  if (minutes >= 1) return `${minutes} dk kaldı`;
+  return "Az kaldı!";
+}
+
+/** Campaign endDate'e göre countdown render. 7 günden azsa görünür. */
+function CampaignCountdown({ endDate }: { endDate: string }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const end = new Date(endDate);
+  const now = new Date();
+  const ms = end.getTime() - now.getTime();
+  const days = ms / 86400000;
+
+  if (ms <= 0 || days > 7) return null;
+
+  const urgent = days < 1;
+  return (
+    <View
+      className="rounded-full px-2.5 py-1"
+      style={{ backgroundColor: urgent ? "#fee2e2" : "#fef3c7" }}
+    >
+      <Text
+        className="text-[10px] font-extrabold uppercase tracking-wide"
+        style={{ color: urgent ? "#991b1b" : "#92400e" }}
+      >
+        {urgent ? "🔥 " : "⏱️ "}
+        {formatCountdown(ms)}
+      </Text>
+    </View>
+  );
 }
 
 export function CampaignCarousel({ campaigns }: { campaigns: ApiCampaign[] }) {
@@ -141,6 +186,9 @@ export function CampaignCarousel({ campaigns }: { campaigns: ApiCampaign[] }) {
                           ⏰ {daysUntil > 1 ? `${daysUntil} gün sonra` : "Yakında"}
                         </Text>
                       </View>
+                    )}
+                    {!isUpcoming && c.endDate && (
+                      <CampaignCountdown endDate={c.endDate} />
                     )}
                     {/* Görsel yoksa emoji köşede */}
                     {!img && (
