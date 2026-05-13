@@ -20,6 +20,7 @@ import HappyHourManagement from './pages/HappyHourManagement';
 import CampaignsLoyalty from './pages/CampaignsLoyalty';
 import LoyaltyPrograms from './pages/LoyaltyPrograms';
 import OptionGroups from './pages/OptionGroups';
+import SpinWheelConfig from './pages/SpinWheelConfig';
 import PushNotifications from './pages/PushNotifications';
 import RawMaterialsManagement from './pages/RawMaterialsManagement';
 import CourierDashboard from './pages/CourierDashboard';
@@ -168,6 +169,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <OptionGroups />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="spin-wheel"
+                element={
+                  <AdminRoute>
+                    <SpinWheelConfig />
                   </AdminRoute>
                 }
               />

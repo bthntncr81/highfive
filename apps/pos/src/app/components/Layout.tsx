@@ -65,6 +65,7 @@ export default function Layout() {
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
     { to: '/loyalty-programs', icon: ClipboardList, label: 'Sadakat Programları', emoji: '✨' },
     { to: '/option-groups', icon: ClipboardList, label: 'Opsiyon Grupları', emoji: '📋' },
+    { to: '/spin-wheel', icon: ClipboardList, label: 'Şans Çarkı', emoji: '🎡' },
     { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },

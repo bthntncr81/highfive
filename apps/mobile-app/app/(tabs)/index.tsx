@@ -23,24 +23,30 @@ import { BundleCard } from "@/components/ui/BundleCard";
 import { LoyaltyTeaser } from "@/components/ui/LoyaltyTeaser";
 import { SpinWheelCard } from "@/components/SpinWheelCard";
 import { StreakWidget } from "@/components/StreakWidget";
+import { BirthdayCelebration } from "@/components/BirthdayCelebration";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
   const menu = useMenu();
   const user = useAuth((s) => s.user);
   const [streak, setStreak] = useState<{ current: number; longest: number } | null>(null);
+  const [birthDate, setBirthDate] = useState<string | null>(null);
 
-  // Streak verisini lazy çek (kullanıcı giriş yapmışsa)
+  // Streak + birthdate verisini lazy çek (kullanıcı giriş yapmışsa)
   useEffect(() => {
     if (!user) {
       setStreak(null);
+      setBirthDate(null);
       return;
     }
     endpoints
       .loyaltyProgress()
       .then((res) => {
         const c = res.customer;
-        if (c) setStreak({ current: c.currentStreak ?? 0, longest: c.longestStreak ?? 0 });
+        if (c) {
+          setStreak({ current: c.currentStreak ?? 0, longest: c.longestStreak ?? 0 });
+          setBirthDate(c.birthDate ?? null);
+        }
       })
       .catch(() => {});
   }, [user]);
@@ -74,6 +80,10 @@ export default function Home() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-white">
+      {/* Doğum günü kutlaması (yılda 1 kez) */}
+      {user && birthDate && (
+        <BirthdayCelebration birthDate={birthDate} customerName={user.name ?? null} />
+      )}
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
