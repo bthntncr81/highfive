@@ -6,6 +6,7 @@ import { webhookService } from '../services/webhook.service';
 import { sendOrderStatusPush } from '../lib/order-push';
 import { awardMobileOrderPoints } from '../lib/loyalty-award';
 import { processOrderForLoyalty } from '../lib/loyalty-engine';
+import { checkAchievementsForCustomer } from '../lib/achievement-checker';
 
 // Email notification - uses nodemailer if available
 async function sendOrderNotification(order: any) {
@@ -184,6 +185,11 @@ async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: 
         break;
       }
     }
+
+    // Achievement auto-unlock — orderCount/totalSpent/streak güncel
+    await checkAchievementsForCustomer(prisma, customer.id).catch((e) => {
+      console.error('[achievement-checker] failed:', e);
+    });
   } catch (error) {
     console.error('❌ Loyalty points error:', error);
     // Don't throw - payment should still succeed even if points fail

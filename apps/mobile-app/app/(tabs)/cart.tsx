@@ -8,6 +8,7 @@ import { Link, router } from "expo-router";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useAutoCartOffer, useCartOffer } from "@/lib/cart-offers";
+import { CrossSellToast } from "@/components/CrossSellToast";
 
 export default function CartScreen() {
   const items = useCart((s) => s.items);
@@ -201,6 +202,9 @@ export default function CartScreen() {
             </View>
           </View>
         )}
+
+        {/* Cross-sell öneri (sepete tamamlayıcı ürün eklemeye davet) */}
+        <CrossSellToast />
 
         <View className="mt-2 flex-row items-center rounded-2xl bg-surface p-3">
           <Ionicons name="information-circle" size={18} color="#005387" />

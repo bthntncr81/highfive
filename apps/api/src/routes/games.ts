@@ -7,6 +7,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 import { verifyAdmin } from '../middleware/auth';
 import { randomBytes } from 'crypto';
+import { checkAchievementsForCustomer } from '../lib/achievement-checker';
 
 type Slice = {
   label: string;
@@ -200,6 +201,9 @@ export default async function gamesRoutes(server: FastifyInstance) {
       where: { id: customerId },
       data: { lastSpinAt: new Date() },
     });
+
+    // SPIN_WIN achievement kontrolü (büyük ödül kazandıysa rozet açılabilir)
+    await checkAchievementsForCustomer(prisma, customerId).catch(() => {});
 
     return {
       attempt: {
