@@ -10,9 +10,11 @@ export const Cart = () => {
   const {
     items,
     bundles,
+    builders,
     removeItem,
     updateQuantity,
     removeBundle,
+    removeBuilderItem,
     clearCart,
     addItem,
     totalItems,
@@ -180,7 +182,7 @@ export const Cart = () => {
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-4">
-              {items.length === 0 && bundles.length === 0 ? (
+              {items.length === 0 && bundles.length === 0 && builders.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -200,6 +202,68 @@ export const Cart = () => {
                 </motion.div>
               ) : (
                 <div className="space-y-3">
+                  {/* Bundle Lines (Combos / Paket Menüler) */}
+                  {/* Builder Lines (Custom Pizza/Sandwich) */}
+                  {builders.map((b) => {
+                    const emoji = b.builderType === 'pizza' ? '🍕' : '🥪'
+                    const productName = b.builderType === 'pizza' ? 'Özel Pizza' : 'Özel Sandviç'
+                    return (
+                      <div
+                        key={b.uid}
+                        className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-3 border border-primary/30"
+                      >
+                        <div className="flex gap-3">
+                          {b.baseImage ? (
+                            <img
+                              src={b.baseImage}
+                              alt={productName}
+                              className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                              style={{ borderRadius: b.builderType === 'pizza' ? '50%' : '8px' }}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-lg bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+                              {emoji}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white px-2 py-0.5 rounded">
+                                Özel
+                              </span>
+                              <h4 className="font-display font-semibold text-foreground truncate">
+                                {emoji} {productName}
+                              </h4>
+                            </div>
+                            <p className="mt-1 text-xs text-foreground-muted">
+                              <span className="text-foreground-subtle">Hamur:</span>{' '}
+                              {b.baseName}
+                            </p>
+                            <ul className="text-xs text-foreground-muted space-y-0.5">
+                              {b.selections.map((s) => (
+                                <li key={s.category}>
+                                  <span className="text-foreground-subtle">{s.category}:</span>{' '}
+                                  {s.items.map((it) => it.name).join(', ')}
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="font-display font-bold text-primary mt-1">
+                              ₺{b.totalPrice.toFixed(2)}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => removeBuilderItem(b.uid)}
+                            className="text-foreground-subtle hover:text-primary transition-colors self-start"
+                            aria-label="Özel ürünü kaldır"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
                   {/* Bundle Lines (Combos / Paket Menüler) */}
                   {bundles.map((b) => (
                     <div
@@ -367,7 +431,7 @@ export const Cart = () => {
             </div>
 
             {/* Footer */}
-            {(items.length > 0 || bundles.length > 0) && (
+            {(items.length > 0 || bundles.length > 0 || builders.length > 0) && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

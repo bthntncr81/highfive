@@ -154,6 +154,38 @@ export default function Home() {
           </>
         )}
 
+        {/* Kendi Pizzanı / Sandviçini Yap CTA */}
+        <View className="mt-3 px-5 flex-row gap-2">
+          <Link href="/builder/pizza" asChild>
+            <Pressable
+              className="flex-1 overflow-hidden rounded-2xl p-4"
+              style={{ backgroundColor: "#bb1e10" }}
+            >
+              <Text style={{ fontSize: 32 }}>🍕</Text>
+              <Text className="mt-1 text-base font-extrabold text-white">
+                Pizzanı Tasarla
+              </Text>
+              <Text className="mt-0.5 text-[10px] text-white/85">
+                5 adımda kendi pizzan
+              </Text>
+            </Pressable>
+          </Link>
+          <Link href="/builder/sandwich" asChild>
+            <Pressable
+              className="flex-1 overflow-hidden rounded-2xl p-4"
+              style={{ backgroundColor: "#005387" }}
+            >
+              <Text style={{ fontSize: 32 }}>🥪</Text>
+              <Text className="mt-1 text-base font-extrabold text-white">
+                Sandviçini Tasarla
+              </Text>
+              <Text className="mt-0.5 text-[10px] text-white/85">
+                Ekmek + içerik özgür
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
+
         {/* Kategorisiz "Paket Menüler" (artık kompakt, sadece kategoriye atanmamış paketler) */}
         {selectedCat === "all" && hasUncategorizedBundles && (
           <View className="mt-6 px-5">

@@ -33,6 +33,7 @@ export const Order = () => {
   const {
     items,
     bundles,
+    builders,
     removeItem,
     updateQuantity,
     removeBundle,
@@ -284,9 +285,9 @@ export const Order = () => {
         }
       }
 
-      // Only block if there are no items AND no bundles — a bundle-only
-      // order is valid (e.g., customer just ordered the Family Combo).
-      if (orderItems.length === 0 && bundles.length === 0) {
+      // Only block if there are no items, bundles AND builders — a builder-only
+      // or bundle-only order is also valid.
+      if (orderItems.length === 0 && bundles.length === 0 && builders.length === 0) {
         setError('Seçilen ürünler şu anda mevcut değil');
         setIsSubmitting(false);
         return;
@@ -298,6 +299,14 @@ export const Order = () => {
           groupId: s.groupId,
           menuItemIds: s.items.map((i) => i.id),
         })),
+      }));
+
+      // Builder (custom pizza/sandwich) — backend "builder:" prefix'li cart id
+      // ile expanded. Backend builder-expansion.ts ile re-validate eder.
+      const orderBuilders = builders.map((b) => ({
+        cartId: `builder:${b.builderType}:${b.baseId}:${b.ingredientIds.slice().sort().join(',')}`,
+        price: b.totalPrice,
+        quantity: 1,
       }));
 
       // Determine order type
@@ -321,6 +330,7 @@ export const Order = () => {
           : undefined,
         items: orderItems,
         bundles: orderBundles.length > 0 ? orderBundles : undefined,
+        builders: orderBuilders.length > 0 ? orderBuilders : undefined,
         type: orderType,
         notes: orderNotes,
         tip: tipAmount > 0 ? tipAmount : undefined,

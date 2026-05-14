@@ -458,6 +458,8 @@ export const endpoints = {
       // Geriye uyumluluk
       assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
     }[];
+    // Custom pizza/sandwich builder items
+    builders?: { cartId: string; price: number; quantity: number }[];
     addressId?: string;
     customerAddress?: string;
     customerLatitude?: number;
@@ -487,6 +489,7 @@ export const endpoints = {
       selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
       assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
     }[];
+    builders?: { cartId: string; price: number; quantity: number }[];
     notes?: string;
     tip?: number;
     paymentMethod?: "CASH" | "ONLINE" | "CREDIT_CARD";
@@ -634,6 +637,48 @@ export const endpoints = {
         scratchedAt: string | null;
       };
     }>(`/api/games/scratch/${id}/scratch`, {}),
+
+  // BUILDER — Pizza/Sandwich create your own
+  builderConfig: (type: "PIZZA" | "SANDWICH") =>
+    api.get<{
+      type: "PIZZA" | "SANDWICH";
+      steps: Array<{
+        key: string;
+        title: string;
+        helper: string;
+        type: "BASE" | "INGREDIENT";
+        categories?: string[];
+        multi: boolean;
+        required: boolean;
+        max?: number;
+      }>;
+      bases: Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        basePrice: number;
+        baseImage: string;
+      }>;
+      ingredients: Array<{
+        id: string;
+        category: string;
+        name: string;
+        description: string | null;
+        extraPrice: number;
+        layerImage: string;
+        layerOrder: number;
+        calories: number | null;
+      }>;
+    }>(`/api/builder/config?type=${type}`),
+
+  builderCalculate: (data: { baseId: string; ingredientIds: string[] }) =>
+    api.post<{
+      totalPrice: number;
+      baseName: string;
+      basePrice: number;
+      extras: number;
+      ingredientList: Array<{ id: string; name: string; extraPrice: number }>;
+    }>("/api/builder/calculate", data),
 
   gameMysteryBoxList: () =>
     api.get<{

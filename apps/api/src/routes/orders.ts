@@ -7,6 +7,7 @@ import { sendOrderStatusPush } from '../lib/order-push';
 import { awardMobileOrderPoints } from '../lib/loyalty-award';
 import { processOrderForLoyalty } from '../lib/loyalty-engine';
 import { checkAchievementsForCustomer } from '../lib/achievement-checker';
+import { expandBuilderItem } from '../lib/builder-expansion';
 
 // Email notification - uses nodemailer if available
 async function sendOrderNotification(order: any) {
@@ -471,6 +472,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       type,
       items,
       bundles,
+      builders,
       notes,
       tip,
       deliveryFee,
@@ -489,6 +491,12 @@ export default async function orderRoutes(server: FastifyInstance) {
       bundles?: {
         bundleId: string;
         selections: { groupId: string; menuItemIds: string[] }[];
+      }[];
+      // Custom pizza/sandwich builder items - server re-validates pricing
+      builders?: {
+        cartId: string;
+        price: number;
+        quantity?: number;
       }[];
       notes?: string;
       tip?: number;
@@ -718,6 +726,20 @@ export default async function orderRoutes(server: FastifyInstance) {
           modifiers: [],
         });
       }
+    }
+
+    // Builder (özel pizza/sandviç) expansion + re-validation
+    for (const builderReq of builders || []) {
+      const result = await expandBuilderItem(prisma, {
+        id: builderReq.cartId,
+        price: Number(builderReq.price),
+        quantity: builderReq.quantity ?? 1,
+      });
+      if (!result.ok) {
+        return reply.status(400).send({ error: result.error });
+      }
+      subtotal += result.subtotalDelta;
+      orderItems.push(result.orderItem);
     }
 
     // Get tax rate from settings

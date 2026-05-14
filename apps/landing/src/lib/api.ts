@@ -1,6 +1,13 @@
 // API Client for connecting to HighFive Suite backend
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
+// Görsel URL'lerini absolute path'e çevir
+export function imageUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -137,6 +144,12 @@ export interface OrderBundleSelection {
   selections: { groupId: string; menuItemIds: string[] }[];
 }
 
+export interface OrderBuilderItem {
+  cartId: string;     // "builder:pizza:<baseId>:<ingredientIds.sorted>"
+  price: number;      // server re-validate eder
+  quantity?: number;
+}
+
 export interface CreateOrderRequest {
   tableId?: string;
   sessionToken?: string;
@@ -146,10 +159,12 @@ export interface CreateOrderRequest {
   customerAddress?: string;
   items: OrderItem[];
   bundles?: OrderBundleSelection[];
+  builders?: OrderBuilderItem[];
   type: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
   notes?: string;
   tip?: number;
   deliveryFee?: number;
+  paymentMethod?: string;
 }
 
 export interface TableInfo {
@@ -444,4 +459,49 @@ export const loyaltyApi = {
   // Get active bundles
   getActiveBundles: () =>
     api.get<{ bundles: any[] }>("/api/bundles/active"),
+};
+
+// ==================== BUILDER (Pizza & Sandwich) ====================
+export type BuilderConfig = {
+  type: 'PIZZA' | 'SANDWICH';
+  steps: Array<{
+    key: string;
+    title: string;
+    helper: string;
+    type: 'BASE' | 'INGREDIENT';
+    categories?: string[];
+    multi: boolean;
+    required: boolean;
+    max?: number;
+  }>;
+  bases: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    basePrice: number;
+    baseImage: string;
+  }>;
+  ingredients: Array<{
+    id: string;
+    category: string;
+    name: string;
+    description: string | null;
+    extraPrice: number;
+    layerImage: string;
+    layerOrder: number;
+    calories: number | null;
+  }>;
+};
+
+export const builderApi = {
+  getConfig: (type: 'pizza' | 'sandwich') =>
+    api.get<BuilderConfig>(`/api/builder/config?type=${type.toUpperCase()}`),
+  calculate: (data: { baseId: string; ingredientIds: string[] }) =>
+    api.post<{
+      totalPrice: number;
+      baseName: string;
+      basePrice: number;
+      extras: number;
+      ingredientList: { id: string; name: string; extraPrice: number }[];
+    }>('/api/builder/calculate', data),
 };

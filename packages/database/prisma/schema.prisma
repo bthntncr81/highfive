@@ -1333,3 +1333,64 @@ model MysteryBoxOpen {
 
   @@index([customerId, createdAt])
 }
+
+// ============================================================================
+// PIZZA & SANDWICH BUILDER — kullanıcı kendi pizzasını/sandviçini oluşturur
+// ============================================================================
+// 2D layered görselle live preview: base'in üstüne her ingredient'in transparent
+// layerImage'ı stack edilir. Her ingredient extraPrice ile temel fiyata eklenir.
+
+enum BuilderType {
+  PIZZA
+  SANDWICH
+}
+
+enum IngredientCategory {
+  DOUGH      // Hamur (pizza) / Ekmek (sandviç) - opsiyonel ekstra topping
+  BASE_SAUCE // Taban sosu (domates, beyaz, BBQ taban, mayonez)
+  CHEESE     // Peynir
+  MEAT       // Et / Sucuk / Pepperoni
+  VEGETABLE  // Sebze / Mantar
+  TOP_SAUCE  // Üst sos / drizzle (BBQ, pesto, sweet chili, trüflü)
+  SAUCE      // Genel sos (legacy — backward compat, kullanılmaz)
+  EXTRA      // Extra (özel toppings)
+}
+
+// Taban / kabuk: ince hamur pizza, kalın hamur, beyaz ekmek sandviç vs.
+model BuilderBase {
+  id          String      @id @default(cuid())
+  type        BuilderType
+  name        String      // "İnce Hamur Pizza", "Beyaz Ekmek Sandviç"
+  description String?
+  basePrice   Decimal     @db.Decimal(10, 2)
+  // Live preview için temel görsel (pizza/sandviç dilimi, transparent dışı)
+  baseImage   String
+  sortOrder   Int         @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// Malzemeler — her biri layerImage ile pizza/sandviç üzerine binebilir.
+model BuilderIngredient {
+  id          String             @id @default(cuid())
+  // Hangi tip ürünlere uygulanabilir? (PIZZA, SANDWICH; BOTH için 2 ayrı kayıt önerilir)
+  type        BuilderType
+  category    IngredientCategory
+  name        String             // "Sucuk", "Mozzarella", "Domates"
+  description String?
+  // Müşteri seçince temel fiyata eklenecek tutar
+  extraPrice  Decimal            @db.Decimal(10, 2) @default(0)
+  // 2D katman görseli (transparent PNG/SVG)
+  layerImage  String
+  // Stack sırası: küçük = altta, büyük = üstte (sos genelde 1, peynir 5, et 7)
+  layerOrder  Int                @default(0)
+  sortOrder   Int                @default(0)
+  isActive    Boolean            @default(true)
+  // Kalori/alerjen bilgisi opsiyonel
+  calories    Int?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([type, category, isActive])
+}

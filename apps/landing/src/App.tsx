@@ -15,6 +15,7 @@ import { Admin } from "./pages/Admin";
 import { Contact } from "./pages/Contact";
 import { Home } from "./pages/Home";
 import { Menu } from "./pages/Menu";
+import Builder from "./pages/Builder";
 import { NotFound } from "./pages/NotFound";
 import { Order } from "./pages/Order";
 import { Payment } from "./pages/Payment";
@@ -135,6 +136,8 @@ const AnimatedRoutes = () => {
               </PageTransition>
             }
           />
+          {/* Pizza & Sandwich Builder — kullanıcı kendi ürününü tasarlar */}
+          <Route path="/build/:type" element={<PageTransition><Builder /></PageTransition>} />
           {/* QR scan route - fetches table info and redirects to menu */}
           <Route path="/table/:tableId" element={<TableScan />} />
           {/* Payment page */}

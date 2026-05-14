@@ -10,6 +10,7 @@ import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
 import { expandBundles } from '../lib/bundle-expansion';
+import { expandBuilderItem } from '../lib/builder-expansion';
 import { evaluateCartOffers } from '../lib/cart-offers';
 
 const DELIVERY_FEE = 29; // Sabit (CUSTOMER_API.md ile uyumlu)
@@ -50,6 +51,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         // Eski: groupId bazlı (geriye uyumluluk)
         assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
       }[];
+      // Custom pizza/sandwich builder — server re-validate eder
+      builders?: { cartId: string; price: number; quantity: number }[];
       notes?: string;
       tip?: number;                                             // bahşiş
       pointsToRedeem?: number;                                  // puanla indirim
@@ -57,8 +60,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';        // ONLINE = iyzico 3DS akışı
     };
 
-    if ((!body.items || body.items.length === 0) && (!body.bundles || body.bundles.length === 0)) {
-      return reply.status(400).send({ error: 'En az bir ürün veya paket gerekli' });
+    if (
+      (!body.items || body.items.length === 0) &&
+      (!body.bundles || body.bundles.length === 0) &&
+      (!body.builders || body.builders.length === 0)
+    ) {
+      return reply.status(400).send({ error: 'En az bir ürün, paket veya özel ürün gerekli' });
     }
     if (!body.type || !['TAKEAWAY', 'DELIVERY'].includes(body.type)) {
       return reply.status(400).send({ error: 'Geçersiz sipariş tipi' });
@@ -145,6 +152,20 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       if (!res.ok) return reply.status(400).send({ error: res.error });
       subtotal += res.subtotalDelta;
       for (const oi of res.orderItems) orderItems.push(oi);
+    }
+
+    // Builder expansion: özel pizza/sandviç — server-side fiyat re-validation
+    if (body.builders && body.builders.length > 0) {
+      for (const builderReq of body.builders) {
+        const res = await expandBuilderItem(prisma, {
+          id: builderReq.cartId,
+          price: Number(builderReq.price),
+          quantity: builderReq.quantity ?? 1,
+        });
+        if (!res.ok) return reply.status(400).send({ error: res.error });
+        subtotal += res.subtotalDelta;
+        orderItems.push(res.orderItem);
+      }
     }
 
     // Tax
@@ -491,6 +512,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
         assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
       }[];
+      builders?: { cartId: string; price: number; quantity: number }[];
       notes?: string;
       tip?: number;
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';
@@ -570,6 +592,20 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       if (!res.ok) return reply.status(400).send({ error: res.error });
       subtotal += res.subtotalDelta;
       for (const oi of res.orderItems) orderItems.push(oi);
+    }
+
+    // Builder expansion (guest) — özel pizza/sandviç
+    if (body.builders && body.builders.length > 0) {
+      for (const builderReq of body.builders) {
+        const res = await expandBuilderItem(prisma, {
+          id: builderReq.cartId,
+          price: Number(builderReq.price),
+          quantity: builderReq.quantity ?? 1,
+        });
+        if (!res.ok) return reply.status(400).send({ error: res.error });
+        subtotal += res.subtotalDelta;
+        orderItems.push(res.orderItem);
+      }
     }
 
     const restaurantSettings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });

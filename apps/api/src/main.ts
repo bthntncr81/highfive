@@ -29,6 +29,7 @@ import loyaltyProgramsRoutes from './routes/loyalty-programs';
 import campaignsRoutes from './routes/campaigns';
 import optionGroupsRoutes from './routes/option-groups';
 import gamesRoutes from './routes/games';
+import builderRoutes from './routes/builder';
 import rawMaterialRoutes from './routes/rawmaterials';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
@@ -108,6 +109,7 @@ server.register(loyaltyProgramsRoutes, { prefix: '/api/loyalty/programs' }); // 
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
 server.register(optionGroupsRoutes, { prefix: '/api/option-groups' }); // Reusable bundle opsiyon grupları
 server.register(gamesRoutes, { prefix: '/api/games' }); // Spin wheel + achievements + scratch card
+server.register(builderRoutes, { prefix: '/api/builder' }); // Pizza & Sandwich builder
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API

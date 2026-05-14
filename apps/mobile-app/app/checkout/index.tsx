@@ -187,17 +187,26 @@ export default function Checkout() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      // Cart items'ı menu item ve bundle olarak ayır
+      // Cart items'ı menu item, bundle ve builder olarak ayır
       // Bundle ID formatı: "bundle:<bundleId>" veya "bundle:<bundleId>#<sel>"
-      // CartItemSelectedOption.groupId artık "<assignmentId>:<slotIndex>" formatında
+      // Builder ID formatı: "builder:<type>:<baseId>:<ingredientIds.sorted>"
+      // CartItemSelectedOption.groupId bundle için "<assignmentId>:<slotIndex>"
       const menuItemPayload: { menuItemId: string; quantity: number }[] = [];
       const bundlePayload: {
         bundleId: string;
         quantity: number;
         selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
       }[] = [];
+      const builderPayload: { cartId: string; price: number; quantity: number }[] = [];
       for (const it of items) {
-        if (it.id.startsWith("bundle:")) {
+        if (it.id.startsWith("builder:")) {
+          // Builder cart item — backend builder-expansion.ts re-validate eder
+          builderPayload.push({
+            cartId: it.id,
+            price: Number(it.price),
+            quantity: it.qty,
+          });
+        } else if (it.id.startsWith("bundle:")) {
           const bundleId = it.id.replace(/^bundle:/, "").split("#")[0];
           // selectedOptions'tan slot key'e göre grupla (assignmentId:slotIndex)
           const bySlot = new Map<string, string[]>();
@@ -236,6 +245,7 @@ export default function Checkout() {
           customerLongitude: manualLng ?? undefined,
           items: menuItemPayload,
           bundles: bundlePayload.length > 0 ? bundlePayload : undefined,
+          builders: builderPayload.length > 0 ? builderPayload : undefined,
           notes: notes.trim() || undefined,
           tip: tipNumber || undefined,
           paymentMethod,
@@ -254,6 +264,7 @@ export default function Checkout() {
           type: orderType,
           items: menuItemPayload,
           bundles: bundlePayload.length > 0 ? bundlePayload : undefined,
+          builders: builderPayload.length > 0 ? builderPayload : undefined,
           ...(orderType === "DELIVERY"
             ? addressId
               ? { addressId }
