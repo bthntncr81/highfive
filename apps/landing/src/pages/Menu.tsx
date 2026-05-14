@@ -361,8 +361,43 @@ export const Menu = () => {
           </div>
         )}
 
-        {/* Paket Menüler — kategori filtresi olmadan, üstte */}
-        {!loading && !activeCategory && <BundleSection />}
+        {/* Paket Menüler — ana sayfada kategorisizleri (null) göster */}
+        {!loading && !activeCategory && <BundleSection categoryFilter={null} />}
+
+        {/* HighFive Kazandıran Menüler kategorisi: Builder kartları + bundle'lar */}
+        {!loading && activeCategory === 'cat-highfive' && (
+          <>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <a
+                href="/build/pizza"
+                className="group rounded-2xl border-2 border-primary bg-white overflow-hidden hover:shadow-md transition"
+              >
+                <div className="h-32 flex items-center justify-center bg-amber-100 text-7xl">🍕</div>
+                <div className="p-4">
+                  <p className="font-display font-extrabold text-foreground text-base">Pizzanı Tasarla</p>
+                  <p className="text-xs text-foreground-muted mt-0.5">5 adımda kendi pizzan</p>
+                  <span className="text-xs text-primary font-semibold mt-2 inline-flex items-center">
+                    Başla →
+                  </span>
+                </div>
+              </a>
+              <a
+                href="/build/sandwich"
+                className="group rounded-2xl border-2 border-accent bg-white overflow-hidden hover:shadow-md transition"
+              >
+                <div className="h-32 flex items-center justify-center bg-blue-100 text-7xl">🥪</div>
+                <div className="p-4">
+                  <p className="font-display font-extrabold text-foreground text-base">Sandviçini Tasarla</p>
+                  <p className="text-xs text-foreground-muted mt-0.5">Ekmek + içerik özgür</p>
+                  <span className="text-xs text-accent font-semibold mt-2 inline-flex items-center">
+                    Başla →
+                  </span>
+                </div>
+              </a>
+            </div>
+            <BundleSection categoryFilter="cat-highfive" />
+          </>
+        )}
 
         {/* Grid */}
         {!loading && (

@@ -78,7 +78,7 @@ type UnifiedSlot =
       label: string
     }
 
-export const BundleSection = () => {
+export const BundleSection = ({ categoryFilter }: { categoryFilter?: string | null } = {}) => {
   const [bundles, setBundles] = useState<ApiBundle[]>([])
   const [menuItems, setMenuItems] = useState<ApiMenuItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,8 +98,13 @@ export const BundleSection = () => {
     }
   }, [])
 
+  // Kategoriye göre filtrele (categoryFilter null = sadece kategorisiz, undefined = tümü)
+  const visibleBundles = categoryFilter !== undefined
+    ? bundles.filter((b) => (b as any).categoryId === categoryFilter)
+    : bundles
+
   if (loading) return null
-  if (bundles.length === 0) return null
+  if (visibleBundles.length === 0) return null
 
   return (
     <>
@@ -115,7 +120,7 @@ export const BundleSection = () => {
           </div>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bundles.map((b) => {
+          {visibleBundles.map((b) => {
             const price = num(b.bundlePrice)
             const orig = num(b.originalPrice)
             const savings = num(b.savings)

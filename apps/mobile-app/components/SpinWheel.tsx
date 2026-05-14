@@ -159,12 +159,14 @@ export function SpinWheel({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 items-center justify-center bg-black/80 px-5">
-        {/* Kapatma butonu */}
+        {/* Kapatma butonu — sağ üstte belirgin */}
         <Pressable
           onPress={onClose}
-          className="absolute right-5 top-12 h-10 w-10 items-center justify-center rounded-full bg-white/20"
+          hitSlop={12}
+          className="absolute right-5 top-12 h-11 w-11 items-center justify-center rounded-full bg-white shadow-lg"
+          style={{ elevation: 6, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 6 }}
         >
-          <Ionicons name="close" size={22} color="#fff" />
+          <Ionicons name="close" size={24} color="#1a1a1a" />
         </Pressable>
 
         <View className="w-full rounded-3xl bg-gradient-to-b from-amber-400 to-amber-600 p-5" style={{ backgroundColor: "#d97706" }}>
@@ -267,6 +269,13 @@ export function SpinWheel({
                 />
                 <Animated.View style={[wheelStyle, { marginTop: 15 }]}>
                   <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
+                    {/* Dış altın halka */}
+                    <G>
+                      <Path
+                        d={`M ${RADIUS} ${RADIUS} m -${RADIUS} 0 a ${RADIUS} ${RADIUS} 0 1 0 ${RADIUS * 2} 0 a ${RADIUS} ${RADIUS} 0 1 0 -${RADIUS * 2} 0 Z`}
+                        fill="#fbbf24"
+                      />
+                    </G>
                     <G>
                       {config.slices.map((slice, i) => {
                         const startAngle = i * anglePerSlice;
@@ -278,31 +287,46 @@ export function SpinWheel({
                           RADIUS * 0.65,
                           midAngle,
                         );
+                        // Daha kısa label — emoji + ilk birkaç kelime
+                        const shortLabel = slice.label.length > 9 ? slice.label.slice(0, 8) + "…" : slice.label;
                         return (
                           <G key={i}>
                             <Path
                               d={describeArc(
                                 RADIUS,
                                 RADIUS,
-                                RADIUS,
+                                RADIUS - 4,
                                 startAngle,
                                 endAngle,
                               )}
                               fill={slice.color}
                               stroke="#fff"
-                              strokeWidth={2}
+                              strokeWidth={1.5}
                             />
+                            {/* Emoji - büyük, dilim ortasında */}
                             <SvgText
                               x={labelPos.x}
-                              y={labelPos.y}
+                              y={labelPos.y - 8}
                               fill="#fff"
-                              fontSize={11}
+                              fontSize={20}
+                              textAnchor="middle"
+                              alignmentBaseline="middle"
+                              transform={`rotate(${midAngle}, ${labelPos.x}, ${labelPos.y - 8})`}
+                            >
+                              {slice.emoji ?? ""}
+                            </SvgText>
+                            {/* Label - emoji altında küçük */}
+                            <SvgText
+                              x={labelPos.x}
+                              y={labelPos.y + 12}
+                              fill="#fff"
+                              fontSize={9}
                               fontWeight="bold"
                               textAnchor="middle"
                               alignmentBaseline="middle"
-                              transform={`rotate(${midAngle}, ${labelPos.x}, ${labelPos.y})`}
+                              transform={`rotate(${midAngle}, ${labelPos.x}, ${labelPos.y + 12})`}
                             >
-                              {slice.emoji ?? ""} {slice.label.length > 12 ? slice.label.slice(0, 10) + ".." : slice.label}
+                              {shortLabel}
                             </SvgText>
                           </G>
                         );

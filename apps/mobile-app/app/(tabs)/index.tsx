@@ -21,9 +21,10 @@ import { Logo } from "@/components/ui/Logo";
 import { ActiveOrderCard } from "@/components/ui/ActiveOrderCard";
 import { BundleCard } from "@/components/ui/BundleCard";
 import { LoyaltyTeaser } from "@/components/ui/LoyaltyTeaser";
-import { SpinWheelCard } from "@/components/SpinWheelCard";
 import { StreakWidget } from "@/components/StreakWidget";
 import { BirthdayCelebration } from "@/components/BirthdayCelebration";
+import { DailySpinWheelTrigger } from "@/components/DailySpinWheelTrigger";
+import { BuilderCategoryCards } from "@/components/BuilderCategoryCards";
 
 export default function Home() {
   const [selectedCat, setSelectedCat] = useState("all");
@@ -144,47 +145,13 @@ export default function Home() {
           )}
         </View>
 
-        {/* Şans Çarkı kartı + Streak Widget (kullanıcı giriş yapmışsa) */}
-        {user && (
-          <>
-            <SpinWheelCard />
-            {streak && streak.current > 0 && (
-              <StreakWidget currentStreak={streak.current} longestStreak={streak.longest} />
-            )}
-          </>
+        {/* Streak Widget (kullanıcı giriş yapmışsa) */}
+        {user && streak && streak.current > 0 && (
+          <StreakWidget currentStreak={streak.current} longestStreak={streak.longest} />
         )}
 
-        {/* Kendi Pizzanı / Sandviçini Yap CTA */}
-        <View className="mt-3 px-5 flex-row gap-2">
-          <Link href="/builder/pizza" asChild>
-            <Pressable
-              className="flex-1 overflow-hidden rounded-2xl p-4"
-              style={{ backgroundColor: "#bb1e10" }}
-            >
-              <Text style={{ fontSize: 32 }}>🍕</Text>
-              <Text className="mt-1 text-base font-extrabold text-white">
-                Pizzanı Tasarla
-              </Text>
-              <Text className="mt-0.5 text-[10px] text-white/85">
-                5 adımda kendi pizzan
-              </Text>
-            </Pressable>
-          </Link>
-          <Link href="/builder/sandwich" asChild>
-            <Pressable
-              className="flex-1 overflow-hidden rounded-2xl p-4"
-              style={{ backgroundColor: "#005387" }}
-            >
-              <Text style={{ fontSize: 32 }}>🥪</Text>
-              <Text className="mt-1 text-base font-extrabold text-white">
-                Sandviçini Tasarla
-              </Text>
-              <Text className="mt-0.5 text-[10px] text-white/85">
-                Ekmek + içerik özgür
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
+        {/* Spin Wheel artık otomatik açılır (her gün 1 kez) — burada kart yok */}
+        {user && <DailySpinWheelTrigger />}
 
         {/* Kategorisiz "Paket Menüler" (artık kompakt, sadece kategoriye atanmamış paketler) */}
         {selectedCat === "all" && hasUncategorizedBundles && (
@@ -227,12 +194,21 @@ export default function Home() {
           onSelect={setSelectedCat}
         />
 
+        {/* HighFive Kazandıran Menüler kategorisi seçildiğinde Builder kartları */}
+        {selectedCat === "cat-highfive" && (
+          <View className="mt-6 px-5">
+            <BuilderCategoryCards />
+          </View>
+        )}
+
         {/* Kategoriye atanmış paketler (kategori seçildiğinde) */}
         {selectedCat !== "all" && bundlesForCategory.length > 0 && (
           <View className="mt-6 px-5">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-lg font-extrabold text-foreground">
-                📦 {categories.find((c) => c.id === selectedCat)?.name ?? ""} Paketleri
+                {selectedCat === "cat-highfive"
+                  ? "📦 Paket Menüler"
+                  : `📦 ${categories.find((c) => c.id === selectedCat)?.name ?? ""} Paketleri`}
               </Text>
               <Text className="text-xs text-foreground-muted">
                 {bundlesForCategory.length} paket
