@@ -22,6 +22,7 @@ import LoyaltyPrograms from './pages/LoyaltyPrograms';
 import OptionGroups from './pages/OptionGroups';
 import SpinWheelConfig from './pages/SpinWheelConfig';
 import AchievementsAdmin from './pages/Achievements';
+import BuilderAdmin from './pages/Builder';
 import PushNotifications from './pages/PushNotifications';
 import RawMaterialsManagement from './pages/RawMaterialsManagement';
 import CourierDashboard from './pages/CourierDashboard';
@@ -186,6 +187,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <AchievementsAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="builder"
+                element={
+                  <AdminRoute>
+                    <BuilderAdmin />
                   </AdminRoute>
                 }
               />

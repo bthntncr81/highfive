@@ -67,6 +67,7 @@ export default function Layout() {
     { to: '/option-groups', icon: ClipboardList, label: 'Opsiyon Grupları', emoji: '📋' },
     { to: '/spin-wheel', icon: ClipboardList, label: 'Şans Çarkı', emoji: '🎡' },
     { to: '/achievements', icon: ClipboardList, label: 'Rozetler', emoji: '🏅' },
+    { to: '/builder', icon: ClipboardList, label: 'Builder (Pizza/Sandviç)', emoji: '🍕' },
     { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },
