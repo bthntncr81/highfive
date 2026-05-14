@@ -136,37 +136,56 @@ export default function MysteryBoxPage() {
   }));
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-white">
+    <SafeAreaView edges={["top"]} className="flex-1" style={{ backgroundColor: "#0f172a" }}>
+      {/* Üst başlık — koyu navy, çark/teaser ile tutarlı */}
       <View className="flex-row items-center px-4 py-3">
         <Pressable
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full bg-surface"
+          className="h-10 w-10 items-center justify-center rounded-full"
+          style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
         >
-          <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={22} color="#fff" />
         </Pressable>
-        <Text className="ml-3 flex-1 text-lg font-extrabold text-foreground">
-          🎁 Sürpriz Kutular
-        </Text>
+        <View className="ml-3 flex-1">
+          <Text style={{ color: "#fbbf24", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>
+            ÖDÜL OYUNLARI
+          </Text>
+          <Text className="text-xl font-extrabold text-white">
+            🎁 Sürpriz Kutular
+          </Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View className="mb-4 rounded-2xl bg-purple-50 border border-purple-200 p-3">
-          <Text className="text-[11px] font-bold uppercase tracking-wide text-purple-800">
-            Puan harca, sürpriz kazan
-          </Text>
-          <Text className="mt-1 text-sm text-purple-900">
-            Kazanılan puanlarınla farklı seviyelerde sürpriz kutular açarak indirim, bonus puan veya özel hediye kazanabilirsin.
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        style={{ backgroundColor: "#f8fafc" }}
+        className="flex-1 rounded-t-3xl"
+      >
+        {/* Bilgi kart — altın aksanlı */}
+        <View
+          className="mb-5 rounded-2xl p-4"
+          style={{ backgroundColor: "#fef3c7", borderWidth: 1, borderColor: "#fcd34d" }}
+        >
+          <View className="flex-row items-center mb-1">
+            <Text style={{ fontSize: 18 }}>⭐</Text>
+            <Text className="ml-2 text-[11px] font-bold uppercase tracking-wider text-amber-800">
+              Puan Harca, Sürpriz Kazan
+            </Text>
+          </View>
+          <Text className="text-sm text-amber-900 leading-5">
+            Puanlarını harcayarak farklı seviyelerde sürpriz kutular aç —
+            indirim, bonus puan veya özel hediye kazan.
           </Text>
         </View>
 
         {loading ? (
           <View className="py-12 items-center">
-            <ActivityIndicator color="#8b5cf6" />
+            <ActivityIndicator color="#0f172a" size="large" />
           </View>
         ) : boxes.length === 0 ? (
-          <View className="items-center rounded-2xl bg-surface p-8">
-            <Text style={{ fontSize: 48 }}>📦</Text>
-            <Text className="mt-3 text-base font-bold text-foreground">
+          <View className="items-center rounded-2xl bg-white p-10 border border-gray-200">
+            <Text style={{ fontSize: 56 }}>📦</Text>
+            <Text className="mt-4 text-base font-extrabold text-foreground">
               Şu an açık kutu yok
             </Text>
             <Text className="mt-1 text-center text-xs text-foreground-muted">
@@ -174,102 +193,195 @@ export default function MysteryBoxPage() {
             </Text>
           </View>
         ) : (
-          <View className="space-y-3">
-            {boxes.map((box) => (
-              <Pressable
-                key={box.id}
-                onPress={() => handleOpen(box)}
-                disabled={!!openingBoxId}
-                className="rounded-2xl border-2 border-purple-300 bg-purple-50 p-4"
-              >
-                <View className="flex-row items-center">
-                  <Animated.View style={openingBoxId === box.id ? boxAnim : undefined}>
-                    <Text style={{ fontSize: 56 }}>{box.emoji}</Text>
-                  </Animated.View>
-                  <View className="ml-3 flex-1">
-                    <Text className="text-base font-extrabold text-purple-900">
-                      {box.name}
-                    </Text>
-                    {box.description && (
-                      <Text className="text-xs text-purple-700 mt-0.5">
-                        {box.description}
+          <View style={{ gap: 12 }}>
+            {boxes.map((box) => {
+              const opening = openingBoxId === box.id;
+              return (
+                <Pressable
+                  key={box.id}
+                  onPress={() => handleOpen(box)}
+                  disabled={!!openingBoxId}
+                  className="overflow-hidden rounded-3xl bg-white"
+                  style={{
+                    elevation: 4,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.08,
+                    shadowRadius: 6,
+                    borderWidth: opening ? 2 : 1,
+                    borderColor: opening ? "#fbbf24" : "#e5e7eb",
+                  }}
+                >
+                  {/* Üst — koyu navy şerit, kutu emoji */}
+                  <View
+                    className="px-5 py-4 flex-row items-center"
+                    style={{ backgroundColor: "#0f172a" }}
+                  >
+                    <Animated.View style={opening ? boxAnim : undefined}>
+                      <Text style={{ fontSize: 56 }}>{box.emoji}</Text>
+                    </Animated.View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-lg font-extrabold text-white">
+                        {box.name}
                       </Text>
-                    )}
-                    <View className="mt-2 flex-row items-center gap-1">
-                      {box.prizes.slice(0, 5).map((p, i) => (
-                        <View
-                          key={i}
-                          className="rounded-full bg-white/80 px-1.5 py-0.5"
-                        >
-                          <Text className="text-[10px]">{p.emoji ?? "🎁"}</Text>
-                        </View>
-                      ))}
-                      {box.prizes.length > 5 && (
-                        <Text className="text-[10px] text-purple-700">
-                          +{box.prizes.length - 5}
+                      {box.description && (
+                        <Text className="text-[11px] text-white/70 mt-0.5" numberOfLines={2}>
+                          {box.description}
                         </Text>
                       )}
                     </View>
+                    {/* Puan badge */}
+                    <View
+                      className="rounded-full px-3 py-2 ml-2"
+                      style={{ backgroundColor: "#fbbf24" }}
+                    >
+                      <Text className="text-xs font-extrabold" style={{ color: "#0f172a" }}>
+                        {box.pointsCost} ⭐
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <View className="mt-3 flex-row items-center justify-between">
-                  <Text className="text-[11px] text-purple-700">
-                    {box.prizes.length} farklı ödül
-                  </Text>
-                  <View className="rounded-full bg-purple-500 px-4 py-2">
-                    <Text className="text-sm font-extrabold text-white">
-                      {openingBoxId === box.id
-                        ? "Açılıyor..."
-                        : `${box.pointsCost} puan → AÇ`}
+
+                  {/* Alt — ödül önizleme + AÇ butonu */}
+                  <View className="px-5 py-4">
+                    <Text className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                      İçinden çıkabilecek {box.prizes.length} ödül
                     </Text>
+                    <View className="flex-row items-center mb-3" style={{ gap: 6 }}>
+                      {box.prizes.slice(0, 6).map((p, i) => (
+                        <View
+                          key={i}
+                          className="rounded-full px-2 py-1"
+                          style={{ backgroundColor: "#fef3c7" }}
+                        >
+                          <Text style={{ fontSize: 14 }}>{p.emoji ?? "🎁"}</Text>
+                        </View>
+                      ))}
+                      {box.prizes.length > 6 && (
+                        <Text className="text-[11px] font-bold text-gray-500">
+                          +{box.prizes.length - 6}
+                        </Text>
+                      )}
+                    </View>
+                    <View
+                      className="rounded-full py-3 items-center"
+                      style={{
+                        backgroundColor: opening ? "#94a3b8" : "#0f172a",
+                      }}
+                    >
+                      <Text className="text-sm font-extrabold text-white">
+                        {opening ? "🌀 Açılıyor..." : "🎁  KUTUYU AÇ"}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </Pressable>
-            ))}
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>
 
-      {/* Sonuç modal */}
-      <Modal visible={!!result} transparent animationType="fade" onRequestClose={() => setResult(null)}>
-        <View className="flex-1 items-center justify-center bg-black/70 px-6">
-          <View
-            className="w-full rounded-3xl p-6"
+      {/* Sonuç modal — wheel/teaser ile aynı dil */}
+      <Modal
+        visible={!!result}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResult(null)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-5"
+          style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+        >
+          {/* Sağ üst kapatma */}
+          <Pressable
+            onPress={() => {
+              setResult(null);
+              refresh();
+            }}
+            hitSlop={16}
+            className="absolute right-5 top-12 h-12 w-12 items-center justify-center rounded-full bg-white"
             style={{
-              backgroundColor: result?.prizeType === "NOTHING" ? "#6b7280" : "#8b5cf6",
+              elevation: 8,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
             }}
           >
-            <Text className="text-center text-6xl mt-2">
-              {result?.prizeType === "NOTHING" ? "😔" : "🎉"}
-            </Text>
-            <Text className="mt-4 text-center text-2xl font-extrabold text-white">
-              {result?.prizeLabel}
-            </Text>
-            {result && result.prizeType !== "NOTHING" && (
-              <Text className="mt-1 text-center text-xs text-white/80">
-                {result.prizeType === "DISCOUNT_PERCENT" || result.prizeType === "DISCOUNT_FIXED"
-                  ? "Kuponun otomatik oluşturuldu, 7 gün geçerli"
-                  : result.prizeType === "POINTS"
-                    ? "Puanlar hesabına eklendi"
-                    : "Ödül hesabında"}
-              </Text>
-            )}
-            <Pressable
-              onPress={() => {
-                setResult(null);
-                refresh();
-              }}
-              className="mt-5 rounded-full bg-white px-6 py-3"
+            <Ionicons name="close" size={26} color="#1a1a1a" />
+          </Pressable>
+
+          <View
+            className="w-full max-w-md rounded-3xl bg-white overflow-hidden"
+            style={{
+              elevation: 12,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 16,
+            }}
+          >
+            <View
+              className="px-5 pt-6 pb-4 items-center"
+              style={{ backgroundColor: "#0f172a" }}
             >
-              <Text
-                className="text-center text-base font-extrabold"
-                style={{
-                  color: result?.prizeType === "NOTHING" ? "#374151" : "#8b5cf6",
-                }}
-              >
-                Tamam
+              <Text style={{ fontSize: 32 }}>
+                {result?.prizeType === "NOTHING" ? "📦" : "🎁"}
               </Text>
-            </Pressable>
+              <Text className="mt-1 text-xl font-extrabold text-white">
+                {result?.prizeType === "NOTHING" ? "Kutu Boş Çıktı" : "Kutu Açıldı!"}
+              </Text>
+            </View>
+
+            <View className="py-10 items-center px-6">
+              <Text style={{ fontSize: 80 }}>
+                {result?.prizeType === "NOTHING" ? "😔" : "🎉"}
+              </Text>
+              <Text className="mt-4 text-center text-xs font-bold uppercase tracking-widest text-foreground-muted">
+                {result?.prizeType === "NOTHING" ? "Maalesef" : "Kazandığın"}
+              </Text>
+              <Text className="mt-1 text-center text-3xl font-extrabold text-foreground">
+                {result?.prizeLabel}
+              </Text>
+
+              {result && result.prizeType !== "NOTHING" && (
+                <View
+                  className="mt-4 rounded-xl border px-4 py-2"
+                  style={{
+                    backgroundColor:
+                      result.prizeType === "POINTS" ? "#dbeafe" : "#d1fae5",
+                    borderColor:
+                      result.prizeType === "POINTS" ? "#93c5fd" : "#86efac",
+                  }}
+                >
+                  <Text
+                    className="text-xs font-semibold text-center"
+                    style={{
+                      color: result.prizeType === "POINTS" ? "#1e40af" : "#065f46",
+                    }}
+                  >
+                    {result.prizeType === "DISCOUNT_PERCENT" ||
+                    result.prizeType === "DISCOUNT_FIXED"
+                      ? "🎁 Kuponun hesabında — 7 gün geçerli"
+                      : result.prizeType === "POINTS"
+                        ? "⭐ Puanlar hesabına eklendi"
+                        : "Ödülün hesabında"}
+                  </Text>
+                </View>
+              )}
+
+              <Pressable
+                onPress={() => {
+                  setResult(null);
+                  refresh();
+                }}
+                className="mt-6 rounded-full px-10 py-3"
+                style={{ backgroundColor: "#0f172a" }}
+              >
+                <Text className="text-base font-extrabold text-white">
+                  {result?.prizeType === "NOTHING" ? "Tamam" : "Harika!"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>

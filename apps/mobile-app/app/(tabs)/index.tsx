@@ -23,7 +23,7 @@ import { BundleCard } from "@/components/ui/BundleCard";
 import { LoyaltyTeaser } from "@/components/ui/LoyaltyTeaser";
 import { StreakWidget } from "@/components/StreakWidget";
 import { BirthdayCelebration } from "@/components/BirthdayCelebration";
-import { DailySpinWheelTrigger } from "@/components/DailySpinWheelTrigger";
+import { DailyGameTrigger } from "@/components/DailyGameTrigger";
 import { BuilderCategoryCards } from "@/components/BuilderCategoryCards";
 
 export default function Home() {
@@ -151,7 +151,7 @@ export default function Home() {
         )}
 
         {/* Spin Wheel artık otomatik açılır (her gün 1 kez) — burada kart yok */}
-        {user && <DailySpinWheelTrigger />}
+        {user && <DailyGameTrigger />}
 
         {/* Kategorisiz "Paket Menüler" (artık kompakt, sadece kategoriye atanmamış paketler) */}
         {selectedCat === "all" && hasUncategorizedBundles && (

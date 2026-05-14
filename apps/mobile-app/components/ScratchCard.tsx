@@ -33,8 +33,8 @@ type Reward = {
 function PrizeContent({ reward }: { reward: Reward }) {
   const isNothing = reward.prizeType === "NOTHING";
   return (
-    <View className="items-center justify-center">
-      <Text style={{ fontSize: 48 }}>
+    <View className="items-center justify-center px-3">
+      <Text style={{ fontSize: 56 }}>
         {isNothing
           ? "😔"
           : reward.prizeType === "POINTS"
@@ -42,21 +42,37 @@ function PrizeContent({ reward }: { reward: Reward }) {
             : "🎉"}
       </Text>
       <Text
-        className={`mt-2 text-center text-2xl font-extrabold ${
-          isNothing ? "text-gray-500" : "text-amber-700"
-        }`}
+        className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest"
+        style={{ color: isNothing ? "#6b7280" : "#0f172a" }}
+      >
+        {isNothing ? "Maalesef" : "Kazandın"}
+      </Text>
+      <Text
+        className="mt-1 text-center text-2xl font-extrabold leading-tight"
+        style={{ color: isNothing ? "#374151" : "#0f172a" }}
+        numberOfLines={2}
       >
         {reward.prizeLabel}
       </Text>
       {!isNothing && reward.prizeType === "DISCOUNT_PERCENT" && (
-        <Text className="mt-1 text-center text-[11px] text-amber-700/80">
-          Kupon hesabında — 7 gün geçerli
-        </Text>
+        <View
+          className="mt-3 rounded-full px-3 py-1"
+          style={{ backgroundColor: "#0f172a" }}
+        >
+          <Text className="text-[10px] font-bold text-white">
+            🎁 Kupon · 7 gün geçerli
+          </Text>
+        </View>
       )}
       {!isNothing && reward.prizeType === "POINTS" && (
-        <Text className="mt-1 text-center text-[11px] text-amber-700/80">
-          Puanlar hesabına eklendi
-        </Text>
+        <View
+          className="mt-3 rounded-full px-3 py-1"
+          style={{ backgroundColor: "#0f172a" }}
+        >
+          <Text className="text-[10px] font-bold text-white">
+            ⭐ Puanlar hesabında
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -84,16 +100,22 @@ function ScratchStripe({
     setTimeout(() => onScratched(), 320);
   };
 
-  // Renk çeşitlemesi
-  const colors = ["#9ca3af", "#a3a3a3", "#9ca3af", "#a3a3a3", "#9ca3af"];
-  const bg = colors[index % colors.length];
+  // Altın metalik şerit görünümü — gümüş yerine sıcak amber tonlar
+  const gradients = [
+    { bg: "#d97706", inner: "#fbbf24" },
+    { bg: "#b45309", inner: "#f59e0b" },
+    { bg: "#d97706", inner: "#fbbf24" },
+    { bg: "#b45309", inner: "#f59e0b" },
+    { bg: "#d97706", inner: "#fbbf24" },
+  ];
+  const colors = gradients[index % gradients.length];
 
   return (
     <Pressable
       onPress={handleScratch}
       style={{
         flex: 1,
-        marginHorizontal: 1,
+        marginHorizontal: 2,
         height: "100%",
       }}
     >
@@ -102,14 +124,30 @@ function ScratchStripe({
           animStyle,
           {
             flex: 1,
-            backgroundColor: bg,
-            borderRadius: 4,
+            backgroundColor: colors.bg,
+            borderRadius: 6,
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: colors.inner,
           },
         ]}
       >
-        <Text style={{ fontSize: 20 }}>🪙</Text>
+        {/* Altın metalik vurgu */}
+        <View
+          style={{
+            position: "absolute",
+            top: "20%",
+            left: "10%",
+            right: "10%",
+            height: 2,
+            backgroundColor: colors.inner,
+            opacity: 0.6,
+            borderRadius: 1,
+          }}
+        />
+        <Text style={{ fontSize: 22 }}>🪙</Text>
       </Animated.View>
     </Pressable>
   );
@@ -158,8 +196,12 @@ export function ScratchCard({
 
   if (loading) {
     return (
-      <View className="my-4 rounded-2xl bg-amber-50 p-5">
-        <Text className="text-center text-sm text-amber-800">
+      <View
+        className="my-4 rounded-3xl p-6 items-center"
+        style={{ backgroundColor: "#0f172a" }}
+      >
+        <Text style={{ fontSize: 32 }}>🎁</Text>
+        <Text className="mt-2 text-center text-sm font-bold text-white">
           Sürpriz hazırlanıyor...
         </Text>
       </View>
@@ -171,32 +213,66 @@ export function ScratchCard({
   const showPrize = scratchedCount >= STRIPES;
 
   return (
-    <View className="my-4 overflow-hidden rounded-2xl border-2 border-amber-300 bg-amber-50">
-      <View className="flex-row items-center justify-between px-4 py-3 bg-amber-100 border-b border-amber-200">
+    <View
+      className="my-4 overflow-hidden rounded-3xl"
+      style={{
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#fcd34d",
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      }}
+    >
+      {/* Üst başlık — koyu navy + altın aksanı */}
+      <View
+        className="flex-row items-center justify-between px-4 py-3"
+        style={{ backgroundColor: "#0f172a" }}
+      >
         <View className="flex-row items-center">
-          <Text style={{ fontSize: 20 }}>🎁</Text>
-          <Text className="ml-2 text-sm font-extrabold text-amber-900">
-            Kazı Kazan Kartın!
-          </Text>
+          <Text style={{ fontSize: 20 }}>🎉</Text>
+          <View className="ml-2">
+            <Text style={{ color: "#fbbf24", fontSize: 9, fontWeight: "800", letterSpacing: 1.2 }}>
+              SİPARİŞ HEDİYESİ
+            </Text>
+            <Text className="text-sm font-extrabold text-white">
+              Kazı Kazan Kartın
+            </Text>
+          </View>
         </View>
         {onClose && (
-          <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={18} color="#92400e" />
+          <Pressable
+            onPress={onClose}
+            hitSlop={8}
+            className="h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+          >
+            <Ionicons name="close" size={18} color="#fff" />
           </Pressable>
         )}
       </View>
 
       <View className="p-5">
-        <Text className="text-center text-[11px] text-amber-800 mb-3">
+        <Text
+          className="text-center text-[11px] mb-3 font-semibold"
+          style={{ color: showPrize ? "#0f172a" : "#92400e" }}
+        >
           {showPrize
             ? "🎊 Sürprizi açtın!"
-            : "🪙 Parmağınla şeritleri kazı — sürpriz altında saklı"}
+            : "🪙 Şeritlere dokun — sürpriz altında saklı"}
         </Text>
 
         {/* Kart altında ödül */}
         <View
-          className="rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 p-4 items-center justify-center"
-          style={{ minHeight: 160, backgroundColor: "#fef3c7" }}
+          className="rounded-2xl p-4 items-center justify-center"
+          style={{
+            minHeight: 180,
+            backgroundColor: "#fef3c7",
+            borderWidth: 1,
+            borderColor: "#fcd34d",
+          }}
         >
           <PrizeContent reward={reward} />
 
@@ -210,7 +286,7 @@ export function ScratchCard({
                 right: 8,
                 bottom: 8,
                 flexDirection: "row",
-                borderRadius: 12,
+                borderRadius: 14,
                 overflow: "hidden",
               }}
             >
@@ -226,9 +302,22 @@ export function ScratchCard({
         </View>
 
         {!showPrize && (
-          <Text className="mt-3 text-center text-[10px] text-amber-700">
-            {scratchedCount} / {STRIPES} şerit açıldı
-          </Text>
+          <View className="mt-4 flex-row items-center justify-center" style={{ gap: 4 }}>
+            {Array.from({ length: STRIPES }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 24,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i < scratchedCount ? "#0f172a" : "#e5e7eb",
+                }}
+              />
+            ))}
+            <Text className="ml-2 text-[10px] font-bold text-foreground-muted">
+              {scratchedCount}/{STRIPES}
+            </Text>
+          </View>
         )}
       </View>
     </View>
