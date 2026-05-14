@@ -73,6 +73,113 @@ export const Home = () => {
       {/* Hero Section */}
       <Hero />
 
+      {/* Build Your Own — prominent CTA right after hero */}
+      <SectionContainer variant="cream">
+        <RevealOnScroll>
+          <div className="text-center mb-8">
+            <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-display font-semibold tracking-wide mb-3">
+              ✨ YENİ
+            </span>
+            <h2 className="font-heading font-bold text-4xl md:text-5xl text-foreground mb-3">
+              Kendi Lezzetini Tasarla
+            </h2>
+            <p className="font-body text-lg text-foreground-muted max-w-xl mx-auto">
+              Hamur, sos, peynir, içerik — adım adım kendi pizzanı veya sandviçini oluştur.
+              Anlık 2D önizleme ile gözlerinin önünde şekillensin.
+            </p>
+          </div>
+        </RevealOnScroll>
+
+        <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          {/* Pizza Builder card */}
+          <RevealOnScroll delay={0.05}>
+            <Link to="/build/pizza" className="block group">
+              <motion.div
+                whileHover={{ y: -6 }}
+                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-500 via-orange-500 to-amber-400 p-8 md:p-10 text-white shadow-xl h-full"
+              >
+                {/* Decorative blurs */}
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/20 rounded-full blur-3xl" />
+                <div className="absolute -bottom-16 -left-12 w-56 h-56 bg-yellow-300/30 rounded-full blur-3xl" />
+
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="text-7xl md:text-8xl drop-shadow-lg" aria-hidden>
+                      🍕
+                    </div>
+                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">
+                      5 ADIM
+                    </span>
+                  </div>
+                  <h3 className="font-heading font-bold text-3xl md:text-4xl mb-2">
+                    Kendi Pizzanı Tasarla
+                  </h3>
+                  <p className="font-body text-white/90 text-base md:text-lg mb-6">
+                    Hamur → Taban Sos → Peynir → İçerik → Üst Sos
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {['İnce', 'Klasik', 'Kalın'].map((b) => (
+                      <span key={b} className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-semibold">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="inline-flex items-center gap-2 bg-white text-red-600 font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg group-hover:shadow-2xl transition-shadow">
+                    Tasarlamaya Başla
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </motion.div>
+            </Link>
+          </RevealOnScroll>
+
+          {/* Sandwich Builder card */}
+          <RevealOnScroll delay={0.12}>
+            <Link to="/build/sandwich" className="block group">
+              <motion.div
+                whileHover={{ y: -6 }}
+                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-700 via-yellow-600 to-orange-500 p-8 md:p-10 text-white shadow-xl h-full"
+              >
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/20 rounded-full blur-3xl" />
+                <div className="absolute -bottom-16 -left-12 w-56 h-56 bg-amber-300/30 rounded-full blur-3xl" />
+
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="text-7xl md:text-8xl drop-shadow-lg" aria-hidden>
+                      🥪
+                    </div>
+                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">
+                      5 ADIM
+                    </span>
+                  </div>
+                  <h3 className="font-heading font-bold text-3xl md:text-4xl mb-2">
+                    Kendi Sandviçini Tasarla
+                  </h3>
+                  <p className="font-body text-white/90 text-base md:text-lg mb-6">
+                    Ekmek → Sos → Peynir → İçerik → Üst Sos
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {['Yarım', 'Tam'].map((b) => (
+                      <span key={b} className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-semibold">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="inline-flex items-center gap-2 bg-white text-amber-700 font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg group-hover:shadow-2xl transition-shadow">
+                    Tasarlamaya Başla
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </motion.div>
+            </Link>
+          </RevealOnScroll>
+        </div>
+      </SectionContainer>
+
       {/* Highlights Section */}
       <SectionContainer variant="paper">
         <SectionHeading

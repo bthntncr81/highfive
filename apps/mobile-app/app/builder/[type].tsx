@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,6 +24,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { endpoints, imageUrl } from "@/lib/api";
+import { SmartImage } from "@/components/SmartImage";
 import { useCart } from "@/lib/cart";
 import { useFlyCart } from "@/lib/fly-cart";
 
@@ -96,8 +96,8 @@ function LayerImage({
         },
       ]}
     >
-      <Image
-        source={{ uri }}
+      <SmartImage
+        uri={uri}
         style={{ width: "100%", height: "100%", borderRadius }}
         contentFit="cover"
         transition={120}
@@ -379,8 +379,8 @@ export default function BuilderWizard() {
           }}
         >
           {selectedBase && (
-            <Image
-              source={{ uri: imageUrl(selectedBase.baseImage) ?? undefined }}
+            <SmartImage
+              uri={imageUrl(selectedBase.baseImage) ?? undefined}
               style={{
                 width: "100%",
                 height: "100%",
@@ -487,8 +487,8 @@ export default function BuilderWizard() {
                       style={{ aspectRatio: 1 }}
                     >
                       {url ? (
-                        <Image
-                          source={{ uri: url }}
+                        <SmartImage
+                          uri={url}
                           style={{
                             width: "85%",
                             height: "85%",
@@ -552,8 +552,8 @@ export default function BuilderWizard() {
                       style={{ aspectRatio: 1 }}
                     >
                       {thumb ? (
-                        <Image
-                          source={{ uri: thumb }}
+                        <SmartImage
+                          uri={thumb}
                           style={{ width: "75%", height: "75%" }}
                           contentFit="contain"
                         />

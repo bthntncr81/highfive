@@ -14,6 +14,8 @@ export const WS_URL = extra?.wsUrl ?? "wss://api.highfivepps.com/ws";
 export function imageUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
+  // Inline data URI (data:image/svg+xml;..., data:image/png;base64,...) — olduğu gibi geçir
+  if (path.startsWith("data:")) return path;
   return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 

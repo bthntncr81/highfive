@@ -5,6 +5,8 @@ const API_BASE = import.meta.env.VITE_API_URL || "";
 export function imageUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
+  // Inline data URI (data:image/svg+xml;..., data:image/png;base64,...) — olduğu gibi geçir
+  if (path.startsWith('data:')) return path;
   return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
