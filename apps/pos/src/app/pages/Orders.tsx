@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { api } from '../lib/api';
-import { Search, Filter, RefreshCw, Clock, ChefHat, Check, X, MapPin, Copy, ExternalLink } from 'lucide-react';
+import { Search, Filter, RefreshCw, Clock, ChefHat, Check, X, MapPin, Copy, ExternalLink, Trash2 } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -134,13 +134,45 @@ const playNotificationSound = () => {
 };
 
 export default function Orders() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { onMessage } = useWebSocket();
+
+  const isAdmin = user?.role === 'ADMIN';
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Admin-only: permanently delete an order. The card is a <Link>, so stop the
+  // click from navigating into the order detail.
+  const handleDelete = async (
+    orderId: string,
+    orderNumber: number,
+    e: MouseEvent,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const label = `#${orderNumber.toString().padStart(4, '0')}`;
+    if (
+      !window.confirm(
+        `${label} numaralı siparişi kalıcı olarak silmek istediğinize emin misiniz?\nBu işlem geri alınamaz.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      setDeletingId(orderId);
+      await api.delete(`/api/orders/${orderId}`, token!);
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (err) {
+      console.error('Order delete error:', err);
+      alert('Sipariş silinemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -441,11 +473,29 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Total */}
-                <div className="text-right">
-                  <p className="text-xl font-bold text-gray-900">
-                    {order.total.toLocaleString('tr-TR')} ₺
-                  </p>
+                {/* Total + admin-only delete */}
+                <div className="flex items-start gap-2 shrink-0">
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-gray-900">
+                      {order.total.toLocaleString('tr-TR')} ₺
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(order.id, order.orderNumber, e)}
+                      disabled={deletingId === order.id}
+                      className="p-2 rounded-lg text-red-600 border border-transparent hover:bg-red-50 hover:border-red-200 hover:text-red-700 disabled:opacity-50 transition-colors"
+                      title="Siparişi sil (admin)"
+                      aria-label="Siparişi sil"
+                    >
+                      {deletingId === order.id ? (
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 

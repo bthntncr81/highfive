@@ -1126,6 +1126,35 @@ export default async function orderRoutes(server: FastifyInstance) {
     return { order: updatedOrder };
   });
 
+  // Delete an entire order — ADMIN ONLY. Hard delete: order items, payments and
+  // the 1:1 receipt cascade automatically; the only non-cascading reference
+  // (coupon usage) is cleared first so the FK can't block the delete. Atomic.
+  server.delete('/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const user = (request as any).user;
+
+    if (user?.role !== 'ADMIN') {
+      return reply.status(403).send({ error: 'Bu işlem için yetkiniz yok (sadece admin).' });
+    }
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
+
+    try {
+      await prisma.$transaction([
+        prisma.couponUsage.deleteMany({ where: { orderId: id } }),
+        prisma.order.delete({ where: { id } }),
+      ]);
+    } catch (e) {
+      (request as any).log?.error?.(e);
+      return reply.status(409).send({ error: 'Sipariş silinemedi — bağlı kayıtlar olabilir.' });
+    }
+
+    // All connected clients refetch on any orders-channel message.
+    broadcastOrderUpdate(order);
+    return { success: true, id };
+  });
+
   // Process payment (with optional item-specific payment for split bills)
   server.post('/:id/payment', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
