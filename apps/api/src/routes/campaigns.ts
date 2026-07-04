@@ -2,6 +2,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastCampaignToMobile } from '../lib/auto-broadcast';
+import { requireFeature } from '../lib/plan-limits';
 
 export default async function campaignsRoutes(server: FastifyInstance) {
   // ==================== CAMPAIGNS ====================
@@ -31,8 +32,8 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     return { campaigns };
   });
 
-  // Create campaign
-  server.post('/campaigns', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // Create campaign (Pro+ paket özelliği — feature-flag)
+  server.post('/campaigns', { preHandler: [verifyAdmin, requireFeature('campaigns')] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const data = request.body as any;
 
     if (!data.name || !data.startDate || !data.endDate) {

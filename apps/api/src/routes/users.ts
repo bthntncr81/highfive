@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { verifyAdmin } from '../middleware/auth';
+import { assertWithinUserLimit } from '../lib/plan-limits';
 
 // Personel = User (platform kimliği: email/name/password) + Membership (bu tenant'ta
 // rol + PIN + aktiflik). Rol/PIN artık Membership'te olduğundan tüm CRUD üyelik
@@ -67,6 +68,9 @@ export default async function userRoutes(server: FastifyInstance) {
     if (!/^\d{4,6}$/.test(pin)) {
       return reply.status(400).send({ error: 'Şifre 4-6 haneli sayı olmalı' });
     }
+
+    // Paket kullanıcı limiti (feature-flag) — aşımda 403
+    if (await assertWithinUserLimit(request.tenant!.id, reply)) return;
 
     // PIN bu TENANT içinde benzersiz (Membership [tenantId, pin])
     const existingPin = await request.db.membership.findFirst({ where: { pin } });

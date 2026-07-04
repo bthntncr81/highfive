@@ -1,6 +1,7 @@
 // Multi-Location / Branch Management Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAuth } from '../middleware/auth';
+import { assertWithinLocationLimit } from '../lib/plan-limits';
 
 export default async function locationRoutes(server: FastifyInstance) {
   // Get all locations
@@ -51,6 +52,9 @@ export default async function locationRoutes(server: FastifyInstance) {
           currency?: string;
           settings?: any;
         };
+
+      // Paket şube limiti (feature-flag) — aşımda 403
+      if (await assertWithinLocationLimit(request.tenant!.id, reply)) return;
 
       // Check if code is unique
       const existing = await request.db.location.findFirst({ where: { code } });

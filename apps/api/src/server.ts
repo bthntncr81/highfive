@@ -57,6 +57,7 @@ import mobileAddressesRoutes from './routes/mobile-addresses';
 import mobileFavoritesRoutes from './routes/mobile-favorites';
 import mobilePrefsRoutes from './routes/mobile-prefs';
 import courierRoutes from './routes/courier';
+import platformRoutes from './routes/platform';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -167,6 +168,10 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   server.register(mobileFavoritesRoutes, { prefix: '/api/mobile/favorites' }); // Mobile favorites
   server.register(mobilePrefsRoutes, { prefix: '/api/mobile/prefs' }); // Mobile notification prefs
   server.register(courierRoutes, { prefix: '/api/courier' }); // Courier mobile app endpoints
+
+  // Platform (SaaS) — kayıt/onboarding/abonelik/süper-admin. Tenant hook ATLAR
+  // (plugins/tenant.ts SKIP_PREFIXES: '/api/platform/'); kendi auth'unu kullanır.
+  server.register(platformRoutes, { prefix: '/api/platform' });
 
   // WebSocket - must be registered AFTER websocket plugin is ready
   server.after(() => {

@@ -9,6 +9,7 @@ import { processBirthdayPrograms } from './lib/loyalty-engine';
 import { startDailyCloseScheduler } from './lib/daily-close';
 import { startWinbackScheduler } from './lib/winback';
 import { scheduleCourierLocationCleanup } from './lib/courier-location-cleanup';
+import { startBillingScheduler } from './lib/subscription-billing';
 
 const prisma = new PrismaClient();
 
@@ -58,6 +59,12 @@ const start = async () => {
 
     // Courier konum geçmişi temizleme — 24 saatten eski kayıtlar saatte 1 kez silinir.
     scheduleCourierLocationCleanup(prisma);
+
+    // Abonelik yenileme + deneme taraması — saatte bir. Dönem sonu geçmiş
+    // abonelikleri saklı kartla çeker; başarısızlıkta grace→otomatik askıya alma.
+    startBillingScheduler(prisma, (msg, err) =>
+      err ? server.log.error({ err }, msg) : server.log.info(msg),
+    );
   } catch (err) {
     server.log.error(err);
     process.exit(1);
