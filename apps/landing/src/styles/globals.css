@@ -1,42 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================
-   HIGH FIVE - Modern Design System
-   Clean, minimal, professional aesthetic
+   HIGH FIVE - Premium Design System (revize)
+   Bricolage Grotesque (display) + Plus Jakarta Sans (body)
+   Brand red locked, warm-tinted depth, friendly pill geometry
    ============================================ */
 
 @layer base {
   :root {
-    /* Core palette */
+    /* Core palette (brand korundu) */
     --color-primary: #bb1e10;
     --color-primary-dark: #8a1610;
     --color-primary-light: #d4382a;
     --color-accent: #005387;
     --color-accent-dark: #003d63;
     --color-accent-light: #0070b8;
-    --color-background: #ecece7;
-    --color-surface: #f5f5f2;
+    --color-background: #f3efe7;
+    --color-surface: #f7f4ee;
     --color-surface-elevated: #ffffff;
-    --color-foreground: #1a1a1a;
-    --color-foreground-muted: #6b6b6b;
-    --color-foreground-subtle: #9a9a9a;
-    --color-border: #d4d4cf;
-    --color-border-light: #e5e5e0;
+    --color-foreground: #1a1512;
+    --color-foreground-muted: #6b6259;
+    --color-foreground-subtle: #9a9189;
+    --color-border: #e3ddd1;
+    --color-border-light: #ece6da;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
-    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-    --shadow-xl: 0 20px 25px rgba(0,0,0,0.1);
+    /* Warm-tinted shadows (no pure black) */
+    --shadow-sm: 0 1px 2px rgba(80,50,25,0.06);
+    --shadow-md: 0 6px 16px -6px rgba(100,60,30,0.16);
+    --shadow-lg: 0 18px 40px -18px rgba(110,60,30,0.24);
+    --shadow-xl: 0 30px 70px -28px rgba(120,55,25,0.34);
+    --shadow-brand: 0 12px 28px -10px rgba(187,30,16,0.42);
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   html {
     scroll-behavior: smooth;
@@ -45,9 +45,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
+    html { scroll-behavior: auto; }
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
@@ -62,164 +60,110 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display font-bold;
+    @apply font-display;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
 
-  h1 { @apply text-4xl md:text-5xl lg:text-6xl; }
-  h2 { @apply text-3xl md:text-4xl; }
+  h1 { @apply text-4xl md:text-5xl lg:text-6xl; line-height: 1.02; }
+  h2 { @apply text-3xl md:text-4xl lg:text-5xl; line-height: 1.05; }
   h3 { @apply text-2xl md:text-3xl; }
   h4 { @apply text-xl md:text-2xl; }
 
-  p {
-    @apply leading-relaxed;
-    text-wrap: pretty;
-  }
+  p { @apply leading-relaxed; text-wrap: pretty; }
 
-  a {
-    @apply transition-colors duration-200;
-  }
+  a { @apply transition-colors duration-200; }
 
-  img {
-    @apply max-w-full h-auto;
-  }
+  img { @apply max-w-full h-auto; }
 
-  /* Focus states */
   :focus-visible {
-    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+    ring-offset-color: var(--color-background);
   }
 }
 
 @layer components {
   /* ============================================
-     BUTTONS - Modern clean style
+     BUTTONS - friendly pill, warm depth
      ============================================ */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           font-display font-semibold text-base
-           px-6 py-3
-           rounded-xl
-           transition-all duration-200
-           cursor-pointer
-           select-none
+           font-display font-bold text-base
+           px-7 py-3.5
+           rounded-full
+           cursor-pointer select-none
            disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s cubic-bezier(.16,1,.3,1), background-color .2s ease, color .2s ease;
   }
 
   .btn-primary {
     @apply btn bg-primary text-white;
-    box-shadow: 0 2px 8px rgba(187, 30, 16, 0.3);
+    box-shadow: var(--shadow-brand);
   }
-
   .btn-primary:hover:not(:disabled) {
     @apply bg-primary-dark;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(187, 30, 16, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 18px 38px -10px rgba(187,30,16,0.5);
   }
-
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(187, 30, 16, 0.3);
-  }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(.99); }
 
   .btn-secondary {
-    @apply btn bg-accent text-white;
-    box-shadow: 0 2px 8px rgba(0, 83, 135, 0.3);
+    @apply btn bg-foreground text-white;
+    box-shadow: var(--shadow-md);
   }
-
-  .btn-secondary:hover:not(:disabled) {
-    @apply bg-accent-dark;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 83, 135, 0.4);
-  }
-
-  .btn-secondary:active:not(:disabled) {
-    transform: translateY(0);
-  }
+  .btn-secondary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .btn-secondary:active:not(:disabled) { transform: translateY(0) scale(.99); }
 
   .btn-outline {
     @apply btn bg-transparent border-2 border-primary text-primary;
   }
-
   .btn-outline:hover:not(:disabled) {
     @apply bg-primary text-white;
-    box-shadow: 0 2px 8px rgba(187, 30, 16, 0.3);
+    box-shadow: var(--shadow-brand);
   }
 
-  .btn-ghost {
-    @apply btn bg-transparent text-foreground;
-  }
-
-  .btn-ghost:hover:not(:disabled) {
-    @apply bg-black/5;
-  }
+  .btn-ghost { @apply btn bg-transparent text-foreground; }
+  .btn-ghost:hover:not(:disabled) { @apply bg-black/5; }
 
   .btn-whatsapp {
     @apply btn text-white;
     background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+    box-shadow: 0 12px 28px -10px rgba(37,211,102,0.5);
   }
-
-  .btn-whatsapp:hover:not(:disabled) {
-    @apply brightness-110;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
-  }
+  .btn-whatsapp:hover:not(:disabled) { @apply brightness-110; transform: translateY(-2px); }
 
   /* ============================================
-     CARDS - Clean elevated style
+     CARDS - soft, warm, lifting
      ============================================ */
   .card {
-    @apply bg-surface-elevated rounded-2xl p-5 relative overflow-hidden;
+    @apply bg-surface-elevated rounded-3xl p-5 relative overflow-hidden;
     box-shadow: var(--shadow-sm);
-    transition: all 0.3s ease;
+    transition: transform .4s cubic-bezier(.16,1,.3,1), box-shadow .4s cubic-bezier(.16,1,.3,1), border-color .3s ease;
   }
+  .card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
 
-  .card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-  }
-
-  .card-menu {
-    @apply card border border-border-light;
-  }
-
-  .card-menu:hover {
-    @apply border-primary/20;
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
-  }
+  .card-menu { @apply card border border-border-light; }
+  .card-menu:hover { @apply border-primary/20; box-shadow: var(--shadow-lg); transform: translateY(-5px); }
 
   /* ============================================
-     BADGES - Modern pill style
+     BADGES - pill
      ============================================ */
   .badge {
     @apply inline-flex items-center justify-center
-           font-display text-xs font-bold uppercase tracking-wider
-           px-3 py-1
-           rounded-full;
+           font-display text-[11px] font-bold uppercase tracking-wider
+           px-3 py-1 rounded-full;
   }
-
-  .badge-new {
-    @apply badge bg-accent text-white;
-  }
-
-  .badge-popular {
-    @apply badge bg-primary text-white;
-  }
-
-  .badge-spicy {
-    @apply badge bg-orange-500 text-white;
-  }
-
-  .badge-vegan {
-    @apply badge bg-emerald-600 text-white;
-  }
+  .badge-new { @apply badge bg-foreground text-white; }
+  .badge-popular { @apply badge bg-amber-100 text-amber-800; }
+  .badge-spicy { @apply badge bg-primary/10 text-primary; }
+  .badge-vegan { @apply badge bg-emerald-100 text-emerald-700; }
 
   /* ============================================
-     FORM INPUTS - Modern clean style
+     FORM INPUTS
      ============================================ */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl
+    @apply w-full px-4 py-3 rounded-2xl
            border border-border
            bg-white text-foreground
            placeholder:text-foreground-subtle
@@ -227,106 +171,97 @@
            focus:ring-2 focus:ring-primary/20
            transition-all duration-200;
   }
-
-  .input-field:hover:not(:focus) {
-    @apply border-foreground-muted/40;
-  }
+  .input-field:hover:not(:focus) { @apply border-foreground-muted/40; }
 
   /* ============================================
      NAVIGATION
      ============================================ */
   .nav-link {
-    @apply font-display font-semibold text-base px-4 py-2
-           text-foreground
-           relative
-           transition-all duration-200;
+    @apply font-display font-semibold text-[15px] px-3.5 py-2
+           text-foreground/80 relative transition-colors duration-200;
   }
-
   .nav-link::after {
     content: '';
-    @apply absolute bottom-0 left-1/2 -translate-x-1/2
-           w-0 h-0.5 bg-primary rounded-full
-           transition-all duration-300;
+    @apply absolute -bottom-0.5 left-1/2 -translate-x-1/2
+           w-0 h-0.5 bg-primary rounded-full transition-all duration-300;
   }
-
-  .nav-link:hover::after,
-  .nav-link.active::after {
-    @apply w-3/4;
-  }
-
-  .nav-link:hover {
-    @apply text-primary;
-  }
-
-  .nav-link.active {
-    @apply text-primary;
-  }
+  .nav-link:hover::after, .nav-link.active::after { @apply w-3/4; }
+  .nav-link:hover { @apply text-primary; }
+  .nav-link.active { @apply text-primary; }
 
   /* ============================================
-     PRICE DISPLAY
+     PRICE / RATINGS / CONTAINER
      ============================================ */
-  .price-tag {
-    @apply inline-flex items-center
-           font-display text-xl font-bold
-           text-primary;
-  }
-
-  .price-tag-big {
-    @apply font-display text-3xl font-bold text-primary;
-  }
-
-  /* ============================================
-     RATINGS
-     ============================================ */
-  .rating-stars {
-    @apply flex gap-1 text-amber-400;
-  }
-
-  /* ============================================
-     RESPONSIVE CONTAINER
-     ============================================ */
-  .container-diner {
-    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
+  .price-tag { @apply inline-flex items-center font-display text-xl font-extrabold text-primary; }
+  .price-tag-big { @apply font-display text-3xl font-extrabold text-primary; }
+  .rating-stars { @apply flex gap-1 text-amber-400; }
+  .container-diner { @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
 
   /* ============================================
      SECTION BACKGROUNDS
      ============================================ */
-  .section-cream {
-    @apply bg-background;
-  }
+  .section-cream { @apply bg-background; }
+  .section-paper { @apply bg-surface; }
+  .section-red { @apply bg-primary text-white; }
+  .dark-section { @apply text-white p-8 rounded-3xl; background: #1a1512; }
 
-  .section-paper {
-    @apply bg-surface;
-  }
-
-  .section-red {
-    @apply bg-primary text-white;
-  }
-
-  /* ============================================
-     DARK SECTION (replaces chalkboard/menu-board)
-     ============================================ */
-  .dark-section {
-    @apply bg-accent text-white p-8 rounded-2xl;
-  }
-
-  /* ============================================
-     UTILITY BORDERS
-     ============================================ */
-  .border-3 {
-    border-width: 3px;
-  }
+  .border-3 { border-width: 3px; }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
+  .no-select { user-select: none; -webkit-user-select: none; }
+  .shadow-warm { box-shadow: var(--shadow-md); }
+  .shadow-warm-lg { box-shadow: var(--shadow-xl); }
+}
 
-  /* Prevent text selection on decorative elements */
-  .no-select {
-    user-select: none;
-    -webkit-user-select: none;
-  }
+/* Blog post içerik tipografisi */
+.prose-blog {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  color: #1a1512;
+  line-height: 1.75;
+}
+.prose-blog .lead {
+  font-size: 1.25rem;
+  color: #4a423d;
+  margin-bottom: 2rem;
+  font-weight: 500;
+  line-height: 1.65;
+}
+.prose-blog h2 {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 2rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: #1a1512;
+  letter-spacing: -0.01em;
+}
+.prose-blog h3 {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: #1a1512;
+}
+.prose-blog p { margin-bottom: 1.25rem; }
+.prose-blog ul, .prose-blog ol { margin: 1rem 0 1.5rem 1.5rem; list-style: disc; }
+.prose-blog ol { list-style: decimal; }
+.prose-blog li { margin-bottom: 0.5rem; padding-left: 0.5rem; }
+.prose-blog strong { font-weight: 700; color: #1a1512; }
+.prose-blog a { color: #bb1e10; text-decoration: underline; font-weight: 600; }
+.prose-blog a:hover { color: #8b1700; }
+.prose-blog .info-table {
+  width: 100%; border-collapse: collapse; margin: 1.5rem 0;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.9rem;
+}
+.prose-blog .info-table th, .prose-blog .info-table td {
+  border: 1px solid #e5e7eb; padding: 0.6rem 0.8rem; text-align: left;
+}
+.prose-blog .info-table th { background: #faf7f1; font-weight: 700; color: #1a1512; }
+.prose-blog .cta-paragraph {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 1.25rem 1.5rem; border-radius: 1rem; border-left: 4px solid #fbbf24;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; font-weight: 500; margin: 2rem 0;
 }

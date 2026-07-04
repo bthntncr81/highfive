@@ -20,6 +20,9 @@ interface OrderItem {
   id: string;
   quantity: number;
   notes?: string;
+  // "Kendin Tasarla" (builder) ürünlerinin içerik listesi: "Hamur: Klasik",
+  // "Et: Salami, Tavuk", "Sebze: ..." — kitchen'da hazırlama için kritik.
+  modifiers?: string[];
   status: string;
   menuItemName?: string;
   createdAt?: string;
@@ -741,11 +744,21 @@ function OrderCard({
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-white text-lg truncate">{item.menuItem?.name || item.menuItemName || 'Silinmiş Ürün'}</p>
-                        {customerNote && (
+                        {customerNote && customerNote !== (item.menuItem?.name || item.menuItemName) && (
                           <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
                             <span>📝</span>
                             <span>{customerNote}</span>
                           </p>
+                        )}
+                        {/* Builder / özel ürün içeriği (Hamur, Sos, Et, Sebze...) */}
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {item.modifiers.map((m, i) => (
+                              <li key={i} className="text-xs text-cyan-300 leading-tight">
+                                • {m}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
                     </div>

@@ -151,7 +151,8 @@ export const Footer = () => {
         <div className="flex flex-wrap justify-center gap-4 mb-6">
           {[
             { to: '/about', label: 'Hakkımızda' },
-            { to: '/privacy', label: 'Gizlilik Sözleşmesi' },
+            { to: '/terms-of-use', label: 'Üyelik Sözleşmesi' },
+            { to: '/privacy', label: 'Gizlilik & KVKK' },
             { to: '/delivery-terms', label: 'Teslimat ve İade Şartları' },
             { to: '/distance-sales', label: 'Mesafeli Satış Sözleşmesi' },
           ].map((link) => (

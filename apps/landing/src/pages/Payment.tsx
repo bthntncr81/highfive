@@ -258,14 +258,40 @@ export const Payment = () => {
   const cardBrand = getCardBrand(cardNumber);
   const popupRef = useRef<Window | null>(null);
 
-  // Listen for 3DS callback
+  // Listen for 3DS callback — SADECE güvenilir origin'lerden gelen mesajları kabul et
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.data?.type === '3ds_result') {
-        console.log('3DS Result:', event.data);
+    // Whitelist: kendi origin'imiz (callback HTML'i window.opener.postMessage çağrısı yapıyor)
+    // ve iyzico'nun popup'ta açılan domain'leri.
+    const TRUSTED_ORIGINS = [
+      window.location.origin, // kendi domain (callback HTML'i bu origin'den iletilirse)
+      'https://api.highfivepps.com',
+      'https://highfivepps.com',
+      'https://order.highfivepps.com',
+      'https://www.iyzipay.com',
+      'https://sandbox-api.iyzipay.com',
+      'https://api.iyzipay.com',
+    ];
 
+    const handleMessage = async (event: MessageEvent) => {
+      // KRİTİK: origin doğrulanmadan veriye dokunma
+      const origin = event.origin || '';
+      const isTrusted =
+        TRUSTED_ORIGINS.includes(origin) ||
+        /\.iyzipay\.com$/.test(new URL(origin || 'https://x').host) ||
+        origin.endsWith('.highfivepps.com');
+
+      if (!isTrusted) {
+        // Sessiz log — saldırı olabilir
+        // eslint-disable-next-line no-console
+        console.warn('[payment] Untrusted postMessage origin rejected:', origin);
+        return;
+      }
+
+      if (event.data?.type === '3ds_result') {
         if (event.data.status === 'success' && event.data.paymentId) {
-          // Complete the payment
+          // KRİTİK: paymentId / conversationId client'tan geldi ama
+          // completePayment backend'e gider ve backend gerçek durumu iyzico'dan doğrular.
+          // Buradaki "success" sadece UI flow trigger'ı — gerçek auth backend.
           await completePayment(event.data.paymentId, event.data.conversationId);
         } else {
           setError('3DS doğrulama başarısız. Lütfen tekrar deneyin.');
@@ -369,10 +395,31 @@ export const Payment = () => {
           decodedHtml = data.htmlContent;
         }
 
+        // İyzico HTML'ini güvenli wrap'le aç:
+        //   - CSP meta: yalnızca iyzipay.com origin'inden script çalışsın (inline gerekli)
+        //   - Charset garantili
+        //   - X-Content-Type-Options nosniff
+        //   - Origin'imize ait postMessage script'imizi iyzico'nun script'inden ÖNCE yerleştirme
+        //     riski yok, çünkü iyzico kendi script'lerini eklerken bizimkini değil bizim
+        //     window.opener'ı kullanır — bu wrap sadece keylogger inject saldırısını zorlaştırır.
+        const wrappedHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.iyzipay.com https://api.iyzipay.com https://sandbox-api.iyzipay.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.iyzipay.com; style-src 'self' 'unsafe-inline' https://*.iyzipay.com; frame-src https://*.iyzipay.com; img-src 'self' data: https:; connect-src https://*.iyzipay.com">
+  <title>3DS Doğrulama</title>
+</head>
+<body>
+${decodedHtml}
+</body>
+</html>`;
+
         // Open 3DS popup
         const popup = window.open('', '3DS Doğrulama', 'width=500,height=600,left=200,top=100');
         if (popup) {
-          popup.document.write(decodedHtml);
+          popup.document.write(wrappedHtml);
           popup.document.close();
           popupRef.current = popup;
 

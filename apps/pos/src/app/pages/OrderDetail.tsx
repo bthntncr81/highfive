@@ -30,6 +30,9 @@ interface Order {
   type: string;
   subtotal: number;
   tax: number;
+  discount: number;
+  deliveryFee: number;
+  serviceCharge: number;
   total: number;
   tip: number;
   notes?: string;
@@ -47,8 +50,15 @@ interface OrderItem {
   total: number;
   notes?: string;
   status: string;
-  menuItem: { name: string };
+  menuItem: { name: string } | null; // null when custom builder item
+  menuItemName?: string | null; // preserved name (custom item or deleted product)
+  modifiers?: string[]; // ["Hamur: Klasik", "Sos: Domates", ...] for custom items
   paidQuantity: number; // Ödenen miktar
+}
+
+// Helper: any item için doğru isim — menuItem null bile olsa çalışır
+function getItemName(item: OrderItem | { menuItem: { name: string } | null; menuItemName?: string | null; notes?: string }): string {
+  return item.menuItem?.name ?? item.menuItemName ?? item.notes ?? "Özel Ürün";
 }
 
 interface Payment {
@@ -246,11 +256,14 @@ export default function OrderDetail() {
   
   ${order.items.map(item => `
     <div class="row">
-      <span class="item-name">${item.menuItem.name}</span>
+      <span class="item-name">${getItemName(item)}</span>
       <span class="item-qty">${item.quantity}</span>
       <span class="item-price">${item.total.toFixed(2)}₺</span>
     </div>
-    ${item.notes ? `<div style="font-size:10px;color:#666;margin-left:10px;">Not: ${item.notes}</div>` : ''}
+    ${(item.modifiers && item.modifiers.length > 0)
+      ? item.modifiers.map(m => `<div style="font-size:10px;color:#444;margin-left:10px;">→ ${m}</div>`).join('')
+      : ''}
+    ${(item.notes && item.notes !== getItemName(item)) ? `<div style="font-size:10px;color:#666;margin-left:10px;">Not: ${item.notes}</div>` : ''}
   `).join('')}
   
   <div class="double-line"></div>
@@ -361,10 +374,13 @@ export default function OrderDetail() {
   ${order.items.map(item => `
     <div class="item">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="item-name">${item.menuItem.name}</span>
+        <span class="item-name">${getItemName(item)}</span>
         <span class="item-qty">x${item.quantity}</span>
       </div>
-      ${item.notes ? `<div class="item-notes">⚠️ ${item.notes}</div>` : ''}
+      ${(item.modifiers && item.modifiers.length > 0)
+        ? item.modifiers.map(m => `<div class="item-notes" style="margin-top:3px;">→ ${m}</div>`).join('')
+        : ''}
+      ${(item.notes && item.notes !== getItemName(item)) ? `<div class="item-notes">⚠️ ${item.notes}</div>` : ''}
     </div>
   `).join('')}
   
@@ -619,8 +635,11 @@ export default function OrderDetail() {
     );
   }
 
-  const paidAmount = order.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-  const remainingAmount = order.total - paidAmount;
+  // payments[].amount ve order.total Prisma Decimal'den string olarak gelir.
+  // Number() yapmazsak reduce "100"+"200"="0100200" (string concat) yapar,
+  // total - paidAmount koca negatif rakam çıkarır.
+  const paidAmount = order.payments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+  const remainingAmount = (Number(order.total) || 0) - paidAmount;
 
   return (
     <div className="p-6 space-y-6">
@@ -743,7 +762,7 @@ export default function OrderDetail() {
                           </div>
                         </div>
                         <div className="mt-1 text-xs text-gray-500">
-                          {items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ')}
+                          {items.map(i => `${i.quantity}x ${getItemName(i)}`).join(', ')}
                         </div>
                       </div>
                     );
@@ -820,11 +839,17 @@ export default function OrderDetail() {
                           {item.quantity}
                         </span>
                       )}
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className={`font-medium ${isFullyPaid ? 'text-green-800' : 'text-gray-900'}`}>
-                            {item.menuItem.name}
+                            {getItemName(item)}
                           </p>
+                          {/* Custom item rozeti */}
+                          {!item.menuItem && (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                              Özel
+                            </span>
+                          )}
                           {/* Kişi grup etiketi */}
                           {itemGroups[item.id] && !splitMode && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
@@ -853,8 +878,18 @@ export default function OrderDetail() {
                             </button>
                           )}
                         </div>
-                        {item.notes && (
-                          <p className="text-sm text-gray-500">Not: {item.notes}</p>
+                        {/* Modifiers — kendi tasarla içeriği (Hamur: Klasik, Sos: Domates ...) */}
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {item.modifiers.map((m, idx) => (
+                              <p key={idx} className="text-[12px] text-gray-700 leading-snug">
+                                <span className="text-amber-700 font-semibold">→</span> {m}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        {item.notes && item.notes !== getItemName(item) && (
+                          <p className="text-sm text-gray-500 mt-1">Not: {item.notes}</p>
                         )}
                         {item.paidQuantity > 0 && !isFullyPaid && (
                           <p className="text-xs text-green-600 mt-0.5">
@@ -1052,10 +1087,30 @@ export default function OrderDetail() {
                 <span className="text-gray-600">Ara Toplam</span>
                 <span>{order.subtotal.toLocaleString('tr-TR')} ₺</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">KDV</span>
-                <span>{order.tax.toLocaleString('tr-TR')} ₺</span>
-              </div>
+              {Number(order.discount) > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>İndirim</span>
+                  <span>−{Number(order.discount).toLocaleString('tr-TR')} ₺</span>
+                </div>
+              )}
+              {Number(order.tax) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">KDV</span>
+                  <span>{Number(order.tax).toLocaleString('tr-TR')} ₺</span>
+                </div>
+              )}
+              {Number(order.deliveryFee) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Teslimat Ücreti</span>
+                  <span>{Number(order.deliveryFee).toLocaleString('tr-TR')} ₺</span>
+                </div>
+              )}
+              {Number(order.serviceCharge) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Servis Ücreti</span>
+                  <span>{Number(order.serviceCharge).toLocaleString('tr-TR')} ₺</span>
+                </div>
+              )}
               {order.tip > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Bahşiş</span>
@@ -1103,7 +1158,7 @@ export default function OrderDetail() {
                           <p className="text-xs text-green-700">
                             {Object.entries(payment.paidItems).map(([itemId, qty]) => {
                               const item = order.items.find(i => i.id === itemId);
-                              return item ? `${qty}x ${item.menuItem.name}` : null;
+                              return item ? `${qty}x ${getItemName(item)}` : null;
                             }).filter(Boolean).join(', ')}
                           </p>
                         </div>
@@ -1178,7 +1233,7 @@ export default function OrderDetail() {
                     if (!item) return null;
                     return (
                       <div key={itemId} className="flex justify-between text-sm">
-                        <span className="text-blue-900">{qty}x {item.menuItem.name}</span>
+                        <span className="text-blue-900">{qty}x {getItemName(item)}</span>
                         <span className="font-medium text-blue-900">{(item.unitPrice * qty).toLocaleString('tr-TR')} ₺</span>
                       </div>
                     );

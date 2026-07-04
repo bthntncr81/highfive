@@ -19,6 +19,7 @@ import {
   Volume2,
   VolumeX,
   Bell,
+  Wallet,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -50,12 +51,16 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // CASHIER de Giderler'i görebilsin diye navItems'a koşullu ekliyoruz (admin-only değil)
+  const canViewExpenses = user?.role === 'ADMIN' || user?.role === 'MANAGER' || user?.role === 'CASHIER';
+
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Ana Sayfa', emoji: '🏠' },
     { to: '/tables', icon: UtensilsCrossed, label: 'Masalar', emoji: '🍽️' },
     { to: '/menu', icon: ClipboardList, label: 'Menü', emoji: '📋' },
     { to: '/orders', icon: ShoppingCart, label: 'Siparişler', emoji: '🛒' },
     { to: '/stock', icon: ClipboardList, label: 'Stok Yönetimi', emoji: '📦' },
+    ...(canViewExpenses ? [{ to: '/expenses', icon: Wallet, label: 'Giderler', emoji: '💸' }] : []),
   ];
 
   const adminItems = [
@@ -64,6 +69,11 @@ export default function Layout() {
     { to: '/happy-hour', icon: ClipboardList, label: 'Happy Hour', emoji: '🍹' },
     { to: '/campaigns', icon: ClipboardList, label: 'Kampanyalar & Sadakat', emoji: '🎯' },
     { to: '/loyalty-programs', icon: ClipboardList, label: 'Sadakat Programları', emoji: '✨' },
+    { to: '/loyalty-claims', icon: ClipboardList, label: 'Yorum Onayları', emoji: '⭐' },
+    { to: '/option-groups', icon: ClipboardList, label: 'Opsiyon Grupları', emoji: '📋' },
+    { to: '/spin-wheel', icon: ClipboardList, label: 'Şans Çarkı', emoji: '🎡' },
+    { to: '/achievements', icon: ClipboardList, label: 'Rozetler', emoji: '🏅' },
+    { to: '/builder', icon: ClipboardList, label: 'Builder (Pizza/Sandviç)', emoji: '🍕' },
     { to: '/push-notifications', icon: Bell, label: 'Push Bildirimleri', emoji: '🔔' },
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },

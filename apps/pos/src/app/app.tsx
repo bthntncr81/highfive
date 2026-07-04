@@ -19,8 +19,14 @@ import MenuManagement from './pages/MenuManagement';
 import HappyHourManagement from './pages/HappyHourManagement';
 import CampaignsLoyalty from './pages/CampaignsLoyalty';
 import LoyaltyPrograms from './pages/LoyaltyPrograms';
+import LoyaltyClaims from './pages/LoyaltyClaims';
+import OptionGroups from './pages/OptionGroups';
+import SpinWheelConfig from './pages/SpinWheelConfig';
+import AchievementsAdmin from './pages/Achievements';
+import BuilderAdmin from './pages/Builder';
 import PushNotifications from './pages/PushNotifications';
 import RawMaterialsManagement from './pages/RawMaterialsManagement';
+import Expenses from './pages/Expenses';
 import CourierDashboard from './pages/CourierDashboard';
 
 // Components
@@ -53,11 +59,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // Admin Route wrapper
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  
+
   if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
     return <Navigate to="/" replace />;
   }
-  
+
+  return <>{children}</>;
+}
+
+// Expense Route wrapper — ADMIN/MANAGER/CASHIER görebilir (admin-only değil)
+function ExpenseRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const allowed = ['ADMIN', 'MANAGER', 'CASHIER'];
+  if (!user || !allowed.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -91,9 +107,10 @@ export default function App() {
       <WebSocketProvider>
         <CartProvider>
           <Routes>
-            {/* Auth routes */}
-            <Route path="/login" element={<Login />} />
+            {/* Auth routes — giriş 6 haneli şifre ile */}
+            <Route path="/login" element={<PinLogin />} />
             <Route path="/pin" element={<PinLogin />} />
+            <Route path="/login-email" element={<Login />} />
             
             {/* Courier route - standalone page */}
             <Route
@@ -147,6 +164,14 @@ export default function App() {
                 }
               />
               <Route
+                path="expenses"
+                element={
+                  <ExpenseRoute>
+                    <Expenses />
+                  </ExpenseRoute>
+                }
+              />
+              <Route
                 path="campaigns"
                 element={
                   <AdminRoute>
@@ -159,6 +184,46 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <LoyaltyPrograms />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="loyalty-claims"
+                element={
+                  <AdminRoute>
+                    <LoyaltyClaims />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="option-groups"
+                element={
+                  <AdminRoute>
+                    <OptionGroups />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="spin-wheel"
+                element={
+                  <AdminRoute>
+                    <SpinWheelConfig />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="achievements"
+                element={
+                  <AdminRoute>
+                    <AchievementsAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="builder"
+                element={
+                  <AdminRoute>
+                    <BuilderAdmin />
                   </AdminRoute>
                 }
               />

@@ -21,6 +21,9 @@ export const Navbar = () => {
   const links = [
     { to: '/', label: 'Ana Sayfa' },
     { to: '/menu', label: 'Menü' },
+    { to: '/build', label: 'Tasarla' },
+    { to: '/blog', label: 'Blog' },
+    { to: '/oyun', label: '🎮 Oyun' },
     { to: '/about', label: 'Hakkımızda' },
     { to: '/contact', label: 'İletişim' },
   ]
@@ -75,7 +78,7 @@ export const Navbar = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowMemberMenu(!showMemberMenu)}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all"
                 >
                   <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm">
                     {(member.name || 'Ü')[0].toUpperCase()}
@@ -133,7 +136,7 @@ export const Navbar = () => {
             ) : (
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-display font-semibold shadow-md hover:shadow-lg transition-all hover:scale-105"
               >
                 <span className="text-sm">Üye Ol</span>
               </button>
@@ -234,7 +237,7 @@ export const Navbar = () => {
                     setMobileOpen(false)
                     setShowLoginModal(true)
                   }}
-                  className="p-4 bg-accent text-white rounded-xl mb-2 flex items-center justify-center gap-2 font-display font-semibold"
+                  className="p-4 bg-primary text-white rounded-xl mb-2 flex items-center justify-center gap-2 font-display font-semibold"
                 >
                   Üye Ol & Puan Kazan!
                 </motion.button>

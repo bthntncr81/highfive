@@ -520,10 +520,11 @@ function ConfigEditor({
     case 'BIRTHDAY':
       return (
         <ConfigBlock title="Doğum Günü Kuralları">
-          <NumberField label="İndirim yüzdesi" value={config.discountPercent ?? 20}
-            onChange={(v) => update('discountPercent', v)} suffix="%" />
+          <DiscountTypeField config={config} update={update} />
           <ItemSelectField label="Bedava ürün (opsiyonel)" menuItems={menuItems}
             value={config.freeItemId} onChange={(v) => update('freeItemId', v)} />
+          <NumberField label="Min sipariş tutarı (kuponu uygulamak için)" value={config.minOrder ?? 0}
+            onChange={(v) => update('minOrder', v)} suffix="₺" />
           <NumberField label="Kaç gün önce duyurulsun?" value={config.daysBeforeBirthday ?? 0}
             onChange={(v) => update('daysBeforeBirthday', v)} suffix="gün" />
           <NumberField label="Kupon kaç gün geçerli?" value={config.validDays ?? 7}
@@ -534,8 +535,9 @@ function ConfigEditor({
     case 'WELCOME':
       return (
         <ConfigBlock title="Hoş Geldin Kuralları">
-          <NumberField label="İlk siparişe indirim" value={config.discountPercent ?? 25}
-            onChange={(v) => update('discountPercent', v)} suffix="%" />
+          <DiscountTypeField config={config} update={update} />
+          <NumberField label="Min sipariş tutarı (indirim için)" value={config.minOrder ?? 0}
+            onChange={(v) => update('minOrder', v)} suffix="₺" />
           <NumberField label="Bonus puan" value={config.bonusPoints ?? 50}
             onChange={(v) => update('bonusPoints', v)} suffix="puan" />
           <ItemSelectField label="Bedava ürün (opsiyonel)" menuItems={menuItems}
@@ -548,8 +550,15 @@ function ConfigEditor({
         <ConfigBlock title="Davet Kuralları">
           <NumberField label="Davet eden bonusu" value={config.referrerPoints ?? 100}
             onChange={(v) => update('referrerPoints', v)} suffix="puan" />
-          <NumberField label="Davet edilenin indirimi" value={config.refereeDiscount ?? 15}
-            onChange={(v) => update('refereeDiscount', v)} suffix="%" />
+          <p className="text-[10px] text-foreground-muted -mt-2">Davet edilen için aşağıdaki indirim uygulanır:</p>
+          <DiscountTypeField
+            config={config}
+            update={update}
+            percentKey="refereeDiscount"
+            valueKey="refereeFixedAmount"
+            typeKey="refereeDiscountType"
+            defaultPercent={15}
+          />
           <NumberField label="Min sipariş tutarı (ödül için)" value={config.minOrderForReward ?? 50}
             onChange={(v) => update('minOrderForReward', v)} suffix="₺" />
         </ConfigBlock>
@@ -682,6 +691,78 @@ function ConfigBlock({ title, children }: { title: string; children: React.React
     <div className="rounded-xl bg-purple-50 border border-purple-200 p-4 space-y-3">
       <h4 className="font-bold text-purple-900 text-sm">{title}</h4>
       {children}
+    </div>
+  );
+}
+
+/**
+ * İndirim tipi seçimi (yüzdelik veya birim tutar)
+ * Welcome / Birthday / Referral gibi sadakat programlarına entegre edilir.
+ * config.discountType = 'PERCENT' | 'FIXED' (varsayılan 'PERCENT')
+ * config.discountPercent = yüzde değeri (% indirim için)
+ * config.discountValue = TL değeri (sabit tutar için)
+ * Anahtar isimleri özelleştirilebilir (REFERRAL'da refereeDiscount vs)
+ */
+function DiscountTypeField({
+  config,
+  update,
+  typeKey = 'discountType',
+  percentKey = 'discountPercent',
+  valueKey = 'discountValue',
+  defaultPercent = 20,
+  defaultValue = 50,
+}: {
+  config: any;
+  update: (k: string, v: any) => void;
+  typeKey?: string;
+  percentKey?: string;
+  valueKey?: string;
+  defaultPercent?: number;
+  defaultValue?: number;
+}) {
+  const type = config[typeKey] ?? 'PERCENT';
+  return (
+    <div className="rounded-lg bg-sky-50 border border-sky-200 p-3 space-y-3">
+      <p className="text-xs font-bold text-sky-900">💰 İndirim Türü</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => update(typeKey, 'PERCENT')}
+          className={`flex-1 rounded-lg border-2 py-2.5 px-3 text-xs font-semibold transition ${
+            type === 'PERCENT'
+              ? 'border-sky-500 bg-sky-500 text-white'
+              : 'border-border bg-white text-foreground-muted hover:border-sky-300'
+          }`}
+        >
+          % Yüzdelik
+        </button>
+        <button
+          type="button"
+          onClick={() => update(typeKey, 'FIXED')}
+          className={`flex-1 rounded-lg border-2 py-2.5 px-3 text-xs font-semibold transition ${
+            type === 'FIXED'
+              ? 'border-sky-500 bg-sky-500 text-white'
+              : 'border-border bg-white text-foreground-muted hover:border-sky-300'
+          }`}
+        >
+          ₺ Birim Tutar
+        </button>
+      </div>
+      {type === 'PERCENT' ? (
+        <NumberField
+          label="İndirim yüzdesi"
+          value={config[percentKey] ?? defaultPercent}
+          onChange={(v) => update(percentKey, v)}
+          suffix="%"
+        />
+      ) : (
+        <NumberField
+          label="İndirim tutarı"
+          value={config[valueKey] ?? defaultValue}
+          onChange={(v) => update(valueKey, v)}
+          suffix="₺"
+        />
+      )}
     </div>
   );
 }

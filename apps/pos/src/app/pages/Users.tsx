@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { Plus, Edit2, Trash2, User, Shield, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, X } from 'lucide-react';
 
 interface UserData {
   id: string;
-  email: string;
   name: string;
   role: string;
   active: boolean;
@@ -18,6 +17,7 @@ const ROLES = [
   { value: 'WAITER', label: 'Garson', color: 'bg-blue-100 text-blue-800' },
   { value: 'KITCHEN', label: 'Mutfak', color: 'bg-orange-100 text-orange-800' },
   { value: 'CASHIER', label: 'Kasa', color: 'bg-green-100 text-green-800' },
+  { value: 'COURIER', label: 'Kurye', color: 'bg-emerald-100 text-emerald-800' },
 ];
 
 export default function Users() {
@@ -26,14 +26,9 @@ export default function Users() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-    role: 'WAITER',
-    pin: '',
-  });
+  const [formData, setFormData] = useState({ name: '', role: 'WAITER', pin: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -50,24 +45,42 @@ export default function Users() {
     }
   };
 
+  const resetForm = () => {
+    setFormData({ name: '', role: 'WAITER', pin: '' });
+    setEditingUser(null);
+    setFormError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setFormError('');
 
+    // Yeni kullanıcıda şifre zorunlu + 6 hane; düzenlemede boş = değişmez
+    if (!editingUser && formData.pin.length !== 6) {
+      setFormError('Şifre 6 haneli olmalı');
+      return;
+    }
+    if (formData.pin && formData.pin.length !== 6) {
+      setFormError('Şifre 6 haneli olmalı (değiştirmek istemiyorsan boş bırak)');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
+      const payload: Record<string, unknown> = { name: formData.name, role: formData.role };
+      if (formData.pin) payload.pin = formData.pin;
+
       if (editingUser) {
-        await api.put(`/api/users/${editingUser.id}`, formData, token!);
+        await api.put(`/api/users/${editingUser.id}`, payload, token!);
       } else {
-        await api.post('/api/users', formData, token!);
+        await api.post('/api/users', payload, token!);
       }
-      
+
       setShowModal(false);
-      setEditingUser(null);
-      setFormData({ email: '', password: '', name: '', role: 'WAITER', pin: '' });
+      resetForm();
       fetchUsers();
     } catch (error) {
-      console.error('Submit error:', error);
-      alert('İşlem başarısız');
+      setFormError(error instanceof Error ? error.message : 'İşlem başarısız');
     } finally {
       setIsSubmitting(false);
     }
@@ -75,19 +88,13 @@ export default function Users() {
 
   const handleEdit = (user: UserData) => {
     setEditingUser(user);
-    setFormData({
-      email: user.email,
-      password: '',
-      name: user.name,
-      role: user.role,
-      pin: '',
-    });
+    setFormData({ name: user.name, role: user.role, pin: '' });
+    setFormError('');
     setShowModal(true);
   };
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) return;
-
     try {
       await api.delete(`/api/users/${userId}`, token!);
       fetchUsers();
@@ -97,9 +104,7 @@ export default function Users() {
     }
   };
 
-  const getRoleInfo = (role: string) => {
-    return ROLES.find((r) => r.value === role) || ROLES[2];
-  };
+  const getRoleInfo = (role: string) => ROLES.find((r) => r.value === role) || ROLES[2];
 
   if (isLoading) {
     return (
@@ -115,12 +120,11 @@ export default function Users() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Kullanıcılar</h1>
-          <p className="text-gray-500">{users.length} kullanıcı</p>
+          <p className="text-gray-500">{users.length} kullanıcı · giriş 6 haneli şifre ile</p>
         </div>
         <button
           onClick={() => {
-            setEditingUser(null);
-            setFormData({ email: '', password: '', name: '', role: 'WAITER', pin: '' });
+            resetForm();
             setShowModal(true);
           }}
           className="btn btn-primary flex items-center gap-2"
@@ -136,7 +140,6 @@ export default function Users() {
           <thead>
             <tr className="bg-gray-50 border-b">
               <th className="table-cell text-left font-medium text-gray-600">Kullanıcı</th>
-              <th className="table-cell text-left font-medium text-gray-600">E-posta</th>
               <th className="table-cell text-left font-medium text-gray-600">Rol</th>
               <th className="table-cell text-left font-medium text-gray-600">Durum</th>
               <th className="table-cell text-right font-medium text-gray-600">İşlemler</th>
@@ -145,7 +148,6 @@ export default function Users() {
           <tbody>
             {users.map((user) => {
               const roleInfo = getRoleInfo(user.role);
-              
               return (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="table-cell">
@@ -158,11 +160,8 @@ export default function Users() {
                       <span className="font-medium text-gray-900">{user.name}</span>
                     </div>
                   </td>
-                  <td className="table-cell text-gray-600">{user.email}</td>
                   <td className="table-cell">
-                    <span className={`badge ${roleInfo.color}`}>
-                      {roleInfo.label}
-                    </span>
+                    <span className={`badge ${roleInfo.color}`}>{roleInfo.label}</span>
                   </td>
                   <td className="table-cell">
                     {user.active ? (
@@ -212,10 +211,14 @@ export default function Users() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {formError}
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ad Soyad
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -227,48 +230,30 @@ export default function Users() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  E-posta
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Şifre {editingUser && '(boş bırakılırsa değişmez)'}
-                </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="input"
-                  required={!editingUser}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  PIN (4 haneli)
+                  Şifre (6 haneli sayı){' '}
+                  {editingUser && (
+                    <span className="text-gray-400 font-normal">— boş bırakılırsa değişmez</span>
+                  )}
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={formData.pin}
-                  onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  className="input"
-                  maxLength={4}
-                  placeholder="Hızlı giriş için"
+                  onChange={(e) =>
+                    setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })
+                  }
+                  className="input text-2xl tracking-[8px] text-center"
+                  maxLength={6}
+                  placeholder="••••••"
+                  required={!editingUser}
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  Kullanıcı bu 6 haneli şifre ile giriş yapar (POS / mobil uygulamalar).
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rol
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
                 <div className="grid grid-cols-2 gap-2">
                   {ROLES.map((role) => (
                     <button
@@ -295,11 +280,7 @@ export default function Users() {
                 >
                   İptal
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn btn-primary flex-1"
-                >
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
                   {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
               </div>
@@ -310,4 +291,3 @@ export default function Users() {
     </div>
   );
 }
-

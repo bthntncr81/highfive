@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { Save, Store, Phone, MapPin, Percent, MessageCircle, Printer, Wifi, TestTube, Link2, Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Store, Phone, MapPin, Percent, MessageCircle, Mail, Printer, Wifi, TestTube, Link2, Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface RestaurantSettings {
   name: string;
@@ -168,6 +168,8 @@ export default function Settings() {
     iyzicoProdApiKey: '',
     iyzicoProdSecretKey: '',
   });
+  const [orderNotifyEnabled, setOrderNotifyEnabled] = useState(false);
+  const [orderNotifyEmails, setOrderNotifyEmails] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -202,6 +204,11 @@ export default function Settings() {
       }
       if (response.settings?.services) {
         setServices({ ...services, ...response.settings.services });
+      }
+      if (response.settings?.orderNotifications) {
+        const on = response.settings.orderNotifications;
+        setOrderNotifyEnabled(!!on.enabled);
+        setOrderNotifyEmails(Array.isArray(on.emails) ? on.emails.join('\n') : '');
       }
     } catch (error) {
       console.error('Settings fetch error:', error);
@@ -335,6 +342,19 @@ export default function Settings() {
       await api.put('/api/settings/restaurant', { value: restaurant }, token!);
       await api.put('/api/settings/whatsapp', { value: whatsapp }, token!);
       await api.put('/api/settings/services', { value: services }, token!);
+      await api.put(
+        '/api/settings/orderNotifications',
+        {
+          value: {
+            enabled: orderNotifyEnabled,
+            emails: orderNotifyEmails
+              .split(/[\n,;]+/)
+              .map((e) => e.trim())
+              .filter((e) => e.includes('@')),
+          },
+        },
+        token!,
+      );
       setMessage('Ayarlar kaydedildi!');
     } catch (error) {
       setMessage('Kaydetme hatası!');
@@ -939,6 +959,52 @@ export default function Settings() {
               rows={2}
               placeholder="Merhaba! Sipariş vermek istiyorum 🍕"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Order notification emails */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Mail className="w-5 h-5 text-primary-500" />
+          Sipariş Bildirim E-postaları
+        </h2>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Mail Bildirimi</p>
+              <p className="text-sm text-gray-500">
+                Her siparişte (POS + web, WhatsApp, mobil) sipariş detayını mail gönder
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={orderNotifyEnabled}
+                onChange={(e) => setOrderNotifyEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alıcı E-posta Adresleri
+            </label>
+            <textarea
+              value={orderNotifyEmails}
+              onChange={(e) => setOrderNotifyEmails(e.target.value)}
+              className="input"
+              rows={3}
+              placeholder="ornek@restoran.com&#10;mutfak@restoran.com"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Her satıra bir e-posta (veya virgülle ayırın). Her yeni siparişte (POS dahil)
+              tümüne sipariş detayı + adres + harita linki gönderilir. Müşteri e-posta
+              girdiyse ona da sipariş onayı gider.
+            </p>
           </div>
         </div>
       </div>

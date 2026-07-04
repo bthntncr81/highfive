@@ -104,6 +104,26 @@ export default async function reportRoutes(server: FastifyInstance) {
       hourlyBreakdown[hour].revenue += Number(order.total);
     }
 
+    // ===== Günlük giderler =====
+    const dayExpenses = await prisma.expense.findMany({
+      where: {
+        expenseDate: { gte: startOfDay, lte: endOfDay },
+        status: 'APPROVED',
+      },
+      include: { category: true },
+    });
+    const totalExpenses = dayExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const expensesByCategoryMap: Record<string, { name: string; amount: number; icon?: string | null; color?: string | null }> = {};
+    for (const e of dayExpenses) {
+      const k = e.categoryId;
+      if (!expensesByCategoryMap[k]) {
+        expensesByCategoryMap[k] = { name: e.category.name, amount: 0, icon: e.category.icon, color: e.category.color };
+      }
+      expensesByCategoryMap[k].amount += Number(e.amount);
+    }
+    const expensesByCategory = Object.values(expensesByCategoryMap).sort((a, b) => b.amount - a.amount);
+    const netProfit = totalRevenue - totalExpenses;
+
     return {
       date: targetDate.toISOString().split('T')[0],
       summary: {
@@ -115,9 +135,12 @@ export default async function reportRoutes(server: FastifyInstance) {
         otherAmount,
         cancelledOrders,
         avgOrderTime,
+        totalExpenses,
+        netProfit,
       },
       topItems,
       hourlyBreakdown,
+      expensesByCategory,
     };
   });
 
@@ -229,11 +252,37 @@ export default async function reportRoutes(server: FastifyInstance) {
     const avgDailyOrders = Math.round(totalOrders / daysInMonth);
     const avgDailyRevenue = Math.round(totalRevenue / daysInMonth);
 
+    // ===== Aylık giderler =====
+    const monthExpenses = await prisma.expense.findMany({
+      where: { expenseDate: { gte: start, lte: end }, status: 'APPROVED' },
+      include: { category: true },
+    });
+    const totalExpenses = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const expenseByCategoryMap: Record<string, { name: string; amount: number; count: number; icon?: string | null; color?: string | null }> = {};
+    for (const e of monthExpenses) {
+      const k = e.categoryId;
+      if (!expenseByCategoryMap[k]) {
+        expenseByCategoryMap[k] = { name: e.category.name, amount: 0, count: 0, icon: e.category.icon, color: e.category.color };
+      }
+      expenseByCategoryMap[k].amount += Number(e.amount);
+      expenseByCategoryMap[k].count += 1;
+    }
+    const netProfit = totalRevenue - totalExpenses;
+
     const result: any = {
       year: targetYear,
       month: targetMonth + 1,
-      summary: { totalOrders, totalRevenue, avgDailyOrders, avgDailyRevenue, daysInMonth },
+      summary: {
+        totalOrders,
+        totalRevenue,
+        avgDailyOrders,
+        avgDailyRevenue,
+        daysInMonth,
+        totalExpenses,
+        netProfit,
+      },
       categoryBreakdown: Object.values(categoryBreakdown).sort((a, b) => b.revenue - a.revenue),
+      expenseBreakdown: Object.values(expenseByCategoryMap).sort((a, b) => b.amount - a.amount),
     };
 
     // Detailed breakdown — adds per-day stats with hourly distribution and
@@ -247,6 +296,8 @@ export default async function reportRoutes(server: FastifyInstance) {
         cashAmount: number;
         cardAmount: number;
         otherAmount: number;
+        expenses: number;
+        netProfit: number;
         hourly: Record<number, { orders: number; revenue: number }>;
         topItems: Record<string, { name: string; count: number; revenue: number }>;
       }> = {};
@@ -258,8 +309,15 @@ export default async function reportRoutes(server: FastifyInstance) {
         days[key] = {
           date: key, orders: 0, revenue: 0, cancelled: 0,
           cashAmount: 0, cardAmount: 0, otherAmount: 0,
+          expenses: 0, netProfit: 0,
           hourly: {}, topItems: {},
         };
+      }
+
+      // Daily expenses fold-in
+      for (const e of monthExpenses) {
+        const key = e.expenseDate.toISOString().split('T')[0];
+        if (days[key]) days[key].expenses += Number(e.amount);
       }
 
       // Also pull cancelled orders for the cancellation column
@@ -313,6 +371,8 @@ export default async function reportRoutes(server: FastifyInstance) {
           cashAmount: d.cashAmount,
           cardAmount: d.cardAmount,
           otherAmount: d.otherAmount,
+          expenses: d.expenses,
+          netProfit: d.revenue - d.expenses,
           hourly: d.hourly,
           topItems: Object.values(d.topItems)
             .sort((a, b) => b.count - a.count)

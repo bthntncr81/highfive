@@ -1,41 +1,56 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Hero } from '../components/Hero'
+import { HfPizza, HfSandwich, HfPasta, HfDrink, HfDessert, HfRollingPin, HfArrow, HfPhone, HfStar, HfDelivery, HIGHLIGHT_ICON } from '../components/BrandIcons'
 import { useContent } from '../lib/contentStore'
-import { useLoyalty } from '../lib/loyaltyStore'
 import { orderApi, type MenuItem as APIMenuItem } from '../lib/api'
-import { SectionContainer, SectionHeading } from '../components/SectionContainer'
-import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
 import { useSettings } from '../hooks/useSettings'
+import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
+import { LoyaltyMegaSection } from '../components/LoyaltyMegaSection'
+import { AppDownload } from '../components/AppDownload'
+import { GoogleReviews } from '../components/GoogleReviews'
 
-// SVG Icon components for highlights
-const highlightIcons: Record<string, JSX.Element> = {
-  '🚀': (
-    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  ),
-  '🥬': (
-    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  ),
-  '👨‍🍳': (
-    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  '🧀': (
-    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-    </svg>
-  ),
+// Appetizing food imagery per category (placeholder — restoran kendi fotoğraflarıyla
+// değiştirebilir). Her görsel yüklenemezse marka degradesine düşer (kırık görsel olmaz).
+const CAT_IMG: Record<string, string> = {
+  pizza: '/media/cat-pizza.jpg',
+  makarna: '/media/cat-makarna.jpg',
+  sandvic: '/media/cat-sandvic.jpg',
+  icecek: '/media/cat-icecek.jpg',
+  tatli: '/media/cat-tatli.jpg',
+}
+const HERO_IMG = '/media/hero.jpg'
+const STORY_IMG = '/media/story.jpg'
+const CAT_VIDEO: Record<string, string> = {
+  pizza: '/media/vid-pizza.mp4',
+  makarna: '/media/vid-makarna.mp4',
+  sandvic: '/media/vid-sandvic.mp4',
+}
+const CAT_POSTER: Record<string, string> = {
+  pizza: '/media/poster-pizza.jpg',
+  makarna: '/media/poster-makarna.jpg',
+  sandvic: '/media/poster-sandvic.jpg',
+}
+const CAT_ICON: Record<string, (p: any) => JSX.Element> = { pizza: HfPizza, makarna: HfPasta, sandvic: HfSandwich, icecek: HfDrink, tatli: HfDessert }
+
+// Image that degrades to a warm brand gradient (with brand icon) if the source fails.
+const FoodImg = ({ src, alt, Icon, className }: { src: string; alt: string; Icon?: (p: any) => JSX.Element; className?: string }) => {
+  const [failed, setFailed] = useState(false)
+  const Fallback = Icon || HfPizza
+  if (failed || !src) {
+    return (
+      <div className={`flex items-center justify-center ${className || ''}`}
+        style={{ background: 'linear-gradient(135deg,#d4382a,#8a1610)' }}>
+        <Fallback className="w-20 h-20 text-white/90" />
+      </div>
+    )
+  }
+  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)}
+    className={`object-cover ${className || ''}`} />
 }
 
 export const Home = () => {
   const { content } = useContent()
-  const { member } = useLoyalty()
   const { whatsappEnabled } = useSettings()
   const [featuredItems, setFeaturedItems] = useState<APIMenuItem[]>([])
 
@@ -44,342 +59,281 @@ export const Home = () => {
       try {
         const response = await orderApi.getMenu()
         if (response.success && response.data?.items) {
-          // Get items that have real images (not placeholders or empty)
           const withImages = response.data.items.filter(
             (item) => item.image && item.image.startsWith('/uploads/')
           )
           setFeaturedItems(withImages.slice(0, 3))
         }
       } catch {
-        // Fallback: keep empty, will use content.menu.items
+        /* fall back to content */
       }
     }
     fetchFeatured()
   }, [])
 
-  // Use API items if available, otherwise fall back to content
   const displayItems = featuredItems.length > 0
     ? featuredItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        desc: item.description || '',
-        price: Number(item.price),
-        image: item.image || '',
+        id: item.id, name: item.name, desc: item.description || '',
+        price: Number(item.price), image: item.image || '',
+        category: (item as { category?: string }).category || 'pizza',
       }))
-    : content.menu.items.slice(0, 3)
+    : content.menu.items
+        .filter((i) => (i.badges || []).includes('Popüler'))
+        .slice(0, 3)
+        .map((i) => ({ id: i.id, name: i.name, desc: i.desc, price: i.price, image: i.image, category: i.category }))
+
+  const headlineWords = (content.hero.headline || content.site.name).split(' ')
+  const headFirst = headlineWords[0]
+  const headRest = headlineWords.slice(1).join(' ')
+
+  const cats = content.menu.categories.filter((c) => ['pizza', 'makarna', 'sandvic'].includes(c.id))
+  const catCount = (id: string) => content.menu.items.filter((i) => i.category === id).length
+  const waLink = `https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`
 
   return (
-    <main>
-      {/* Hero Section */}
-      <Hero />
+    <div className="overflow-hidden">
 
-      {/* Highlights Section */}
-      <SectionContainer variant="paper">
-        <SectionHeading
-          title="Neden High Five?"
-          subtitle="Lezzetin ve kalitenin buluşma noktası"
-        />
+      {/* ============ HERO ============ */}
+      <section className="relative section-cream pt-12 lg:pt-20 pb-16 lg:pb-24">
+        <div className="absolute -top-24 -right-24 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="container-diner grid lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+          <div className="lg:col-span-6">
+            <RevealOnScroll>
+              <p className="inline-flex items-center gap-2 text-[13px] font-bold tracking-wide text-primary bg-primary/10 rounded-full px-4 py-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {content.contact.address.split(',').slice(-2).join(',').trim() || 'Akçakoca, Düzce'}
+              </p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.08}>
+              <h1 className="font-display font-extrabold text-[clamp(2.6rem,6.5vw,4.8rem)] leading-[0.98] mt-5">
+                <span className="text-foreground">{headFirst}</span>{' '}
+                <span className="text-primary">{headRest}</span>
+              </h1>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.16}>
+              <p className="mt-6 text-lg text-foreground-muted leading-relaxed max-w-[46ch]">
+                {content.hero.subheadline}
+              </p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.24}>
+              <div className="flex flex-wrap items-center gap-3 mt-8">
+                <Link to="/menu" className="btn-primary text-[15px]">
+                  Hemen Sipariş Ver <HfArrow className="w-4 h-4" />
+                </Link>
+                <Link to="/menu" className="btn bg-surface-elevated text-foreground border border-border hover:border-primary/40">
+                  Menüyü Gör
+                </Link>
+              </div>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.32}>
+              <div className="flex items-center gap-5 mt-9 text-sm text-foreground-subtle">
+                <span className="flex items-center gap-2"><HfDelivery className="w-5 h-5 text-primary" /> 18 dk teslimat</span>
+                <span className="h-4 w-px bg-border" />
+                <span className="flex items-center gap-2"><HfStar className="w-5 h-5 text-amber-500" /> 4.9 / 5 Google</span>
+              </div>
+            </RevealOnScroll>
+          </div>
 
-        <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {content.highlights.map((highlight, index) => (
-            <StaggerItem key={index}>
-              <motion.div
-                whileHover={{ y: -4 }}
-                className="card text-center h-full"
-              >
-                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  {highlightIcons[highlight.icon] || (
-                    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  )}
+          <RevealOnScroll delay={0.12} className="lg:col-span-6">
+            <div className="relative">
+              <FoodImg src={HERO_IMG} alt={content.site.name} Icon={HfPizza}
+                className="aspect-[4/5] w-full rounded-[2rem] shadow-2xl" />
+              <div className="absolute -left-3 lg:-left-6 bottom-10 bg-surface-elevated rounded-2xl px-4 py-3 shadow-2xl border border-border-light">
+                <p className="text-[11px] font-semibold text-foreground-subtle uppercase tracking-wide">{displayItems[0]?.name || 'Margherita'}</p>
+                <p className="font-display font-extrabold text-2xl text-foreground leading-none mt-1">{displayItems[0]?.price || 149}<span className="text-primary text-lg">₺</span></p>
+              </div>
+              <div className="absolute -right-2 lg:-right-4 top-8 bg-primary text-white rounded-2xl px-4 py-3 shadow-2xl rotate-3">
+                <p className="text-[11px] font-semibold opacity-80 uppercase tracking-wide">Bugün</p>
+                <p className="font-display font-extrabold text-lg leading-none mt-0.5">Sıcacık kapında</p>
+              </div>
+            </div>
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* ============ HIGHLIGHTS BAND ============ */}
+      <section className="border-y border-border bg-surface-elevated/60">
+        <div className="container-diner grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border">
+          {content.highlights.map((h, i) => {
+            const Icon = HIGHLIGHT_ICON[h.icon] || HfDelivery
+            return (
+            <div key={i} className="flex items-center gap-4 p-6 lg:p-8">
+              <span className="grid place-items-center h-12 w-12 rounded-2xl bg-primary/10 text-primary shrink-0"><Icon className="w-6 h-6" /></span>
+              <div>
+                <p className="font-display font-bold text-foreground">{h.title}</p>
+                <p className="text-sm text-foreground-muted mt-0.5">{h.desc}</p>
+              </div>
+            </div>
+          )})}
+        </div>
+      </section>
+
+      {/* ============ FEATURED / POPULAR ============ */}
+      <SectionLite>
+        <div className="flex items-end justify-between gap-6 mb-10">
+          <div>
+            <p className="text-sm font-bold tracking-wide text-primary uppercase">Çok sevilenler</p>
+            <h2 className="font-display font-extrabold text-4xl lg:text-5xl text-foreground mt-3">Masada en çok buluşanlar</h2>
+          </div>
+          <Link to="/menu" className="hidden sm:inline-flex items-center gap-2 font-bold text-foreground hover:text-primary transition shrink-0">
+            Tüm menü <HfArrow className="w-4 h-4" />
+          </Link>
+        </div>
+        <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayItems.map((item) => (
+            <StaggerItem key={item.id}>
+              <Link to="/menu" className="card-menu group block">
+                <div className="relative aspect-[16/11] rounded-2xl overflow-hidden mb-4">
+                  <FoodImg src={item.image && item.image.startsWith('/uploads/') ? item.image : (CAT_IMG[item.category] || CAT_IMG.pizza)}
+                    alt={item.name} Icon={CAT_ICON[item.category] || HfPizza}
+                    className="w-full h-full transition-transform duration-500 group-hover:scale-105" />
+                  <span className="absolute top-3 left-3 badge-popular">Popüler</span>
                 </div>
-                <h3 className="font-display font-bold text-xl text-foreground mb-2">
-                  {highlight.title}
-                </h3>
-                <p className="font-body text-foreground-muted text-sm">
-                  {highlight.desc}
-                </p>
-              </motion.div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">{item.name}</h3>
+                  <p className="font-display font-extrabold text-xl text-foreground shrink-0">{item.price}<span className="text-primary text-sm">₺</span></p>
+                </div>
+                <p className="text-sm text-foreground-muted mt-1 line-clamp-2">{item.desc}</p>
+              </Link>
             </StaggerItem>
           ))}
         </StaggerContainer>
-      </SectionContainer>
+      </SectionLite>
 
-      {/* Featured Menu Preview */}
-      <SectionContainer variant="cream">
-        <div className="relative">
-          <SectionHeading
-            title="En Sevilenler"
-            subtitle="Müşterilerimizin favorileri"
-          />
-
-          {/* Featured items */}
-          <StaggerContainer className="grid md:grid-cols-3 gap-8 mb-12">
-            {displayItems.map((item) => (
-              <StaggerItem key={item.id}>
-                <motion.div
-                  whileHover={{ y: -4 }}
-                  className="card-menu group cursor-pointer"
-                >
-                  {/* Image */}
-                  <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    {/* Popular badge */}
-                    <div className="absolute top-3 right-3">
-                      <span className="badge-popular">FAVORİ</span>
-                    </div>
-                    {/* Price */}
-                    <div className="absolute bottom-3 left-3 bg-primary text-white font-display font-bold text-lg px-3 py-1 rounded-full shadow-md">
-                      ₺{item.price}
-                    </div>
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-foreground group-hover:text-primary transition-colors">
-                    {item.name}
-                  </h3>
-                  <p className="font-body text-foreground-muted text-sm mt-1 line-clamp-2">
-                    {item.desc}
-                  </p>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-
-          {/* CTA to menu */}
-          <RevealOnScroll className="text-center">
-            <Link to="/menu" className="btn-primary text-xl inline-flex">
-              Tüm Menüyü Gör
-              <span className="ml-1">→</span>
-            </Link>
-          </RevealOnScroll>
-        </div>
-      </SectionContainer>
-
-      {/* Social Proof / Stats */}
-      <SectionContainer variant="red">
-        <div className="grid sm:grid-cols-3 gap-8 text-center">
-          {[
-            {
-              number: '10K+',
-              label: 'Mutlu Müşteri',
-              icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              ),
-            },
-            {
-              number: '4.9',
-              label: 'Google Puanı',
-              icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              ),
-            },
-            {
-              number: '30dk',
-              label: 'Ortalama Teslimat',
-              icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ),
-            },
-          ].map((stat, index) => (
-            <RevealOnScroll key={index} delay={index * 0.1}>
-              <div className="p-6">
-                <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white">
-                  {stat.icon}
+      {/* ============ CATEGORIES ============ */}
+      <section className="pb-16 lg:pb-24 section-cream">
+        <div className="container-diner grid md:grid-cols-3 gap-5">
+          {cats.map((c, i) => (
+            <RevealOnScroll key={c.id} delay={i * 0.08} className={i === 1 ? 'md:mt-10' : ''}>
+              <Link to={`/menu?category=${c.id}`} className="relative block aspect-[4/3] md:aspect-[3/4] rounded-[1.75rem] overflow-hidden shadow-lg group">
+                {CAT_VIDEO[c.id] ? (
+                  <video src={CAT_VIDEO[c.id]} poster={CAT_POSTER[c.id]} autoPlay muted loop playsInline preload="none"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                ) : (
+                  <FoodImg src={CAT_IMG[c.id]} alt={c.name} Icon={CAT_ICON[c.id] || HfPizza} className="w-full h-full transition-transform duration-700 group-hover:scale-105" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute bottom-0 inset-x-0 p-6 text-white">
+                  <p className="text-sm opacity-80">{catCount(c.id)} çeşit</p>
+                  <p className="font-display font-extrabold text-3xl">{c.name}</p>
                 </div>
-                <div className="font-heading font-bold text-5xl text-white mb-2">
-                  {stat.number}
-                </div>
-                <div className="font-body text-lg text-white/80">
-                  {stat.label}
-                </div>
-              </div>
+              </Link>
             </RevealOnScroll>
           ))}
         </div>
-      </SectionContainer>
+      </section>
 
-      {/* Loyalty Program Section */}
-      {!member ? (
-        <SectionContainer variant="cream">
-          <RevealOnScroll>
-            <div className="relative bg-gradient-to-br from-accent to-accent-dark rounded-2xl p-8 md:p-12 overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
-
-              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-                <div className="flex-1 text-center lg:text-left">
-                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                    </svg>
+      {/* ============ BUILDER (Tasarla) ============ */}
+      <SectionLite>
+        <div className="grid md:grid-cols-2 gap-5 lg:gap-6">
+          <RevealOnScroll delay={0.05}>
+            <Link to="/build/pizza" className="block group h-full">
+              <motion.div whileHover={{ y: -6 }} className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-xl h-full flex flex-col"
+                style={{ background: 'linear-gradient(135deg,#d4382a 0%,#bb1e10 55%,#8a1610 100%)' }}>
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/15 rounded-full blur-3xl" />
+                <div className="relative z-10 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-6">
+                    <HfPizza className="w-24 h-24 drop-shadow-lg" />
+                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">5 ADIM</span>
                   </div>
-                  <h2 className="font-heading font-bold text-4xl md:text-5xl text-white mb-4">
-                    Sadakat Programı
-                  </h2>
-                  <p className="font-body text-xl text-white/90 mb-6 max-w-lg">
-                    Ücretsiz üye ol, her siparişte puan kazan!
-                    <span className="block mt-2 font-display font-semibold text-white">
-                      İlk üyeliğe 50 puan hediye!
-                    </span>
-                  </p>
-
-                  {/* Benefits */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    {[
-                      {
-                        text: 'Her 10₺ = 1 Puan',
-                        icon: (
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        text: '100 Puan = 10₺',
-                        icon: (
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        text: 'Özel Kampanyalar',
-                        icon: (
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                          </svg>
-                        ),
-                      },
-                    ].map((benefit, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center"
-                      >
-                        <div className="text-white mb-1 flex justify-center">{benefit.icon}</div>
-                        <span className="text-sm text-white font-display font-semibold">{benefit.text}</span>
-                      </motion.div>
-                    ))}
-                  </div>
+                  <h3 className="font-display font-extrabold text-3xl md:text-4xl mb-2">Kendi Pizzanı Tasarla</h3>
+                  <p className="text-white/90 text-base md:text-lg mb-6">Hamur → Sos → Peynir → İçerik → Üst Sos</p>
+                  <span className="inline-flex items-center gap-2 bg-white text-primary font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg self-start mt-auto">
+                    Tasarlamaya Başla <HfArrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </div>
-
-                <div className="flex-shrink-0 text-center">
-                  <p className="text-white/80 font-body mb-4">
-                    Sağ üstteki Üye Ol butonuna tıklayın
-                  </p>
-                  <Link to="/menu" className="btn bg-white text-accent font-bold text-xl inline-flex shadow-lg hover:shadow-xl transition-all">
-                    Menüye Git →
-                  </Link>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </Link>
           </RevealOnScroll>
-        </SectionContainer>
-      ) : (
-        <SectionContainer variant="cream">
-          <RevealOnScroll>
-            <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 md:p-12 overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-
-              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-                <div className="flex-1 text-center lg:text-left">
-                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
+          <RevealOnScroll delay={0.12}>
+            <Link to="/build/sandwich" className="block group h-full">
+              <motion.div whileHover={{ y: -6 }} className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-xl h-full flex flex-col"
+                style={{ background: 'linear-gradient(135deg,#b91c1c 0%,#991b1b 55%,#7f1d1d 100%)' }}>
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-300/25 rounded-full blur-3xl" />
+                <div className="relative z-10 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-6">
+                    <HfSandwich className="w-24 h-24 drop-shadow-lg" />
+                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">5 ADIM</span>
                   </div>
-                  <h2 className="font-heading font-bold text-4xl md:text-5xl text-white mb-2">
-                    Merhaba, {member.name || 'Üye'}!
-                  </h2>
-                  <p className="font-body text-xl text-white/90 mb-4">
-                    Sadakat programında aktif üyesiniz
-                  </p>
-
-                  <div className="inline-flex items-center gap-4 bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
-                    <div className="text-center">
-                      <p className="text-5xl font-bold text-white">{member.totalPoints}</p>
-                      <p className="text-sm text-white/80">Puanınız</p>
-                    </div>
-                    <div className="w-px h-12 bg-white/30" />
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-white">
-                        {Math.floor(member.totalPoints / 100) * 10}₺
-                      </p>
-                      <p className="text-sm text-white/80">Kullanılabilir</p>
-                    </div>
-                  </div>
-
-                  {member.loyaltyTier && (
-                    <div className="mt-4 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
-                      <span className="text-xl">{member.loyaltyTier.icon}</span>
-                      <span className="text-white font-display font-semibold">{member.loyaltyTier.name} Üye</span>
-                    </div>
-                  )}
+                  <h3 className="font-display font-extrabold text-3xl md:text-4xl mb-2">Kendi Sandviçini Tasarla</h3>
+                  <p className="text-white/90 text-base md:text-lg mb-6">Ekmek → Sos → Peynir → İçerik → Üst Sos</p>
+                  <span className="inline-flex items-center gap-2 bg-white text-primary font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg self-start mt-auto">
+                    Tasarlamaya Başla <HfArrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </div>
-
-                <div className="flex-shrink-0">
-                  <Link
-                    to="/menu"
-                    className="bg-white text-emerald-600 font-display font-bold text-2xl px-10 py-5 rounded-full shadow-xl hover:shadow-2xl transition-all flex items-center gap-3"
-                  >
-                    Sipariş Ver →
-                  </Link>
-                  <p className="text-center text-white/80 text-sm mt-3">
-                    Siparişte puanlarını kullan!
-                  </p>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </Link>
           </RevealOnScroll>
-        </SectionContainer>
-      )}
+        </div>
+      </SectionLite>
 
-      {/* CTA Section */}
-      <SectionContainer variant="paper">
-        <RevealOnScroll>
-          <div className="relative bg-accent rounded-2xl p-8 md:p-12 text-center overflow-hidden">
-            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="font-heading font-bold text-4xl md:text-5xl text-white mb-4">
-              Acıktın mı?
-            </h2>
-            <p className="font-body text-xl text-white/70 mb-8 max-w-xl mx-auto">
-              {whatsappEnabled ? "WhatsApp'tan hızlıca sipariş ver, kapına gelsin!" : "Menümüzü inceleyin!"}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {whatsappEnabled && (
-                <a
-                  href={`https://wa.me/${content.whatsapp.phone}?text=${encodeURIComponent(content.whatsapp.defaultMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-whatsapp text-xl"
-                >
-                  WhatsApp Sipariş
-                </a>
-              )}
-              <Link to="/menu" className="btn bg-white text-foreground font-bold text-xl">
-                Menüye Bak →
+      {/* ============ STATS BAND ============ */}
+      <section className="section-red">
+        <div className="container-diner py-16 lg:py-20 grid sm:grid-cols-3 gap-8 text-center">
+          {[['10K+', 'Mutlu Müşteri'], ['4.9', 'Google Puanı'], ['18dk', 'Ortalama Teslimat']].map(([n, l], i) => (
+            <RevealOnScroll key={i} delay={i * 0.1}>
+              <div className="font-display font-extrabold text-5xl lg:text-6xl text-white">{n}</div>
+              <div className="text-lg text-white/80 mt-2">{l}</div>
+            </RevealOnScroll>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ STORY ============ */}
+      <section className="bg-[#1a1512] text-white">
+        <div className="container-diner py-20 lg:py-28 grid lg:grid-cols-2 gap-12 items-center">
+          <RevealOnScroll className="order-2 lg:order-1">
+            <FoodImg src={STORY_IMG} alt={content.about.storyTitle} Icon={HfRollingPin} className="aspect-[5/4] w-full rounded-[2rem] shadow-2xl" />
+          </RevealOnScroll>
+          <div className="order-1 lg:order-2">
+            <RevealOnScroll><p className="text-sm font-bold tracking-wide text-primary-light uppercase">Taş fırından, Akçakoca'dan</p></RevealOnScroll>
+            <RevealOnScroll delay={0.08}><h2 className="font-display font-extrabold text-4xl lg:text-5xl mt-3">Akçakoca'da samimi<br className="hidden sm:block" /> bir İtalyan lezzeti</h2></RevealOnScroll>
+            <RevealOnScroll delay={0.16}>
+              <p className="text-white/70 leading-relaxed mt-6 text-lg max-w-[52ch]">Akçakoca'nın kalbinde küçük bir mutfakta başladık. San Marzano domatesi, mozzarella, kendi yoğurduğumuz Tip "00" hamur ve 450°C taş fırın. İyi yemek aceleye gelmez; sabırla, gönülden gelen lezzettir.</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.24}>
+              <Link to="/about" className="inline-flex items-center gap-2 mt-8 rounded-full border border-white/20 px-6 py-3.5 font-bold hover:bg-white hover:text-foreground transition">
+                Hikayemiz <HfArrow className="w-4 h-4" />
               </Link>
+            </RevealOnScroll>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ Korunan zengin bölümler (premium sisteme otomatik geçer) ============ */}
+      <GoogleReviews />
+      <LoyaltyMegaSection />
+      <AppDownload />
+
+      {/* ============ ORDER CTA ============ */}
+      <SectionLite>
+        <RevealOnScroll>
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-primary text-white px-8 lg:px-16 py-16 lg:py-20 shadow-2xl">
+            <div className="absolute -bottom-24 -right-12 opacity-[0.06] select-none pointer-events-none text-white"><HfPizza className="w-[26rem] h-[26rem]" /></div>
+            <div className="relative max-w-xl">
+              <h2 className="font-display font-extrabold text-4xl lg:text-5xl">Karnın mı acıktı?</h2>
+              <p className="text-white/85 text-lg mt-4">Akçakoca içi 18 dakikada teslimat. Şimdi sipariş ver, sıcacık kapına gelsin.</p>
+              <div className="flex flex-wrap gap-3 mt-8">
+                <Link to="/menu" className="btn bg-white text-primary hover:bg-surface">Sipariş Ver</Link>
+                <a href={`tel:${content.links.phoneTel}`} className="btn bg-white/15 backdrop-blur border border-white/25 text-white hover:bg-white/25">
+                  <HfPhone className="w-4 h-4" /> {content.links.phoneTel}
+                </a>
+                {whatsappEnabled && (
+                  <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn bg-white/15 backdrop-blur border border-white/25 text-white hover:bg-white/25">
+                    WhatsApp'tan Yaz
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </RevealOnScroll>
-      </SectionContainer>
-    </main>
+      </SectionLite>
+    </div>
   )
 }
+
+// Lightweight section wrapper (premium spacing on warm paper).
+const SectionLite = ({ children }: { children: React.ReactNode }) => (
+  <section className="section-cream py-16 lg:py-24">
+    <div className="container-diner">{children}</div>
+  </section>
+)

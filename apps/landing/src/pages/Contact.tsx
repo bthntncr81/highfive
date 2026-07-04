@@ -1,256 +1,152 @@
-import { motion } from 'framer-motion'
 import { useContent } from '../lib/contentStore'
-import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 import { RevealOnScroll, StaggerContainer, StaggerItem } from '../components/RevealOnScroll'
 import { createWhatsAppLink } from '../lib/whatsapp'
 import { useSettings } from '../hooks/useSettings'
+import { HfPhone, HfWhatsapp, HfPin, HfClock, HfInstagram, HfTiktok, HfArrow } from '../components/BrandIcons'
+
+const STOREFRONT = '/media/contact.jpg'
 
 export const Contact = () => {
   const { content } = useContent()
   const { whatsappEnabled } = useSettings()
+  const wa = createWhatsAppLink(content.whatsapp.phone, content.whatsapp.defaultMessage)
 
   return (
-    <main>
-      {/* Page Header */}
-      <SectionContainer variant="red" className="py-12 md:py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <motion.img
-            src="/logo-white.svg"
-            alt="High Five"
-            className="h-24 md:h-32 w-auto mx-auto mb-4"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ repeat: Infinity, duration: 3 }}
-          />
-          <h1 className="font-heading font-bold text-5xl md:text-6xl text-white mb-4">
-            İletişim
-          </h1>
-          <p className="font-body text-xl text-background/80 max-w-xl mx-auto">
-            Bize ulaşın, siparişinizi verin!
-          </p>
-        </motion.div>
-      </SectionContainer>
-
-      {/* Contact Info Cards */}
-      <SectionContainer variant="paper">
-        <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {/* Address */}
-          <StaggerItem>
-            <motion.div
-              whileHover={{ y: -8, rotate: -2 }}
-              className="card h-full"
-            >
-              <div className="text-4xl mb-4">📍</div>
-              <h3 className="font-display text-lg text-foreground mb-2">
-                Adres
-              </h3>
-              <p className="font-body text-foreground-muted text-sm">
-                {content.contact.address}
+    <main className="overflow-hidden">
+      {/* HERO */}
+      <section className="section-cream pt-12 lg:pt-16 pb-16 lg:pb-20">
+        <div className="container-diner grid lg:grid-cols-12 gap-10 items-center">
+          <div className="lg:col-span-6">
+            <RevealOnScroll>
+              <p className="text-sm font-bold tracking-wide text-primary uppercase">İletişim</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.08}>
+              <h1 className="font-display font-extrabold text-5xl lg:text-6xl text-foreground mt-3">Bize ulaş</h1>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.16}>
+              <p className="text-lg text-foreground-muted mt-4 max-w-md">
+                Akçakoca'da bizi ziyaret et, telefonla ara ya da WhatsApp'tan yaz. Siparişin 18 dakikada kapında.
               </p>
-              <a
-                href={content.links.googleMaps}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-display text-sm text-primary mt-3 hover:underline"
-              >
-                Haritada Gör →
-              </a>
-            </motion.div>
-          </StaggerItem>
-
-          {/* Phone */}
-          <StaggerItem>
-            <motion.div
-              whileHover={{ y: -8, rotate: 2 }}
-              className="card h-full"
-            >
-              <div className="text-4xl mb-4">📞</div>
-              <h3 className="font-display text-lg text-foreground mb-2">
-                Telefon
-              </h3>
-              <a
-                href={`tel:${content.links.phoneTel}`}
-                className="font-body text-foreground-muted hover:text-primary transition-colors"
-              >
-                {content.links.phoneTel}
-              </a>
-            </motion.div>
-          </StaggerItem>
-
-          {/* WhatsApp */}
-          {whatsappEnabled && (
-          <StaggerItem>
-            <motion.div
-              whileHover={{ y: -8, rotate: -2 }}
-              className="card h-full"
-            >
-              <div className="text-4xl mb-4">💬</div>
-              <h3 className="font-display text-lg text-foreground mb-2">
-                WhatsApp Sipariş
-              </h3>
-              <a
-                href={createWhatsAppLink(content.whatsapp.phone, content.whatsapp.defaultMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-whatsapp text-sm mt-2"
-              >
-                Sipariş Ver
-              </a>
-            </motion.div>
-          </StaggerItem>
-          )}
-
-          {/* Social */}
-          <StaggerItem>
-            <motion.div
-              whileHover={{ y: -8, rotate: 2 }}
-              className="card h-full"
-            >
-              <div className="text-4xl mb-4">📱</div>
-              <h3 className="font-display text-lg text-foreground mb-2">
-                Sosyal Medya
-              </h3>
-              <div className="flex gap-3 mt-3">
-                {content.links.instagram && (
-                  <a
-                    href={content.links.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-accent rounded-xl text-xl text-white hover:bg-primary transition-colors"
-                  >
-                    📸
-                  </a>
-                )}
-                {content.links.tiktok && (
-                  <a
-                    href={content.links.tiktok}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 flex items-center justify-center bg-accent rounded-xl text-xl text-white hover:bg-primary transition-colors"
-                  >
-                    🎵
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.24}>
+              <div className="flex flex-wrap gap-3 mt-8">
+                <a href={`tel:${content.links.phoneTel}`} className="btn-primary">
+                  <HfPhone className="w-4 h-4" /> {content.links.phoneTel}
+                </a>
+                {whatsappEnabled && (
+                  <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-whatsapp">
+                    <HfWhatsapp className="w-4 h-4" /> WhatsApp
                   </a>
                 )}
               </div>
-            </motion.div>
-          </StaggerItem>
-        </StaggerContainer>
-
-        {/* Opening Hours */}
-        <RevealOnScroll>
-          <div className="max-w-2xl mx-auto">
-            <SectionHeading title="Çalışma Saatleri 🕐" />
-
-            <div className="bg-accent text-white rounded-xl p-6">
-              {content.contact.hours.map((hour, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex justify-between items-baseline py-2 border-b border-white/10"
-                >
-                  <span className="font-body text-lg">{hour.day}</span>
-                  <span className="font-display font-bold text-accent-light">
-                    {hour.open} - {hour.close}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
+            </RevealOnScroll>
           </div>
-        </RevealOnScroll>
-      </SectionContainer>
+          <RevealOnScroll delay={0.12} className="lg:col-span-6">
+            <img src={STOREFRONT} alt={content.site.name} loading="lazy"
+              className="aspect-[4/3] w-full object-cover rounded-[2rem] shadow-2xl" />
+          </RevealOnScroll>
+        </div>
+      </section>
 
-      {/* Map */}
-      <SectionContainer variant="cream">
-        <SectionHeading
-          title="Bizi Bulun 🗺️"
-          subtitle="Haritada konumumuz"
-        />
+      {/* CONTACT CARDS + HOURS */}
+      <section className="section-cream pb-16 lg:pb-24">
+        <div className="container-diner grid lg:grid-cols-12 gap-6">
+          {/* left: cards */}
+          <div className="lg:col-span-5 space-y-4">
+            <RevealOnScroll>
+              <a href={`tel:${content.links.phoneTel}`} className="card-menu flex items-center gap-4 bg-primary text-white">
+                <span className="grid place-items-center h-12 w-12 rounded-2xl bg-white/15 shrink-0"><HfPhone className="w-6 h-6" /></span>
+                <div><p className="text-white/70 text-sm">Telefonla sipariş</p><p className="font-display font-extrabold text-2xl">{content.links.phoneTel}</p></div>
+              </a>
+            </RevealOnScroll>
+            {whatsappEnabled && (
+              <RevealOnScroll delay={0.06}>
+                <a href={wa} target="_blank" rel="noopener noreferrer" className="card-menu flex items-center gap-4">
+                  <span className="grid place-items-center h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-600 shrink-0"><HfWhatsapp className="w-6 h-6" /></span>
+                  <div><p className="text-foreground-muted text-sm">WhatsApp</p><p className="font-display font-extrabold text-xl text-foreground">Hızlıca yaz</p></div>
+                </a>
+              </RevealOnScroll>
+            )}
+            <RevealOnScroll delay={0.12}>
+              <a href={content.links.googleMaps} target="_blank" rel="noopener noreferrer" className="card-menu flex items-start gap-4">
+                <span className="grid place-items-center h-12 w-12 rounded-2xl bg-primary/10 text-primary shrink-0"><HfPin className="w-6 h-6" /></span>
+                <div><p className="text-foreground-muted text-sm">Adres</p><p className="font-semibold text-foreground mt-0.5 leading-snug">{content.contact.address}</p>
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-primary mt-2">Yol tarifi al <HfArrow className="w-4 h-4" /></span></div>
+              </a>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.18}>
+              <div className="flex items-center gap-3 pt-1">
+                {content.links.instagram && (
+                  <a href={content.links.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                    className="grid place-items-center h-12 w-12 rounded-full bg-surface-elevated shadow-card text-primary hover:bg-primary hover:text-white transition"><HfInstagram className="w-6 h-6" /></a>
+                )}
+                {content.links.tiktok && (
+                  <a href={content.links.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok"
+                    className="grid place-items-center h-12 w-12 rounded-full bg-surface-elevated shadow-card text-primary hover:bg-primary hover:text-white transition"><HfTiktok className="w-6 h-6" /></a>
+                )}
+              </div>
+            </RevealOnScroll>
+          </div>
 
-        <RevealOnScroll>
-          <div className="relative rounded-2xl overflow-hidden shadow-xl">
-            {/* Map container */}
-            <div className="aspect-video md:aspect-[21/9]">
-              <iframe
-                src={content.contact.mapEmbedUrl}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="High Five Konum"
-              />
+          {/* right: hours */}
+          <RevealOnScroll delay={0.1} className="lg:col-span-7">
+            <div className="card">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary"><HfClock className="w-5 h-5" /></span>
+                <h2 className="font-display font-extrabold text-2xl text-foreground">Çalışma Saatleri</h2>
+              </div>
+              <div className="divide-y divide-border">
+                {content.contact.hours.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between py-3">
+                    <span className="font-medium text-foreground-muted">{h.day}</span>
+                    <span className={`font-display font-bold ${h.close === '00:00' ? 'text-primary' : 'text-foreground'}`}>{h.open} - {h.close}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+          </RevealOnScroll>
+        </div>
+      </section>
 
-            {/* Overlay card */}
-            <motion.div
-              initial={{ x: -100, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              className="absolute bottom-4 left-4 md:bottom-8 md:left-8"
-            >
-              <div className="card max-w-xs">
-                <div className="flex items-start gap-3">
-                  <span className="text-3xl">📍</span>
+      {/* MAP */}
+      <section className="section-cream pb-16 lg:pb-24">
+        <div className="container-diner">
+          <RevealOnScroll>
+            <div className="relative rounded-[2rem] overflow-hidden shadow-xl">
+              <div className="aspect-video md:aspect-[21/9]">
+                <iframe src={content.contact.mapEmbedUrl} width="100%" height="100%" style={{ border: 0 }}
+                  allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="High Five Konum" />
+              </div>
+              <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6">
+                <div className="card max-w-xs flex items-start gap-3">
+                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary shrink-0"><HfPin className="w-5 h-5" /></span>
                   <div>
-                    <h4 className="font-display text-lg text-foreground">
-                      High Five
-                    </h4>
-                    <p className="font-body text-sm text-foreground-muted">
-                      {content.contact.address}
-                    </p>
-                    <a
-                      href={content.links.googleMaps}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary text-sm mt-3"
-                    >
-                      Yol Tarifi Al
-                    </a>
+                    <h4 className="font-display font-bold text-foreground">{content.site.logoText}</h4>
+                    <p className="text-sm text-foreground-muted">{content.contact.address}</p>
+                    <a href={content.links.googleMaps} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm mt-3">Yol Tarifi Al</a>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </RevealOnScroll>
-      </SectionContainer>
+            </div>
+          </RevealOnScroll>
+        </div>
+      </section>
 
       {/* CTA */}
       {whatsappEnabled && (
-      <SectionContainer variant="red">
-        <RevealOnScroll>
-          <div className="text-center">
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="text-6xl mb-6"
-            >
-              🍕
-            </motion.div>
-            <h2 className="font-heading font-bold text-4xl text-white mb-4">
-              Acıktıysan bekleme!
-            </h2>
-            <p className="font-body text-xl text-background/80 mb-8 max-w-xl mx-auto">
-              WhatsApp'tan hızlıca sipariş ver, 30 dakikada kapında olsun!
-            </p>
-            <a
-              href={createWhatsAppLink(content.whatsapp.phone, content.whatsapp.defaultMessage)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary text-xl inline-flex"
-            >
-              <span>📱</span>
-              Hemen Sipariş Ver
-            </a>
+        <section className="section-cream pb-20 lg:pb-28">
+          <div className="container-diner">
+            <RevealOnScroll>
+              <div className="relative overflow-hidden rounded-[2.5rem] bg-primary text-white px-8 lg:px-16 py-16 text-center shadow-2xl">
+                <h2 className="font-display font-extrabold text-4xl lg:text-5xl">Acıktıysan bekleme!</h2>
+                <p className="text-white/85 text-lg mt-4 max-w-xl mx-auto">WhatsApp'tan hızlıca sipariş ver, 18 dakikada kapında olsun.</p>
+                <a href={wa} target="_blank" rel="noopener noreferrer" className="btn bg-white text-primary hover:bg-surface mt-8 inline-flex">
+                  <HfWhatsapp className="w-5 h-5" /> Hemen Sipariş Ver
+                </a>
+              </div>
+            </RevealOnScroll>
           </div>
-        </RevealOnScroll>
-      </SectionContainer>
+        </section>
       )}
     </main>
   )

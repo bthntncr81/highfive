@@ -13,28 +13,28 @@ datasource db {
 // ==================== LOCATION / BRANCH MANAGEMENT ====================
 
 model Location {
-  id           String   @id @default(cuid())
-  name         String   // "High Five Kadıköy"
-  code         String   @unique // "kadiköy", "besiktas"
-  address      String?
-  phone        String?
-  email        String?
-  timezone     String   @default("Europe/Istanbul")
-  currency     String   @default("TRY")
-  taxRate      Decimal  @default(10) @db.Decimal(5, 2)
-  serviceCharge Decimal @default(0) @db.Decimal(5, 2) // Servis ücreti %
-  serviceChargeType String @default("PERCENTAGE") // PERCENTAGE, FIXED
-  active       Boolean  @default(true)
-  isDefault    Boolean  @default(false)
-  settings     Json?    // Location specific settings
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String // "High Five Kadıköy"
+  code              String   @unique // "kadiköy", "besiktas"
+  address           String?
+  phone             String?
+  email             String?
+  timezone          String   @default("Europe/Istanbul")
+  currency          String   @default("TRY")
+  taxRate           Decimal  @default(10) @db.Decimal(5, 2)
+  serviceCharge     Decimal  @default(0) @db.Decimal(5, 2) // Servis ücreti %
+  serviceChargeType String   @default("PERCENTAGE") // PERCENTAGE, FIXED
+  active            Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  settings          Json? // Location specific settings
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  tables    Table[]
-  orders    Order[]
-  users     User[]
-  menuItems MenuItemLocation[]
-  happyHours HappyHour[]
+  tables              Table[]
+  orders              Order[]
+  users               User[]
+  menuItems           MenuItemLocation[]
+  happyHours          HappyHour[]
   integrationPartners IntegrationPartner[]
 }
 
@@ -50,24 +50,34 @@ enum UserRole {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  email      String    @unique
+  id         String   @id @default(cuid())
+  email      String   @unique
   password   String
   name       String
-  role       UserRole  @default(WAITER)
-  pin        String?   // Quick PIN login for POS
+  role       UserRole @default(WAITER)
+  pin        String? // Quick PIN login for POS
   avatar     String?
-  phone      String?   // Kurye telefonu
-  active     Boolean   @default(true)
-  locationId String?   // Assigned location
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  phone      String? // Kurye telefonu
+  active     Boolean  @default(true)
+  locationId String? // Assigned location
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  location       Location?     @relation(fields: [locationId], references: [id])
-  waiterOrders   Order[]       @relation("WaiterOrders")
-  courierOrders  Order[]       @relation("CourierOrders")
-  sessions       Session[]
-  activityLogs   ActivityLog[]
+  // Kurye canlı durumu (yalnız COURIER rolü için anlamlı)
+  isOnline    Boolean   @default(false)
+  lastSeenLat Float?
+  lastSeenLng Float?
+  lastSeenAt  DateTime?
+
+  location         Location?         @relation(fields: [locationId], references: [id])
+  waiterOrders     Order[]           @relation("WaiterOrders")
+  courierOrders    Order[]           @relation("CourierOrders")
+  sessions         Session[]
+  activityLogs     ActivityLog[]
+  createdExpenses  Expense[]         @relation("ExpenseCreator")
+  approvedExpenses Expense[]         @relation("ExpenseApprover")
+  courierLocations CourierLocation[] @relation("CourierLocations")
+  deviceTokens     DeviceToken[]
 }
 
 model Session {
@@ -103,18 +113,18 @@ enum TableStatus {
 model Table {
   id               String      @id @default(cuid())
   locationId       String?
-  number           Int         
-  name             String?     // "Bahçe 1", "VIP 2" etc.
+  number           Int
+  name             String? // "Bahçe 1", "VIP 2" etc.
   capacity         Int         @default(4)
   status           TableStatus @default(FREE)
-  positionX        Float?      // For floor plan
+  positionX        Float? // For floor plan
   positionY        Float?
   floor            Int         @default(1)
-  section          String?     // "İç Mekan", "Bahçe", "Teras"
+  section          String? // "İç Mekan", "Bahçe", "Teras"
   active           Boolean     @default(true)
-  mergedWithId     String?     // Birleştirildiği ana masa
-  sessionToken     String?     // QR sipariş için oturum kodu
-  sessionStartedAt DateTime?   // Oturum başlangıç zamanı
+  mergedWithId     String? // Birleştirildiği ana masa
+  sessionToken     String? // QR sipariş için oturum kodu
+  sessionStartedAt DateTime? // Oturum başlangıç zamanı
   tabEnabled       Boolean     @default(true) // Hesap açık tutulabilir mi
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -140,7 +150,8 @@ model Category {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  items MenuItem[]
+  items   MenuItem[]
+  bundles BundleDeal[]
 }
 
 // Alerjen Enum
@@ -162,56 +173,57 @@ enum Allergen {
 }
 
 model MenuItem {
-  id             String     @id @default(cuid())
-  categoryId     String
-  name           String
-  description    String?
-  price          Decimal    @db.Decimal(10, 2)
-  image          String?
-  badges         String[]   // ["Popüler", "Yeni", "Acılı"]
-  allergens      Allergen[] // Alerjen bilgileri
-  calories       Int?       // Kalori değeri
-  prepTime       Int?       // Preparation time in minutes
-  
-  // Stock Management
-  available      Boolean    @default(true)
-  outOfStockReason String?  // "Malzeme bitti", "Bugünlük tükendi"
-  outOfStockUntil DateTime? // Otomatik açılma zamanı
-  stockQuantity  Int?       // Stok miktarı (opsiyonel)
-  lowStockAlert  Int?       // Düşük stok uyarı seviyesi
-  
-  // Sorting & Display
-  sortOrder      Int        @default(0)
-  featured       Boolean    @default(false) // Öne çıkan ürün
-  
-  // Pricing
-  discountPrice  Decimal?   @db.Decimal(10, 2) // İndirimli fiyat
-  discountUntil  DateTime?  // İndirim bitiş tarihi
-  
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  price       Decimal    @db.Decimal(10, 2)
+  image       String?
+  badges      String[] // ["Popüler", "Yeni", "Acılı"]
+  allergens   Allergen[] // Alerjen bilgileri
+  calories    Int? // Kalori değeri
+  prepTime    Int? // Preparation time in minutes
 
-  category       Category           @relation(fields: [categoryId], references: [id])
-  modifiers      Modifier[]
-  ingredients    MenuItemIngredient[]
-  orderItems     OrderItem[]
-  upsellItems    MenuItemUpsell[]   @relation("UpsellFrom")
-  upsoldBy       MenuItemUpsell[]   @relation("UpsellTo")
-  crossSellItems MenuItemCrossSell[] @relation("CrossSellFrom")
-  crossSoldBy    MenuItemCrossSell[] @relation("CrossSellTo")
-  locations      MenuItemLocation[]
-  happyHourItems HappyHourItem[]
-  bundleItems    BundleItem[]
+  // Stock Management
+  available        Boolean   @default(true)
+  outOfStockReason String? // "Malzeme bitti", "Bugünlük tükendi"
+  outOfStockUntil  DateTime? // Otomatik açılma zamanı
+  stockQuantity    Int? // Stok miktarı (opsiyonel)
+  lowStockAlert    Int? // Düşük stok uyarı seviyesi
+
+  // Sorting & Display
+  sortOrder Int     @default(0)
+  featured  Boolean @default(false) // Öne çıkan ürün
+
+  // Pricing
+  discountPrice Decimal?  @db.Decimal(10, 2) // İndirimli fiyat
+  discountUntil DateTime? // İndirim bitiş tarihi
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category         Category             @relation(fields: [categoryId], references: [id])
+  modifiers        Modifier[]
+  ingredients      MenuItemIngredient[]
+  orderItems       OrderItem[]
+  upsellItems      MenuItemUpsell[]     @relation("UpsellFrom")
+  upsoldBy         MenuItemUpsell[]     @relation("UpsellTo")
+  crossSellItems   MenuItemCrossSell[]  @relation("CrossSellFrom")
+  crossSoldBy      MenuItemCrossSell[]  @relation("CrossSellTo")
+  locations        MenuItemLocation[]
+  happyHourItems   HappyHourItem[]
+  bundleItems      BundleItem[]
+  optionGroupItems OptionGroupItem[]
 }
 
 // Location-specific menu item settings
 model MenuItemLocation {
-  id           String   @id @default(cuid())
-  menuItemId   String
-  locationId   String
-  available    Boolean  @default(true)
-  price        Decimal? @db.Decimal(10, 2) // Location specific price override
-  createdAt    DateTime @default(now())
+  id         String   @id @default(cuid())
+  menuItemId String
+  locationId String
+  available  Boolean  @default(true)
+  price      Decimal? @db.Decimal(10, 2) // Location specific price override
+  createdAt  DateTime @default(now())
 
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -221,14 +233,14 @@ model MenuItemLocation {
 
 // Upselling - "Bununla birlikte X de ister misiniz?"
 model MenuItemUpsell {
-  id            String   @id @default(cuid())
-  fromItemId    String
-  toItemId      String
-  message       String?  // "Yanında patates ister misiniz?"
+  id             String   @id @default(cuid())
+  fromItemId     String
+  toItemId       String
+  message        String? // "Yanında patates ister misiniz?"
   discountAmount Decimal? @db.Decimal(10, 2) // Upsell indirimi
-  sortOrder     Int      @default(0)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  sortOrder      Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
   fromItem MenuItem @relation("UpsellFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
   toItem   MenuItem @relation("UpsellTo", fields: [toItemId], references: [id], onDelete: Cascade)
@@ -238,14 +250,14 @@ model MenuItemUpsell {
 
 // Cross-selling - Sepette X varken Y öner
 model MenuItemCrossSell {
-  id            String   @id @default(cuid())
-  fromItemId    String
-  toItemId      String
-  message       String?  // "Bunu da beğenebilirsiniz"
+  id             String   @id @default(cuid())
+  fromItemId     String
+  toItemId       String
+  message        String? // "Bunu da beğenebilirsiniz"
   discountAmount Decimal? @db.Decimal(10, 2)
-  sortOrder     Int      @default(0)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  sortOrder      Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
   fromItem MenuItem @relation("CrossSellFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
   toItem   MenuItem @relation("CrossSellTo", fields: [toItemId], references: [id], onDelete: Cascade)
@@ -256,7 +268,7 @@ model MenuItemCrossSell {
 model Modifier {
   id         String   @id @default(cuid())
   menuItemId String
-  name       String   // "Ekstra Peynir", "Acısız" etc.
+  name       String // "Ekstra Peynir", "Acısız" etc.
   price      Decimal  @default(0) @db.Decimal(10, 2)
   available  Boolean  @default(true)
   createdAt  DateTime @default(now())
@@ -276,18 +288,18 @@ enum RawMaterialUnit {
 }
 
 model RawMaterial {
-  id            String          @id @default(cuid())
-  name          String          @unique
-  unit          RawMaterialUnit @default(GRAM)
-  currentStock  Decimal         @default(0) @db.Decimal(10, 2) // Mevcut stok miktarı
-  minStock      Decimal         @default(0) @db.Decimal(10, 2) // Min stok uyarı seviyesi
-  costPerUnit   Decimal         @default(0) @db.Decimal(10, 2) // Birim maliyet
-  supplier      String?         // Tedarikçi
-  active        Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  name         String          @unique
+  unit         RawMaterialUnit @default(GRAM)
+  currentStock Decimal         @default(0) @db.Decimal(10, 2) // Mevcut stok miktarı
+  minStock     Decimal         @default(0) @db.Decimal(10, 2) // Min stok uyarı seviyesi
+  costPerUnit  Decimal         @default(0) @db.Decimal(10, 2) // Birim maliyet
+  supplier     String? // Tedarikçi
+  active       Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
-  ingredients   MenuItemIngredient[]
+  ingredients MenuItemIngredient[]
 }
 
 // Menü ürünü - Ham madde ilişkisi (gramajlı)
@@ -307,25 +319,25 @@ model MenuItemIngredient {
 
 // Happy Hours - Zamanlı indirimler/menü değişiklikleri
 model HappyHour {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   locationId  String?
-  name        String   // "Happy Hour", "Öğle Menüsü"
+  name        String // "Happy Hour", "Öğle Menüsü"
   description String?
-  startTime   String   // "17:00"
-  endTime     String   // "19:00"
-  daysOfWeek  Int[]    // [1,2,3,4,5] = Pazartesi-Cuma
-  
+  startTime   String // "17:00"
+  endTime     String // "19:00"
+  daysOfWeek  Int[] // [1,2,3,4,5] = Pazartesi-Cuma
+
   // İndirim Seçenekleri
-  discountType    String?  // "PERCENT", "FIXED", "CAMPAIGN"
+  discountType    String? // "PERCENT", "FIXED", "CAMPAIGN"
   discountPercent Decimal? @db.Decimal(5, 2) // Yüzde indirim
   discountAmount  Decimal? @db.Decimal(10, 2) // Sabit tutar indirim
-  campaignId      String?  // Bağlı kampanya ID
-  
-  active      Boolean  @default(true)
-  startDate   DateTime? // Kampanya başlangıç
-  endDate     DateTime? // Kampanya bitiş
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  campaignId      String? // Bağlı kampanya ID
+
+  active    Boolean   @default(true)
+  startDate DateTime? // Kampanya başlangıç
+  endDate   DateTime? // Kampanya bitiş
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   location Location?       @relation(fields: [locationId], references: [id])
   campaign Campaign?       @relation(fields: [campaignId], references: [id])
@@ -333,12 +345,12 @@ model HappyHour {
 }
 
 model HappyHourItem {
-  id          String   @id @default(cuid())
-  happyHourId String
-  menuItemId  String
-  specialPrice Decimal? @db.Decimal(10, 2) // Özel fiyat
+  id              String   @id @default(cuid())
+  happyHourId     String
+  menuItemId      String
+  specialPrice    Decimal? @db.Decimal(10, 2) // Özel fiyat
   discountPercent Decimal? @db.Decimal(5, 2) // veya % indirim
-  createdAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   happyHour HappyHour @relation(fields: [happyHourId], references: [id], onDelete: Cascade)
   menuItem  MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
@@ -349,21 +361,21 @@ model HappyHourItem {
 // ==================== ORDER MANAGEMENT ====================
 
 enum OrderStatus {
-  PENDING           // Just created
-  CONFIRMED         // Confirmed by kitchen
-  PREPARING         // Being prepared
-  READY             // Ready for service
-  OUT_FOR_DELIVERY  // Kurye yolda (delivery orders)
-  DELIVERED         // Teslim edildi
-  SERVED            // Served to customer (dine-in)
-  COMPLETED         // Paid and closed
-  CANCELLED         // Cancelled
+  PENDING // Just created
+  CONFIRMED // Confirmed by kitchen
+  PREPARING // Being prepared
+  READY // Ready for service
+  OUT_FOR_DELIVERY // Kurye yolda (delivery orders)
+  DELIVERED // Teslim edildi
+  SERVED // Served to customer (dine-in)
+  COMPLETED // Paid and closed
+  CANCELLED // Cancelled
 }
 
 enum OrderType {
-  DINE_IN      // Table order
-  TAKEAWAY     // Paket
-  DELIVERY     // Eve servis (kurye ile)
+  DINE_IN // Table order
+  TAKEAWAY // Paket
+  DELIVERY // Eve servis (kurye ile)
   ROOM_SERVICE // Oda servisi (otel)
 }
 
@@ -375,7 +387,7 @@ enum PaymentMethod {
   MULTINET
   SODEXO
   TICKET
-  TAB          // Hesaba ekle (sonra öde)
+  TAB // Hesaba ekle (sonra öde)
   DIGITAL_COIN // Festival için dijital coin
   OTHER
 }
@@ -385,62 +397,65 @@ enum PaymentStatus {
   PARTIAL
   PAID
   REFUNDED
-  ON_TAB       // Hesap açık
+  ON_TAB // Hesap açık
 }
 
 model Order {
-  id             String        @id @default(cuid())
-  orderNumber    Int           @unique @default(autoincrement())
-  locationId     String?
-  tableId        String?
-  userId         String?       // Waiter who created the order
-  courierId      String?       // Kurye ID
-  customerName   String?
-  customerPhone  String?
-  customerEmail  String?
-  customerAddress String?      // Teslimat adresi
-  customerLatitude  Float?     // Mobile sipariş için GPS (Google Maps linki)
+  id                String         @id @default(cuid())
+  orderNumber       Int            @unique @default(autoincrement())
+  locationId        String?
+  tableId           String?
+  userId            String? // Waiter who created the order
+  courierId         String? // Kurye ID
+  customerName      String?
+  customerPhone     String?
+  customerEmail     String?
+  customerAddress   String? // Teslimat adresi
+  customerLatitude  Float? // Mobile sipariş için GPS (Google Maps linki)
   customerLongitude Float?
-  roomNumber     String?       // Otel oda numarası
-  type           OrderType     @default(DINE_IN)
-  status         OrderStatus   @default(PENDING)
-  paymentStatus  PaymentStatus @default(PENDING)
-  paymentMethod  PaymentMethod?
-  
-  // Pricing
-  subtotal       Decimal       @db.Decimal(10, 2)
-  tax            Decimal       @default(0) @db.Decimal(10, 2)
-  serviceCharge  Decimal       @default(0) @db.Decimal(10, 2) // Servis ücreti
-  deliveryFee    Decimal       @default(0) @db.Decimal(10, 2) // Kurye ücreti
-  discount       Decimal       @default(0) @db.Decimal(10, 2)
-  total          Decimal       @db.Decimal(10, 2)
-  tip            Decimal       @default(0) @db.Decimal(10, 2)
-  
-  // Tab (Sonradan ödeme) settings
-  isTab          Boolean       @default(false) // Hesap açık mı
-  tabClosedAt    DateTime?     // Hesap ne zaman kapandı
-  
-  // Kurye bilgileri
-  assignedAt     DateTime?     // Kuryeye atanma zamanı
-  pickedUpAt     DateTime?     // Yola çıkma zamanı
-  deliveredAt    DateTime?     // Teslim zamanı
-  
-  notes          String?
-  source         String?       // "POS", "WhatsApp", "Web", "QR"
-  externalOrderId String?      // Dış sistem sipariş ID (WhatRes vb.)
-  
-  // Analytics
-  deviceType     String?       // "mobile", "tablet", "desktop"
-  userAgent      String?
-  
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  completedAt    DateTime?
+  roomNumber        String? // Otel oda numarası
+  type              OrderType      @default(DINE_IN)
+  status            OrderStatus    @default(PENDING)
+  paymentStatus     PaymentStatus  @default(PENDING)
+  paymentMethod     PaymentMethod?
 
-  location Location? @relation(fields: [locationId], references: [id])
-  table    Table?    @relation(fields: [tableId], references: [id])
-  user     User?     @relation("WaiterOrders", fields: [userId], references: [id])
-  courier  User?     @relation("CourierOrders", fields: [courierId], references: [id])
+  // Pricing
+  subtotal      Decimal @db.Decimal(10, 2)
+  tax           Decimal @default(0) @db.Decimal(10, 2)
+  serviceCharge Decimal @default(0) @db.Decimal(10, 2) // Servis ücreti
+  deliveryFee   Decimal @default(0) @db.Decimal(10, 2) // Kurye ücreti
+  discount      Decimal @default(0) @db.Decimal(10, 2)
+  total         Decimal @db.Decimal(10, 2)
+  tip           Decimal @default(0) @db.Decimal(10, 2)
+
+  // Tab (Sonradan ödeme) settings
+  isTab       Boolean   @default(false) // Hesap açık mı
+  tabClosedAt DateTime? // Hesap ne zaman kapandı
+
+  // Kurye bilgileri
+  assignedAt        DateTime? // Kuryeye atanma zamanı (admin/POS tarafından)
+  courierAcceptedAt DateTime? // Kurye "Aldım"a basma zamanı
+  pickedUpAt        DateTime? // Yola çıkma zamanı
+  deliveredAt       DateTime? // Teslim zamanı
+  deliveryPhotoUrl  String? // Teslimat anı kanıt fotoğrafı
+  deliveryNotes     String? // Kurye notu (kapı çalmıyor, eline verildi vb.)
+
+  notes           String?
+  source          String? // "POS", "WhatsApp", "Web", "QR"
+  externalOrderId String? // Dış sistem sipariş ID (WhatRes vb.)
+
+  // Analytics
+  deviceType String? // "mobile", "tablet", "desktop"
+  userAgent  String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  location Location?   @relation(fields: [locationId], references: [id])
+  table    Table?      @relation(fields: [tableId], references: [id])
+  user     User?       @relation("WaiterOrders", fields: [userId], references: [id])
+  courier  User?       @relation("CourierOrders", fields: [courierId], references: [id])
   items    OrderItem[]
   invoice  Invoice?
   payments Payment[]
@@ -450,13 +465,13 @@ model OrderItem {
   id           String      @id @default(cuid())
   orderId      String
   menuItemId   String?
-  menuItemName String?     // Preserved name when menu item is deleted
+  menuItemName String? // Preserved name when menu item is deleted
   quantity     Int         @default(1)
   paidQuantity Int         @default(0) // Ödenen miktar
   unitPrice    Decimal     @db.Decimal(10, 2)
   total        Decimal     @db.Decimal(10, 2)
   notes        String?
-  modifiers    String[]    // Applied modifier names
+  modifiers    String[] // Applied modifier names
   status       OrderStatus @default(PENDING)
   isUpsell     Boolean     @default(false) // Upsell'den mi geldi
   isCrossSell  Boolean     @default(false) // Cross-sell'den mi geldi
@@ -475,11 +490,11 @@ model Payment {
   amount     Decimal       @db.Decimal(10, 2)
   tipAmount  Decimal       @default(0) @db.Decimal(10, 2) // Bahşiş miktarı
   method     PaymentMethod
-  reference  String?       // Transaction ID, etc.
-  paidItems  Json?         // { itemId: quantity } hangi ürünlerden kaç adet ödendi
+  reference  String? // Transaction ID, etc.
+  paidItems  Json? // { itemId: quantity } hangi ürünlerden kaç adet ödendi
   refunded   Boolean       @default(false)
   refundedAt DateTime?
-  refundedBy String?       // User ID who refunded
+  refundedBy String? // User ID who refunded
   createdAt  DateTime      @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -504,75 +519,130 @@ model Invoice {
 // ==================== PRINTER MANAGEMENT ====================
 
 enum PrinterType {
-  RECEIPT   // Fiş yazıcı
-  KITCHEN   // Mutfak yazıcı
-  BAR       // Bar yazıcı
-  LABEL     // Etiket yazıcı
+  RECEIPT // Fiş yazıcı
+  KITCHEN // Mutfak yazıcı
+  BAR // Bar yazıcı
+  LABEL // Etiket yazıcı
 }
 
 model Printer {
   id           String      @id @default(cuid())
-  name         String      // "Mutfak Yazıcı 1"
+  name         String // "Mutfak Yazıcı 1"
   type         PrinterType @default(RECEIPT)
-  ipAddress    String?     // Network printer
+  ipAddress    String? // Network printer
   port         Int         @default(9100)
-  usbVendorId  String?     // USB printer
+  usbVendorId  String? // USB printer
   usbProductId String?
   paperWidth   Int         @default(80) // 80mm, 58mm
   active       Boolean     @default(true)
   isDefault    Boolean     @default(false)
-  categories   String[]    // Hangi kategorileri basar
+  categories   String[] // Hangi kategorileri basar
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
 
 model PrintJob {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   printerId String
   orderId   String?
-  content   String   // Print content (ESC/POS commands or text)
-  status    String   @default("PENDING") // PENDING, PRINTING, COMPLETED, FAILED
+  content   String // Print content (ESC/POS commands or text)
+  status    String    @default("PENDING") // PENDING, PRINTING, COMPLETED, FAILED
   error     String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   printedAt DateTime?
 }
 
 // ==================== WHATSAPP INTEGRATION ====================
 
 model WhatsAppMessage {
-  id          String   @id @default(cuid())
-  messageId   String   @unique // WhatsApp message ID
-  from        String   // Phone number
-  body        String
-  timestamp   DateTime
-  processed   Boolean  @default(false)
-  orderId     String?  // If converted to order
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  messageId String   @unique // WhatsApp message ID
+  from      String // Phone number
+  body      String
+  timestamp DateTime
+  processed Boolean  @default(false)
+  orderId   String? // If converted to order
+  createdAt DateTime @default(now())
 }
 
 // ==================== REPORTING ====================
 
 model DailyReport {
-  id             String   @id @default(cuid())
-  locationId     String?
-  date           DateTime @db.Date
-  totalOrders    Int      @default(0)
-  totalRevenue   Decimal  @default(0) @db.Decimal(10, 2)
-  cashAmount     Decimal  @default(0) @db.Decimal(10, 2)
-  cardAmount     Decimal  @default(0) @db.Decimal(10, 2)
-  onlineAmount   Decimal  @default(0) @db.Decimal(10, 2)
-  tipAmount      Decimal  @default(0) @db.Decimal(10, 2)
-  serviceChargeAmount Decimal @default(0) @db.Decimal(10, 2)
-  otherAmount    Decimal  @default(0) @db.Decimal(10, 2)
-  cancelCount    Int      @default(0)
-  avgOrderTime   Int?     // in minutes
-  avgOrderValue  Decimal? @db.Decimal(10, 2)
-  customerCount  Int      @default(0)
-  topItems       Json?    // [{ itemId, name, count, revenue }]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  locationId          String?
+  date                DateTime @db.Date
+  totalOrders         Int      @default(0)
+  totalRevenue        Decimal  @default(0) @db.Decimal(10, 2)
+  cashAmount          Decimal  @default(0) @db.Decimal(10, 2)
+  cardAmount          Decimal  @default(0) @db.Decimal(10, 2)
+  onlineAmount        Decimal  @default(0) @db.Decimal(10, 2)
+  tipAmount           Decimal  @default(0) @db.Decimal(10, 2)
+  serviceChargeAmount Decimal  @default(0) @db.Decimal(10, 2)
+  otherAmount         Decimal  @default(0) @db.Decimal(10, 2)
+  cancelCount         Int      @default(0)
+  avgOrderTime        Int? // in minutes
+  avgOrderValue       Decimal? @db.Decimal(10, 2)
+  customerCount       Int      @default(0)
+  topItems            Json? // [{ itemId, name, count, revenue }]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([locationId, date])
+}
+
+// ==================== EXPENSES (GİDERLER) ====================
+
+enum ExpenseStatus {
+  PENDING_APPROVAL // Büyük gider — admin onayı bekliyor (auto-approve threshold üzerinde)
+  APPROVED // Onaylandı (varsayılan: küçük giderler oto onaylı; ADMIN/MANAGER hep oto)
+  REJECTED // Reddedildi
+}
+
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String? // emoji veya icon adı
+  color     String? // #hex (UI badge)
+  isSystem  Boolean  @default(false) // seed'den geldiyse silinemez
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+}
+
+model Expense {
+  id            String        @id @default(cuid())
+  amount        Decimal       @db.Decimal(10, 2)
+  categoryId    String
+  description   String?
+  expenseDate   DateTime      @db.Date // Giderin oluştuğu tarih (filtre için)
+  vendor        String? // "Kimden": BEDAŞ, Migros, vs.
+  paymentMethod PaymentMethod @default(CASH) // Mevcut enum
+  receiptUrl    String? // Fiş foto — /api/upload'dan dönen path
+  notes         String? // Uzun not / detay
+  status        ExpenseStatus @default(APPROVED)
+
+  // Kim ekledi / kim onayladı
+  createdById  String
+  approvedById String?
+  approvedAt   DateTime?
+
+  locationId String? // Multi-location için (back-relation eklenmedi, query'lerde filter kullanılır)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id])
+  createdBy  User            @relation("ExpenseCreator", fields: [createdById], references: [id])
+  approvedBy User?           @relation("ExpenseApprover", fields: [approvedById], references: [id])
+
+  @@index([expenseDate])
+  @@index([categoryId])
+  @@index([createdById])
+  @@index([status])
+  @@index([locationId, expenseDate])
 }
 
 // ==================== SETTINGS ====================
@@ -589,7 +659,7 @@ model Settings {
 model AnalyticsEvent {
   id         String   @id @default(cuid())
   locationId String?
-  eventType  String   // "page_view", "add_to_cart", "order_completed", "upsell_accepted"
+  eventType  String // "page_view", "add_to_cart", "order_completed", "upsell_accepted"
   eventData  Json?
   sessionId  String?
   deviceType String?
@@ -602,56 +672,74 @@ model AnalyticsEvent {
 
 // Sadakat Programı Müşterisi
 model Customer {
-  id              String   @id @default(cuid())
-  phone           String?  @unique // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel
-  email           String?  @unique // Email-OTP login için ana identifier
-  name            String?
-  birthDate       DateTime?
-  gender          String?  // "MALE" | "FEMALE" | "OTHER" — kayıtta opsiyonel
-  password        String?  // Optional - eski web login (kullanılmıyor)
+  id        String    @id @default(cuid())
+  phone     String?   @unique // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel
+  email     String?   @unique // Email-OTP login için ana identifier
+  name      String?
+  birthDate DateTime?
+  gender    String? // "MALE" | "FEMALE" | "OTHER" — kayıtta opsiyonel
+  password  String? // Optional - eski web login (kullanılmıyor)
 
   // Loyalty Info
-  loyaltyTierId   String?
-  totalPoints     Int      @default(0)
-  lifetimePoints  Int      @default(0) // Toplam kazanılan puan
-  totalSpent      Decimal  @default(0) @db.Decimal(10, 2) // Toplam harcama
-  orderCount      Int      @default(0) // Sipariş sayısı
+  loyaltyTierId  String?
+  totalPoints    Int     @default(0)
+  lifetimePoints Int     @default(0) // Toplam kazanılan puan
+  totalSpent     Decimal @default(0) @db.Decimal(10, 2) // Toplam harcama
+  orderCount     Int     @default(0) // Sipariş sayısı
 
   // Marketing
-  smsConsent      Boolean  @default(false)
-  emailConsent    Boolean  @default(false)
-  pushConsent     Boolean  @default(false)
+  smsConsent   Boolean @default(false)
+  emailConsent Boolean @default(false)
+  pushConsent  Boolean @default(false)
+
+  // KVKK / Sözleşme Audit (yasal uyum için kabul tarihleri)
+  termsAcceptedAt    DateTime? // Üyelik sözleşmesi kabul tarihi
+  kvkkAcceptedAt     DateTime? // KVKK aydınlatma metni kabul tarihi
+  marketingConsentAt DateTime? // Açık pazarlama izni (e-posta + SMS) — KVKK gerek
 
   // Status
-  isActive        Boolean  @default(true)
-  isVerified      Boolean  @default(false) // Email doğrulandı mı
-  verificationCode String?
+  isActive                  Boolean   @default(true)
+  isVerified                Boolean   @default(false) // Email doğrulandı mı
+  verificationCode          String?
   verificationCodeExpiresAt DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastOrderAt     DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastOrderAt   DateTime?
+  // Win-back kampanyası — son gönderim tarihi (cooldown için)
+  lastWinbackAt DateTime?
+  // Spin wheel — günde 1x cooldown için
+  lastSpinAt    DateTime?
 
   loyaltyTier     LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id])
   // Cashback bakiyesi (TL cinsinden — 1 cashback unit = 1 TL)
-  cashbackBalance Decimal @default(0) @db.Decimal(10, 2)
+  cashbackBalance Decimal      @default(0) @db.Decimal(10, 2)
   // Davet (referral) sistemi
-  referralCode    String? @unique // Kişiye özel davet kodu
+  referralCode    String?      @unique // Kişiye özel davet kodu
   referredByCode  String? // Bu müşteri hangi koddan geldi
-  referralCount   Int     @default(0) // Bu müşteri kaç kişi davet etti
+  referralCount   Int          @default(0) // Bu müşteri kaç kişi davet etti
   // Streak takibi
-  currentStreak   Int     @default(0)
-  longestStreak   Int     @default(0)
+  currentStreak   Int          @default(0)
+  longestStreak   Int          @default(0)
   lastStreakDate  DateTime?
 
-  orders          CustomerOrder[]
-  pointsHistory   PointsTransaction[]
-  usedCoupons     CouponUsage[]
-  devices         DeviceToken[]
-  addresses       Address[]
-  favorites       FavoriteItem[]
+  orders            CustomerOrder[]
+  pointsHistory     PointsTransaction[]
+  usedCoupons       CouponUsage[]
+  devices           DeviceToken[]
+  addresses         Address[]
+  favorites         FavoriteItem[]
   notificationPrefs NotificationPreference?
-  loyaltyProgress CustomerLoyaltyProgress[]
+  loyaltyProgress   CustomerLoyaltyProgress[]
+  // Gamification
+  spinAttempts      SpinAttempt[]
+  achievements      CustomerAchievement[]
+  scratchRewards    ScratchReward[]
+  mysteryBoxOpens   MysteryBoxOpen[]
+  // "Kendin Tasarla" — kaydedilmiş özel pizza/sandviç tasarımları (üye-özel)
+  savedBuilderDesigns SavedBuilderDesign[]
+  // Google review / Instagram story gibi screenshot-onaylı ödül talepleri
+  loyaltyClaims       LoyaltyClaim[]
 
   @@index([phone])
   @@index([email])
@@ -661,13 +749,13 @@ model Customer {
 // Sadakat Seviyesi (Bronze, Silver, Gold vb.)
 model LoyaltyTier {
   id               String   @id @default(cuid())
-  name             String   // "Bronze", "Silver", "Gold", "Platinum"
-  minPoints        Int      // Bu seviyeye ulaşmak için gereken min puan
+  name             String // "Bronze", "Silver", "Gold", "Platinum"
+  minPoints        Int // Bu seviyeye ulaşmak için gereken min puan
   pointsMultiplier Decimal  @default(1) @db.Decimal(3, 2) // Puan çarpanı (1.5x = %50 daha fazla puan)
   discountPercent  Decimal  @default(0) @db.Decimal(5, 2) // Sabit % indirim
-  benefits         Json?    // Ek avantajlar listesi
-  color            String?  // Badge rengi (#CD7F32 = bronze)
-  icon             String?  // Emoji veya icon
+  benefits         Json? // Ek avantajlar listesi
+  color            String? // Badge rengi (#CD7F32 = bronze)
+  icon             String? // Emoji veya icon
   sortOrder        Int      @default(0)
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
@@ -681,9 +769,9 @@ model PointsTransaction {
   id          String   @id @default(cuid())
   customerId  String
   orderId     String?
-  points      Int      // + kazanım, - harcama
-  type        String   // "EARN", "SPEND", "BONUS", "EXPIRE", "ADJUSTMENT"
-  description String?  // "Sipariş #123", "10 siparişe özel 100 puan"
+  points      Int // + kazanım, - harcama
+  type        String // "EARN", "SPEND", "BONUS", "EXPIRE", "ADJUSTMENT"
+  description String? // "Sipariş #123", "10 siparişe özel 100 puan"
   createdAt   DateTime @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -691,12 +779,12 @@ model PointsTransaction {
 
 // Müşteri Siparişleri (Order'a referans)
 model CustomerOrder {
-  id          String   @id @default(cuid())
-  customerId  String
-  orderId     String   @unique
-  pointsEarned Int     @default(0)
-  pointsSpent  Int     @default(0)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  customerId   String
+  orderId      String   @unique
+  pointsEarned Int      @default(0)
+  pointsSpent  Int      @default(0)
+  createdAt    DateTime @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }
@@ -705,81 +793,88 @@ model CustomerOrder {
 
 // İndirim Kampanyaları
 model Campaign {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  image           String?  // Kapak fotoğrafı URL — landing/mobile kampanya kartlarında gösterilir
-  type            String   // "DISCOUNT", "BOGO", "FREE_ITEM", "POINTS_MULTIPLIER", "MIN_PURCHASE"
-  
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  image       String? // Kapak fotoğrafı URL — landing/mobile kampanya kartlarında gösterilir
+  type        String // "DISCOUNT", "BOGO", "FREE_ITEM", "POINTS_MULTIPLIER", "MIN_PURCHASE"
+
   // Koşullar
   minPurchase     Decimal? @db.Decimal(10, 2) // Min sepet tutarı
-  minItems        Int?     // Min ürün sayısı
+  minItems        Int? // Min ürün sayısı
   loyaltyTierIds  String[] // Hangi üyelik seviyeleri için geçerli
   applicableItems String[] // Geçerli ürün ID'leri (boş = hepsi)
   excludedItems   String[] // Hariç tutulan ürünler
-  
-  // İndirim
-  discountType    String?  // "PERCENT", "FIXED", "FREE_ITEM"
-  discountValue   Decimal? @db.Decimal(10, 2) // % veya sabit tutar
-  freeItemId      String?  // Bedava verilecek ürün
-  maxDiscount     Decimal? @db.Decimal(10, 2) // Max indirim limiti
-  
-  // Geçerlilik
-  startDate       DateTime
-  endDate         DateTime
-  daysOfWeek      Int[]    // 0-6 (boş = her gün)
-  startTime       String?  // "10:00"
-  endTime         String?  // "22:00"
-  
-  // Limitleme
-  usageLimit      Int?     // Toplam kullanım limiti
-  usagePerCustomer Int?    // Kişi başı limit
-  currentUsage    Int      @default(0)
-  
-  // Status
-  isActive        Boolean  @default(true)
-  autoApply       Boolean  @default(false) // Otomatik uygulan mı
-  stackable       Boolean  @default(false) // Diğer kampanyalarla birleştirilebilir mi
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 
-  happyHours      HappyHour[] // Bu kampanyayı kullanan happy hour'lar
+  // İndirim
+  discountType  String? // "PERCENT", "FIXED", "FREE_ITEM"
+  discountValue Decimal? @db.Decimal(10, 2) // % veya sabit tutar
+  freeItemId    String? // Bedava verilecek ürün
+  maxDiscount   Decimal? @db.Decimal(10, 2) // Max indirim limiti
+
+  // Geçerlilik
+  startDate  DateTime
+  endDate    DateTime
+  daysOfWeek Int[] // 0-6 (boş = her gün)
+  startTime  String? // "10:00"
+  endTime    String? // "22:00"
+
+  // Limitleme
+  usageLimit       Int? // Toplam kullanım limiti
+  usagePerCustomer Int? // Kişi başı limit
+  currentUsage     Int  @default(0)
+
+  // Status
+  isActive  Boolean @default(true)
+  autoApply Boolean @default(false) // Otomatik uygulan mı
+  stackable Boolean @default(false) // Diğer kampanyalarla birleştirilebilir mi
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  happyHours        HappyHour[] // Bu kampanyayı kullanan happy hour'lar
   pushNotifications PushNotification[]
 }
 
 // Paket Menüler / Combo'lar
 model BundleDeal {
-  id              String   @id @default(cuid())
-  name            String   // "Aile Paketi", "Öğle Menüsü"
-  description     String?
-  image           String?
-  
-  // Fiyatlandırma
-  originalPrice   Decimal  @db.Decimal(10, 2) // Normal toplam fiyat
-  bundlePrice     Decimal  @db.Decimal(10, 2) // Paket fiyatı
-  savings         Decimal  @db.Decimal(10, 2) // Tasarruf miktarı
-  
-  // Geçerlilik
-  startDate       DateTime?
-  endDate         DateTime?
-  daysOfWeek      Int[]    // Hangi günler geçerli
-  startTime       String?
-  endTime         String?
-  
-  // Status
-  isActive        Boolean  @default(true)
-  featured        Boolean  @default(false) // Öne çıkan mı
-  sortOrder       Int      @default(0)
-  
-  // Analytics
-  soldCount       Int      @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String  @id @default(cuid())
+  name        String // "Aile Paketi", "Öğle Menüsü"
+  description String?
+  image       String?
 
-  items           BundleItem[]
-  optionGroups    BundleOptionGroup[]
+  // Fiyatlandırma
+  originalPrice Decimal @db.Decimal(10, 2) // Normal toplam fiyat
+  bundlePrice   Decimal @db.Decimal(10, 2) // Paket fiyatı
+  savings       Decimal @db.Decimal(10, 2) // Tasarruf miktarı
+
+  // Geçerlilik
+  startDate  DateTime?
+  endDate    DateTime?
+  daysOfWeek Int[] // Hangi günler geçerli
+  startTime  String?
+  endTime    String?
+
+  // Status
+  isActive  Boolean @default(true)
+  featured  Boolean @default(false) // Öne çıkan mı
+  sortOrder Int     @default(0)
+
+  // Kategori — paket'in menüde hangi başlık altında görüneceği.
+  // null ise "Paket Menüler" default başlığı altında görünür.
+  categoryId String?
+
+  // Analytics
+  soldCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  items                  BundleItem[]
+  optionGroups           BundleOptionGroup[]
+  optionGroupAssignments BundleOptionGroupAssignment[]
 }
 
 // Müşterinin paket içinde seçim yapacağı gruplar.
@@ -788,7 +883,7 @@ model BundleDeal {
 model BundleOptionGroup {
   id              String   @id @default(cuid())
   bundleId        String
-  name            String   // "Pizza Seçimi"
+  name            String // "Pizza Seçimi"
   pickCount       Int      @default(1) // Müşteri kaç tane seçecek
   // priceMode: INCLUDED = paket fiyatına dahil (seçim sadece çeşni)
   //            ADD_PRICE = seçilen ürünün menü fiyatı pakete eklenir
@@ -801,7 +896,58 @@ model BundleOptionGroup {
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
 
-  bundle          BundleDeal @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  bundle BundleDeal @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+}
+
+// ==================== REUSABLE OPTION GROUPS ====================
+// Pizza Seçimi gibi opsiyon grupları — bir kez tanımlanır, birden çok bundle'a atanır.
+// Her grup içindeki ürünlerin kendi ek fiyatı (extraPrice) olabilir.
+model OptionGroup {
+  id          String   @id @default(cuid())
+  name        String // "Pizza Seçimi", "İçecek Seçimi", "Yan Ürün"
+  description String?
+  minSelect   Int      @default(1) // En az kaç ürün seçilmeli
+  maxSelect   Int      @default(1) // En fazla kaç ürün seçilebilir
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       OptionGroupItem[]
+  assignments BundleOptionGroupAssignment[]
+}
+
+// Grup içindeki ürünler — her birinin ek fiyatı olabilir
+model OptionGroupItem {
+  id            String   @id @default(cuid())
+  optionGroupId String
+  menuItemId    String
+  extraPrice    Decimal  @default(0) @db.Decimal(10, 2) // 0 = pakete dahil, >0 = ek ücret
+  sortOrder     Int      @default(0)
+  isDefault     Boolean  @default(false) // Otomatik seçili gelen (opsiyonel)
+  createdAt     DateTime @default(now())
+
+  optionGroup OptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([optionGroupId, menuItemId])
+}
+
+// Bundle ↔ OptionGroup ilişki tablosu (many-to-many)
+model BundleOptionGroupAssignment {
+  id            String   @id @default(cuid())
+  bundleId      String
+  optionGroupId String
+  // Aynı grup bir bundle'a kaç defa eklendi (kaç slot oluşacak).
+  // Örn: "Pizza Seçimi" grubunu quantity=2 atayınca müşteri 2 ayrı pizza seçer.
+  quantity      Int      @default(1)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  bundle      BundleDeal  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  optionGroup OptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, optionGroupId])
 }
 
 // Paket İçindeki Ürünler
@@ -811,58 +957,62 @@ model BundleItem {
   menuItemId  String
   quantity    Int      @default(1)
   isOptional  Boolean  @default(false) // Seçimli mi
-  optionGroup String?  // "Ana Yemek", "İçecek" - aynı grup içinden seç
+  optionGroup String? // "Ana Yemek", "İçecek" - aynı grup içinden seç
   createdAt   DateTime @default(now())
 
   bundle   BundleDeal @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   menuItem MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  
+
   @@unique([bundleId, menuItemId])
 }
 
 // Kuponlar
 model Coupon {
-  id              String   @id @default(cuid())
-  code            String   @unique // "HOSGELDIN20", "DOGUMGUNU50"
-  name            String
-  description     String?
-  
+  id          String  @id @default(cuid())
+  code        String  @unique // "HOSGELDIN20", "DOGUMGUNU50"
+  name        String
+  description String?
+
   // İndirim
-  discountType    String   // "PERCENT", "FIXED"
-  discountValue   Decimal  @db.Decimal(10, 2)
-  maxDiscount     Decimal? @db.Decimal(10, 2)
-  minPurchase     Decimal? @db.Decimal(10, 2)
-  
+  discountType  String // "PERCENT", "FIXED"
+  discountValue Decimal  @db.Decimal(10, 2)
+  maxDiscount   Decimal? @db.Decimal(10, 2)
+  minPurchase   Decimal? @db.Decimal(10, 2)
+
   // Geçerlilik
-  startDate       DateTime
-  endDate         DateTime
-  
+  startDate DateTime
+  endDate   DateTime
+
   // Limitleme
-  usageLimit      Int?     // Toplam kullanım
-  usagePerCustomer Int     @default(1) // Kişi başı
-  currentUsage    Int      @default(0)
-  
+  usageLimit       Int? // Toplam kullanım
+  usagePerCustomer Int  @default(1) // Kişi başı
+  currentUsage     Int  @default(0)
+
   // Hedef kitle
-  loyaltyTierIds  String[] // Hangi üyelik seviyeleri
-  isFirstOrder    Boolean  @default(false) // Sadece ilk sipariş için
-  
+  loyaltyTierIds String[] // Hangi üyelik seviyeleri
+  isFirstOrder   Boolean  @default(false) // Sadece ilk sipariş için
+
   // Status
-  isActive        Boolean  @default(true)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   usages          CouponUsage[]
+  // Gamification back-relations
+  spinAttempts    SpinAttempt[]
+  scratchRewards  ScratchReward[]  @relation("ScratchCoupon")
+  mysteryBoxOpens MysteryBoxOpen[] @relation("MysteryBoxCoupon")
 }
 
 // Kupon Kullanımları
 model CouponUsage {
-  id          String   @id @default(cuid())
-  couponId    String
-  customerId  String?
-  orderId     String
-  discount    Decimal  @db.Decimal(10, 2) // Uygulanan indirim
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  couponId   String
+  customerId String?
+  orderId    String
+  discount   Decimal  @db.Decimal(10, 2) // Uygulanan indirim
+  createdAt  DateTime @default(now())
 
   coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id])
@@ -872,64 +1022,69 @@ model CouponUsage {
 
 model IntegrationPartner {
   id            String   @id @default(cuid())
-  name          String                    // "WhatRes - Tenant XYZ"
-  apiKey        String   @unique          // crypto.randomBytes(32).hex
+  name          String // "WhatRes - Tenant XYZ"
+  apiKey        String   @unique // crypto.randomBytes(32).hex
   isActive      Boolean  @default(true)
-  webhookUrl    String?                   // https://posfixmenu.com/api/webhooks/highfive
-  webhookSecret String?                   // HMAC imzalama için
+  webhookUrl    String? // https://posfixmenu.com/api/webhooks/highfive
+  webhookSecret String? // HMAC imzalama için
   permissions   String[] @default(["menu:read", "orders:write", "orders:read"])
-  locationId    String?                   // Hangi lokasyona erişebilir
+  locationId    String? // Hangi lokasyona erişebilir
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  location      Location? @relation(fields: [locationId], references: [id])
-  webhookLogs   WebhookLog[]
+  location    Location?    @relation(fields: [locationId], references: [id])
+  webhookLogs WebhookLog[]
 }
 
 model WebhookLog {
-  id          String   @id @default(cuid())
-  partnerId   String
-  event       String                    // order.status_changed, menu.updated
-  payload     Json
-  statusCode  Int?
-  error       String?
-  attempts    Int      @default(1)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  partnerId  String
+  event      String // order.status_changed, menu.updated
+  payload    Json
+  statusCode Int?
+  error      String?
+  attempts   Int      @default(1)
+  createdAt  DateTime @default(now())
 
-  partner     IntegrationPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner IntegrationPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 }
 
 // ==================== MOBILE PUSH NOTIFICATIONS ====================
 
 model DeviceToken {
-  id          String   @id @default(cuid())
-  token       String   @unique          // ExponentPushToken[xxx]
-  platform    String                    // ios | android
-  customerId  String?                   // Anonim cihazlar için null olabilir
-  deviceId    String?                   // App'in kendi ürettiği UUID
-  appVersion  String?
-  locale      String?
-  isActive    Boolean  @default(true)
-  lastSeenAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  token      String   @unique // ExponentPushToken[xxx]
+  platform   String // ios | android
+  customerId String? // Customer app cihazları
+  userId     String? // POS/Kitchen/Courier (staff) cihazları
+  appType    String? // customer | pos | kitchen | courier
+  deviceId   String? // App'in kendi ürettiği UUID
+  appVersion String?
+  locale     String?
+  isActive   Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([customerId])
+  @@index([userId])
+  @@index([appType])
   @@index([token])
   @@index([isActive])
 }
 
 model PushNotification {
-  id          String   @id @default(cuid())
-  title       String
-  body        String
-  data        Json?                     // { campaignId, productId, route, ... }
-  imageUrl    String?
-  campaignId  String?
-  targetType  String   @default("ALL")  // ALL, VERIFIED, CUSTOMER, DEVICE, SEGMENT
-  targetIds   String[] @default([])     // hedef listesi (CUSTOMER için Customer.id)
+  id              String   @id @default(cuid())
+  title           String
+  body            String
+  data            Json? // { campaignId, productId, route, ... }
+  imageUrl        String?
+  campaignId      String?
+  targetType      String   @default("ALL") // ALL, VERIFIED, CUSTOMER, DEVICE, SEGMENT
+  targetIds       String[] @default([]) // hedef listesi (CUSTOMER için Customer.id)
   // Behavior segmentation kriterleri (targetType=SEGMENT için)
   // Örn: { menuItemIds: ['x'], dayOfWeek: 0, lastNDays: 30 }
   segmentCriteria Json?
@@ -939,23 +1094,23 @@ model PushNotification {
   // Örn: { type: 'WEEKLY', dayOfWeek: 0, hour: 18, minute: 0 }
   //      { type: 'DAILY', hour: 12 }
   //      { type: 'MONTHLY', dayOfMonth: 1, hour: 9 }
-  recurrence  Json?
+  recurrence Json?
   // Her recurring tetiklemede son ne zaman gönderildiğini takip et (idempotency)
-  lastSentAt  DateTime?
+  lastSentAt DateTime?
 
   // Stats
-  sentCount   Int      @default(0)
-  deliveredCount Int   @default(0)
-  failedCount Int      @default(0)
-  openCount   Int      @default(0)
+  sentCount      Int @default(0)
+  deliveredCount Int @default(0)
+  failedCount    Int @default(0)
+  openCount      Int @default(0)
 
-  status      String   @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, FAILED, RECURRING
+  status      String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, FAILED, RECURRING
   scheduledAt DateTime?
   sentAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([campaignId])
@@ -980,14 +1135,14 @@ model PushNotification {
 // - TIER_DISCOUNT: tier'a göre sabit % indirim (mevcut LoyaltyTier'i destekler)
 
 model LoyaltyProgram {
-  id          String   @id @default(cuid())
-  type        String   // Yukarıdaki türlerden biri
-  name        String   // "Pizza Damga Kartı", "Doğum Günü Sürprizi"
+  id          String  @id @default(cuid())
+  type        String // Yukarıdaki türlerden biri
+  name        String // "Pizza Damga Kartı", "Doğum Günü Sürprizi"
   description String?
-  icon        String?  // Emoji veya url
-  color       String?  // Tema rengi (#bb1e10)
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
+  icon        String? // Emoji veya url
+  color       String? // Tema rengi (#bb1e10)
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
 
   // Tüm türler için esnek config — anlamı türe göre değişir
   // Örnek STAMP_CARD: { stampsRequired: 10, rewardType: 'FREE_ITEM', rewardItemId: 'x', rewardValue: 0 }
@@ -999,11 +1154,11 @@ model LoyaltyProgram {
   // Örnek CASHBACK: { cashbackPercent: 5, maxPerOrder: 50 }
   // Örnek PRODUCT_VIP: { trackedItemIds: ['x'], requiredCount: 20, rewardItemId: 'y' }
   // Örnek HAPPY_HOUR_POINTS: { startHour: 14, endHour: 17, multiplier: 2 }
-  config      Json
+  config Json
 
   // Tier bazlı override — Bronze/Silver/Gold/Platinum farklı parametre
   // Örnek: { 'tier-id-1': { stampsRequired: 8 }, 'tier-id-2': { stampsRequired: 5 } }
-  tierConfig  Json?
+  tierConfig Json?
 
   // Hedef ürün / kategori (opsiyonel — STAMP_CARD, PRODUCT_VIP için)
   // Bu ürünleri/kategorileri alınca damga/sayaç tetiklenir (ALINAN ÜRÜNLER)
@@ -1012,23 +1167,47 @@ model LoyaltyProgram {
 
   // Ödül olarak verilebilecek ürünler — çoklu seçim (VERİLEN ÜRÜNLER)
   // Damga dolduğunda buradaki ürünlerden biri (veya hepsi) bedava verilebilir
-  rewardMenuItemIds  String[] @default([])
-  rewardCategoryIds  String[] @default([])
+  rewardMenuItemIds String[] @default([])
+  rewardCategoryIds String[] @default([])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  progress    CustomerLoyaltyProgress[]
+  progress CustomerLoyaltyProgress[]
+  claims   LoyaltyClaim[]
 
   @@index([type])
   @@index([isActive])
 }
 
+// Müşterinin sadakat programı için yaptığı manuel doğrulamalı talep:
+// Google review / Instagram story gibi ödüller için ekran görüntüsü yükler,
+// admin POS web'den inceleyip onaylar (puan o zaman yatar) veya reddeder.
+// Bir customer + program çifti için aynı anda en fazla 1 PENDING/APPROVED kayıt.
+model LoyaltyClaim {
+  id            String         @id @default(cuid())
+  customerId    String
+  programId     String
+  proofImageUrl String // /uploads/... — yüklenen screenshot
+  status        String         @default("PENDING") // PENDING | APPROVED | REJECTED
+  rewardPoints  Int            @default(0) // Snapshot — admin onaylayınca verilecek puan
+  adminNote     String? // Red sebebi vb.
+  reviewedById  String? // User.id (staff, FK yok — admin silinse de kayıt kalsın)
+  reviewedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  program       LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, programId])
+  @@index([status, createdAt(sort: Desc)])
+}
+
 // Müşterinin her programdaki ilerlemesi
 model CustomerLoyaltyProgress {
-  id          String   @id @default(cuid())
-  customerId  String
-  programId   String
+  id         String @id @default(cuid())
+  customerId String
+  programId  String
 
   // Programın türüne göre data formatı:
   // STAMP_CARD: { count: 5, target: 10, claimedRewards: 2 }
@@ -1037,13 +1216,13 @@ model CustomerLoyaltyProgress {
   // BIRTHDAY: { lastClaimedYear: 2025 }
   // WELCOME: { claimed: false }
   // MILESTONE: { lastClaimedAt: 5 } — son verilmiş milestone sipariş sayısı
-  data        Json
+  data Json
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  customer    Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  program     LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  program  LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, programId])
   @@index([customerId])
@@ -1055,30 +1234,30 @@ model CustomerLoyaltyProgress {
 model Address {
   id          String   @id @default(cuid())
   customerId  String
-  label       String                       // "Ev", "İş", "Yazlık"
-  fullAddress String                       // Tam adres metni
-  district    String?                      // İlçe
-  city        String?                      // Şehir
+  label       String // "Ev", "İş", "Yazlık"
+  fullAddress String // Tam adres metni
+  district    String? // İlçe
+  city        String? // Şehir
   zipCode     String?
-  latitude    Float?                       // Geo
+  latitude    Float? // Geo
   longitude   Float?
-  notes       String?                      // Kapı kodu, kat vs.
+  notes       String? // Kapı kodu, kat vs.
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
 }
 
 model FavoriteItem {
-  id          String   @id @default(cuid())
-  customerId  String
-  menuItemId  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  customerId String
+  menuItemId String
+  createdAt  DateTime @default(now())
 
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   // MenuItem'a soft-bağ: ürün silinirse favori de silinir
   // (MenuItem schema'da relation tanımlı değil, customer kaybolduğunda onDelete cascade ile temizlenir)
 
@@ -1088,17 +1267,284 @@ model FavoriteItem {
 }
 
 model NotificationPreference {
+  id              String   @id @default(cuid())
+  customerId      String   @unique
+  pushEnabled     Boolean  @default(true)
+  orderStatus     Boolean  @default(true) // Sipariş durumu push'ları
+  campaigns       Boolean  @default(true) // Kampanya / happy hour
+  loyalty         Boolean  @default(true) // Puan kazanım
+  marketing       Boolean  @default(true) // Genel pazarlama
+  quietHoursStart String? // "22:00" — bu saatlerde marketing push gelmesin
+  quietHoursEnd   String? // "08:00"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// GAMIFICATION — Spin Wheel + Scratch Card + Achievements
+// ============================================================================
+
+// Yöneticinin tanımladığı şans çarkı konfigi. Tek aktif konfig yeterli (isActive=true).
+// Her dilim weight'le birlikte tanımlanır; backend bu weight'lere göre weighted random
+// outcome üretir (client'a SADECE prize index döner; tüm güvenlik server-side).
+model SpinWheelConfig {
   id            String   @id @default(cuid())
-  customerId    String   @unique
-  pushEnabled   Boolean  @default(true)
-  orderStatus   Boolean  @default(true)    // Sipariş durumu push'ları
-  campaigns     Boolean  @default(true)    // Kampanya / happy hour
-  loyalty       Boolean  @default(true)    // Puan kazanım
-  marketing     Boolean  @default(true)    // Genel pazarlama
-  quietHoursStart String?                  // "22:00" — bu saatlerde marketing push gelmesin
-  quietHoursEnd   String?                  // "08:00"
+  name          String   @default("Şans Çarkı")
+  description   String?
+  // Günlük cooldown saati (24 = günde 1 kere)
+  cooldownHours Int      @default(24)
+  // Min sepet tutarı (TL) — bu altında çark açılmaz
+  minCartTotal  Decimal  @default(0) @db.Decimal(10, 2)
+  // Dilim tanımları (JSON):
+  // [{ "label": "%10 İndirim", "weight": 30, "type": "DISCOUNT_PERCENT", "value": 10, "color": "#ef4444", "emoji": "🎁" }, ...]
+  // type: DISCOUNT_PERCENT | DISCOUNT_FIXED | POINTS | FREE_ITEM | TRY_AGAIN | NOTHING
+  slices        Json
+  isActive      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  attempts SpinAttempt[]
+}
+
+// Kullanıcı her çark çevirme denemesi audit kaydı. Cooldown ve kötüye kullanım takibi.
+model SpinAttempt {
+  id         String    @id @default(cuid())
+  customerId String
+  configId   String
+  // Hangi dilim seçildi (0-indexed slice array index'i)
+  prizeIndex Int
+  // Snapshot — çark değişse bile ödülün ne olduğu kaydedildi
+  prizeLabel String
+  prizeType  String // DISCOUNT_PERCENT, POINTS, FREE_ITEM, TRY_AGAIN, NOTHING
+  prizeValue Decimal?  @db.Decimal(10, 2)
+  // Bağlı kupon (kazanılan ödül kupon ise)
+  couponId   String?
+  redeemed   Boolean   @default(false)
+  redeemedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  config   SpinWheelConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  coupon   Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+}
+
+// Achievement (rozet) tanımı — admin tarafından oluşturulur.
+// type: ORDER_COUNT | TOTAL_SPENT | STREAK | CATEGORY_MASTER | TIME_BASED
+model Achievement {
+  id               String   @id @default(cuid())
+  key              String   @unique // "first_order", "pizza_kralı_10", "morning_bird"
+  name             String // "İlk Sipariş"
+  description      String // "Hesap açtıktan sonra ilk siparişini ver"
+  icon             String // emoji
+  type             String // ORDER_COUNT, TOTAL_SPENT, STREAK, CATEGORY_MASTER, TIME_BASED
+  // Tetiklenme kriterleri (type'a göre değişir, JSON)
+  // ORDER_COUNT: { threshold: 1 } / { threshold: 100 }
+  // TOTAL_SPENT: { threshold: 1000 } (TL)
+  // STREAK: { days: 7 }
+  // CATEGORY_MASTER: { categoryId: 'cat-pizza', count: 10 }
+  // TIME_BASED: { hourStart: 6, hourEnd: 11, count: 5 } (sabah kuşu)
+  criteria         Json
+  // Açılınca verilen ödül (opsiyonel — sadece kutlama da olabilir)
+  rewardPoints     Int      @default(0)
+  rewardCouponCode String? // Otomatik üretilecek kupon (varsa)
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customerAchievements CustomerAchievement[]
+}
+
+// Kullanıcının kazandığı rozetler
+model CustomerAchievement {
+  id            String    @id @default(cuid())
+  customerId    String
+  achievementId String
+  unlockedAt    DateTime  @default(now())
+  seenAt        DateTime? // Müşteri rozeti gördü mü (modal kapatınca set edilir)
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, achievementId])
+  @@index([customerId])
+}
+
+// Scratch card — kullanıcı sipariş sonrası kazıyıp ödül alır
+model ScratchReward {
+  id          String    @id @default(cuid())
+  customerId  String
+  orderId     String? // Bağlı sipariş (opsiyonel)
+  // Prize snapshot
+  prizeType   String // DISCOUNT_PERCENT, POINTS, FREE_ITEM, NOTHING
+  prizeLabel  String
+  prizeValue  Decimal?  @db.Decimal(10, 2)
+  couponId    String?
+  scratchedAt DateTime? // Müşteri gerçekten kazıdıysa
+  redeemed    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon   Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "ScratchCoupon")
+
+  @@index([customerId, scratchedAt])
+}
+
+// ============================================================================
+// MYSTERY BOX — Puan harcayarak açılan sürpriz kutu
+// ============================================================================
+// Admin birden fazla kutu tanımlayabilir (Bronze 100 puan, Silver 500 puan vb.)
+// Her kutu kendi prize tablosuyla server outcome'lu açılır.
+model MysteryBoxConfig {
+  id          String   @id @default(cuid())
+  name        String // "Bronze Kutu"
+  description String?
+  emoji       String   @default("📦")
+  // Açmak için harcanacak puan
+  pointsCost  Int
+  // Prize slices (Spin Wheel ile aynı yapı)
+  prizes      Json // [{ label, weight, type, value, emoji }, ...]
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  opens MysteryBoxOpen[]
+}
+
+model MysteryBoxOpen {
+  id          String   @id @default(cuid())
+  customerId  String
+  configId    String
+  pointsSpent Int
+  prizeIndex  Int
+  prizeLabel  String
+  prizeType   String // DISCOUNT_PERCENT, POINTS, FREE_ITEM, NOTHING
+  prizeValue  Decimal? @db.Decimal(10, 2)
+  couponId    String?
+  createdAt   DateTime @default(now())
+
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  config   MysteryBoxConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  coupon   Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "MysteryBoxCoupon")
+
+  @@index([customerId, createdAt])
+}
+
+// ============================================================================
+// PIZZA & SANDWICH BUILDER — kullanıcı kendi pizzasını/sandviçini oluşturur
+// ============================================================================
+// 2D layered görselle live preview: base'in üstüne her ingredient'in transparent
+// layerImage'ı stack edilir. Her ingredient extraPrice ile temel fiyata eklenir.
+
+enum BuilderType {
+  PIZZA
+  SANDWICH
+}
+
+enum IngredientCategory {
+  DOUGH // Hamur (pizza) / Ekmek (sandviç) - opsiyonel ekstra topping
+  BASE_SAUCE // Taban sosu (domates, beyaz, BBQ taban, mayonez)
+  CHEESE // Peynir
+  MEAT // Et / Sucuk / Pepperoni
+  VEGETABLE // Sebze / Mantar
+  TOP_SAUCE // Üst sos / drizzle (BBQ, pesto, sweet chili, trüflü)
+  SAUCE // Genel sos (legacy — backward compat, kullanılmaz)
+  EXTRA // Extra (özel toppings)
+}
+
+// Taban / kabuk: ince hamur pizza, kalın hamur, beyaz ekmek sandviç vs.
+model BuilderBase {
+  id          String      @id @default(cuid())
+  type        BuilderType
+  name        String // "İnce Hamur Pizza", "Beyaz Ekmek Sandviç"
+  description String?
+  basePrice   Decimal     @db.Decimal(10, 2)
+  // Live preview için temel görsel (pizza/sandviç dilimi, transparent dışı)
+  baseImage   String
+  sortOrder   Int         @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// Malzemeler — her biri layerImage ile pizza/sandviç üzerine binebilir.
+model BuilderIngredient {
+  id          String             @id @default(cuid())
+  // Hangi tip ürünlere uygulanabilir? (PIZZA, SANDWICH; BOTH için 2 ayrı kayıt önerilir)
+  type        BuilderType
+  category    IngredientCategory
+  name        String // "Sucuk", "Mozzarella", "Domates"
+  description String?
+  // Müşteri seçince temel fiyata eklenecek tutar
+  extraPrice  Decimal            @default(0) @db.Decimal(10, 2)
+  // 2D katman görseli (transparent PNG/SVG)
+  layerImage  String
+  // Stack sırası: küçük = altta, büyük = üstte (sos genelde 1, peynir 5, et 7)
+  layerOrder  Int                @default(0)
+  sortOrder   Int                @default(0)
+  isActive    Boolean            @default(true)
+  // Kalori/alerjen bilgisi opsiyonel
+  calories    Int?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([type, category, isActive])
+}
+
+// ==================== COURIER LOCATION TRACKING ====================
+// Kuryenin canlı/tarihsel konum geçmişi.
+// 5sn (foreground) / 30sn (background) aralıklarla insert edilir.
+// 24 saatten eski kayıtlar daily cron ile temizlenir.
+
+model CourierLocation {
+  id           String   @id @default(cuid())
+  courierId    String
+  latitude     Float
+  longitude    Float
+  accuracy     Float? // metre
+  heading      Float? // 0-360 derece
+  speed        Float? // m/s
+  altitude     Float?
+  batteryLevel Int? // %
+  isMoving     Boolean  @default(true)
+  source       String   @default("FOREGROUND") // FOREGROUND | BACKGROUND
+  createdAt    DateTime @default(now())
+
+  courier User @relation("CourierLocations", fields: [courierId], references: [id], onDelete: Cascade)
+
+  @@index([courierId, createdAt(sort: Desc)])
+  @@index([createdAt]) // TTL cleanup
+}
+
+// Müşterinin "Kendin Tasarla" ile oluşturduğu pizza/sandviç tasarımını kaydet,
+// sonradan tek tıkla tekrar sipariş et. Üye-özel. baseId + ingredientIds başka
+// tablolara referans — burada FK YOK ki taban/malzeme silinse bile tasarım
+// kalsın (UI "bu malzeme artık aktif değil" gösterir).
+model SavedBuilderDesign {
+  id            String      @id @default(cuid())
+  customerId    String
+  name          String // Kullanıcının verdiği isim: "Acılı Karışık Pizza"
+  builderType   BuilderType
+  baseId        String // BuilderBase.id snapshot
+  ingredientIds String[] // BuilderIngredient.id'leri (sıralı)
+  totalPrice    Decimal     @db.Decimal(10, 2) // Kayıt anındaki fiyat (server re-validate eder)
+  createdAt     DateTime    @default(now())
+  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt(sort: Desc)])
+}
+
+// Pizza Şefi mini-oyunu — herkese açık global skor tablosu
+model PizzaGameScore {
+  id        String   @id @default(cuid())
+  name      String
+  score     Int
+  createdAt DateTime @default(now())
+
+  @@index([score])
 }

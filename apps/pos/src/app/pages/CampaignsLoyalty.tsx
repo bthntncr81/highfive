@@ -961,69 +961,51 @@ function CampaignModal({
 }
 
 // Bundle Modal Component
-type OptionGroupForm = {
-  name: string;
-  pickCount: number;
-  priceMode: 'INCLUDED' | 'ADD_PRICE';
-  categoryId: string; // empty string = no filter (whitelist mode)
-  eligibleItemIds: string[];
-};
-
 function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesProp, token }: { show: boolean; onClose: () => void; onSave: () => void; menuItems: any[]; categories?: { id: string; name: string }[]; token: string }) {
   const [form, setForm] = useState({
     name: '',
     description: '',
     image: '',
     bundlePrice: 0,
+    categoryId: '' as string, // boş = "Paket Menüler" default başlığı
     items: [] as { menuItemId: string; quantity: number }[],
-    optionGroups: [] as OptionGroupForm[],
+    // Yeni: assignedOptionGroups: [{ groupId, quantity }]
+    assignedOptionGroups: [] as { groupId: string; quantity: number }[],
   });
 
-  // Prefer the categories list from the parent (server-shaped). Fall back to
-  // deriving from menuItems if not provided.
+  // Kategori listesi parent'tan; yoksa menuItems'tan türet
   const categories = React.useMemo(() => {
     if (categoriesProp && categoriesProp.length > 0) return categoriesProp;
     const map = new Map<string, string>();
     for (const m of menuItems) {
       if (m.categoryId && m.category?.name) map.set(m.categoryId, m.category.name);
-      else if (m.categoryId) map.set(m.categoryId, m.categoryId);
     }
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [menuItems, categoriesProp]);
+  }, [categoriesProp, menuItems]);
 
-  const addOptionGroup = () => {
-    setForm((f) => ({
-      ...f,
-      optionGroups: [
-        ...f.optionGroups,
-        { name: '', pickCount: 1, priceMode: 'INCLUDED', categoryId: '', eligibleItemIds: [] },
-      ],
-    }));
+  // Reusable option groups (yeni sistem) — POS'tan ayrı sayfada oluşturulmuş gruplar
+  const [reusableGroups, setReusableGroups] = useState<{ id: string; name: string; minSelect: number; maxSelect: number; items: { id: string; menuItem: { name: string }; extraPrice: number | string }[] }[]>([]);
+  React.useEffect(() => {
+    if (!show) return;
+    api.get('/api/option-groups', token)
+      .then((r) => setReusableGroups(r.groups ?? []))
+      .catch(() => setReusableGroups([]));
+  }, [show, token]);
+
+  // Quantity güncelle (0 = grubu kaldır, 1+ = slot sayısı)
+  const setGroupQty = (groupId: string, qty: number) => {
+    setForm((f) => {
+      const next = qty <= 0
+        ? f.assignedOptionGroups.filter((a) => a.groupId !== groupId)
+        : f.assignedOptionGroups.find((a) => a.groupId === groupId)
+          ? f.assignedOptionGroups.map((a) => (a.groupId === groupId ? { ...a, quantity: qty } : a))
+          : [...f.assignedOptionGroups, { groupId, quantity: qty }];
+      return { ...f, assignedOptionGroups: next };
+    });
   };
-  const updateOptionGroup = (i: number, patch: Partial<OptionGroupForm>) => {
-    setForm((f) => ({
-      ...f,
-      optionGroups: f.optionGroups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)),
-    }));
-  };
-  const removeOptionGroup = (i: number) => {
-    setForm((f) => ({ ...f, optionGroups: f.optionGroups.filter((_, idx) => idx !== i) }));
-  };
-  const toggleEligibleItem = (groupIdx: number, itemId: string) => {
-    setForm((f) => ({
-      ...f,
-      optionGroups: f.optionGroups.map((g, idx) => {
-        if (idx !== groupIdx) return g;
-        const has = g.eligibleItemIds.includes(itemId);
-        return {
-          ...g,
-          eligibleItemIds: has
-            ? g.eligibleItemIds.filter((x) => x !== itemId)
-            : [...g.eligibleItemIds, itemId],
-        };
-      }),
-    }));
-  };
+  const getGroupQty = (groupId: string) => form.assignedOptionGroups.find((a) => a.groupId === groupId)?.quantity ?? 0;
+
+
   const [uploading, setUploading] = useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -1064,34 +1046,17 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
 
   const handleSubmit = async () => {
     try {
-      // Validation: every group must have name + pickCount, and either a
-      // category filter OR at least one whitelisted item.
-      for (const g of form.optionGroups) {
-        if (!g.name.trim()) {
-          alert('Her seçim grubuna isim ver');
-          return;
-        }
-        if (g.pickCount < 1) {
-          alert(`"${g.name}" için seçim sayısı en az 1 olmalı`);
-          return;
-        }
-        if (!g.categoryId && g.eligibleItemIds.length === 0) {
-          alert(`"${g.name}" için ya bir kategori seç ya da ürün listesi gir`);
-          return;
-        }
-      }
       await api.post('/api/bundles', {
-        ...form,
+        name: form.name,
+        description: form.description,
+        image: form.image,
+        bundlePrice: form.bundlePrice,
+        categoryId: form.categoryId || null,
+        items: form.items,
         originalPrice,
         savings: originalPrice - form.bundlePrice,
-        optionGroups: form.optionGroups.map((g, i) => ({
-          name: g.name,
-          pickCount: g.pickCount,
-          priceMode: g.priceMode,
-          categoryId: g.categoryId || null,
-          eligibleItemIds: g.eligibleItemIds,
-          sortOrder: i,
-        })),
+        // Yeni format: groupId + quantity (slot sayısı)
+        assignedOptionGroups: form.assignedOptionGroups,
       }, token);
       onSave();
       onClose();
@@ -1126,6 +1091,29 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
             className="input w-full"
             rows={2}
           />
+
+          {/* Kategori — hangi başlık altında görünecek */}
+          <div>
+            <label className="block text-sm font-semibold mb-1">
+              📂 Kategori <span className="text-foreground-muted font-normal">(opsiyonel)</span>
+            </label>
+            <p className="text-[11px] text-foreground-muted mb-2">
+              Boş bırakırsan ana sayfada "📦 Paket Menüler" başlığı altında görünür.
+              Bir kategori seçersen o kategori başlığı altında listelenir (örn. Pizza, Makarna).
+            </p>
+            <select
+              value={form.categoryId}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+              className="input w-full"
+            >
+              <option value="">— Paket Menüler (default) —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Kapak fotoğrafı */}
           <div>
@@ -1169,7 +1157,12 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Ürünler</label>
+            <label className="block text-sm font-medium mb-1">
+              Sabit Ürünler <span className="text-foreground-muted font-normal">(opsiyonel)</span>
+            </label>
+            <p className="text-[11px] text-foreground-muted mb-2">
+              Pakete eklemek istediğin sabit ürünler varsa seç. Boş bırakırsan sadece opsiyon gruplarından seçim yapılır.
+            </p>
             <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
               {menuItems.map((item) => (
                 <button
@@ -1223,131 +1216,57 @@ function BundleModal({ show, onClose, onSave, menuItems, categories: categoriesP
             )}
           </div>
 
-          {/* Seçim Grupları (müşteri kategori/ürün listesinden seçer) */}
+          {/* Reusable Opsiyon Grupları — quantity input ile */}
           <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <label className="block text-sm font-bold">Seçim Grupları</label>
-                <p className="text-[11px] text-foreground-muted">
-                  Müşteri her gruptan belirttiğin sayıda ürün seçer (örn: "2 Pizza + 2 İçecek")
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addOptionGroup}
-                className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 font-bold hover:bg-purple-200"
-              >
-                + Grup Ekle
-              </button>
-            </div>
-
-            {form.optionGroups.length === 0 ? (
-              <p className="text-xs text-foreground-muted bg-gray-50 rounded-lg p-3 text-center">
-                Seçim grubu eklemezsen sadece sabit içerikli paket olur
+            <div className="mb-2">
+              <label className="block text-sm font-bold">📋 Opsiyon Grupları</label>
+              <p className="text-[11px] text-foreground-muted">
+                Opsiyon Grupları sayfasında oluşturduğun hazır gruplardan seç. Aynı grubu birden fazla ekleyebilirsin (örn: 2x Pizza Seçimi = müşteri 2 ayrı pizza seçer). Her ürünün ek fiyatı paket tabanına eklenir.
               </p>
+            </div>
+            {reusableGroups.length === 0 ? (
+              <div className="text-xs text-foreground-muted bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                Henüz hazır grup yok. <a href="/option-groups" className="text-amber-700 font-bold underline">Opsiyon Grupları</a> sayfasından oluşturabilirsin.
+              </div>
             ) : (
-              <div className="space-y-3">
-                {form.optionGroups.map((g, i) => (
-                  <div key={i} className="bg-purple-50/60 border border-purple-200 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Grup adı (örn: Pizza Seçimi)"
-                        value={g.name}
-                        onChange={(e) => updateOptionGroup(i, { name: e.target.value })}
-                        className="input flex-1 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeOptionGroup(i)}
-                        className="text-red-500 px-2 text-lg"
-                        title="Grubu sil"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-semibold mb-0.5">
-                          Kaç Tane Seçecek
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={g.pickCount}
-                          onChange={(e) =>
-                            updateOptionGroup(i, { pickCount: Math.max(1, Number(e.target.value)) })
-                          }
-                          className="input w-full text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold mb-0.5">Fiyatlama</label>
-                        <select
-                          value={g.priceMode}
-                          onChange={(e) =>
-                            updateOptionGroup(i, { priceMode: e.target.value as 'INCLUDED' | 'ADD_PRICE' })
-                          }
-                          className="input w-full text-sm"
-                        >
-                          <option value="INCLUDED">Paket fiyatına dahil</option>
-                          <option value="ADD_PRICE">Ürün fiyatı eklenir</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold mb-0.5">
-                        Hangi ürünler seçilebilir
-                      </label>
-                      <select
-                        value={g.categoryId}
-                        onChange={(e) =>
-                          updateOptionGroup(i, {
-                            categoryId: e.target.value,
-                            // kategori seçilince whitelist temizleniyor — ikisi birden olmasın
-                            eligibleItemIds: e.target.value ? [] : g.eligibleItemIds,
-                          })
-                        }
-                        className="input w-full text-sm"
-                      >
-                        <option value="">— Belirli ürünleri seç (aşağıdan)</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            Kategori: {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {!g.categoryId && (
-                      <div>
-                        <p className="text-[11px] font-semibold mb-1">
-                          Seçilebilir ürünler ({g.eligibleItemIds.length})
+              <div className="space-y-1.5">
+                {reusableGroups.map((rg) => {
+                  const qty = getGroupQty(rg.id);
+                  const active = qty > 0;
+                  return (
+                    <div
+                      key={rg.id}
+                      className={`flex items-center gap-2 text-xs px-2 py-2 rounded-lg border ${
+                        active ? 'bg-amber-50 border-amber-400' : 'bg-white border-border-light'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <p className="font-bold text-amber-900">📋 {rg.name}</p>
+                        <p className="text-[10px] text-foreground-muted">
+                          🎯 {rg.minSelect === rg.maxSelect ? `${rg.minSelect} seçim` : `${rg.minSelect}-${rg.maxSelect} seçim`} · 📦 {rg.items.length} ürün
                         </p>
-                        <div className="max-h-32 overflow-y-auto bg-white rounded border p-1 space-y-0.5">
-                          {menuItems.map((mi) => {
-                            const checked = g.eligibleItemIds.includes(mi.id);
-                            return (
-                              <label
-                                key={mi.id}
-                                className={`flex items-center gap-2 text-xs px-2 py-1 rounded cursor-pointer hover:bg-gray-50 ${
-                                  checked ? 'bg-purple-50' : ''
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleEligibleItem(i, mi.id)}
-                                />
-                                <span className="flex-1">{mi.name}</span>
-                                <span className="text-gray-500">₺{mi.price}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div className="flex items-center gap-1 bg-white border border-amber-300 rounded-full px-1">
+                        <button
+                          type="button"
+                          onClick={() => setGroupQty(rg.id, Math.max(0, qty - 1))}
+                          className="h-7 w-7 rounded-full text-amber-700 font-bold hover:bg-amber-100 disabled:opacity-30"
+                          disabled={qty === 0}
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-sm font-bold text-amber-900">{qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => setGroupQty(rg.id, qty + 1)}
+                          className="h-7 w-7 rounded-full text-amber-700 font-bold hover:bg-amber-100"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

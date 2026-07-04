@@ -44,6 +44,7 @@ services:
       WA_PHONE_NUMBER_ID: ${WA_PHONE_NUMBER_ID:-}
       WA_ACCESS_TOKEN: ${WA_ACCESS_TOKEN:-}
       WA_NOTIFY_PHONE: ${WA_NOTIFY_PHONE:-905552438181}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-xtvJrcUKgsDIQBeIdHOsH6x-iZqqAhB3Xij3UGe9}
     volumes:
       - uploads_data:/app/uploads
     depends_on:

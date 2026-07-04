@@ -4,6 +4,16 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // PRODUCTION GUARD — seed sipariş/menü siler, prod'da koşmamalı
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowed = process.env.ALLOW_PROD_SEED === '1';
+  if (isProd && !allowed) {
+    throw new Error(
+      '⛔ Production seed bloklandı. seed.ts mevcut Order/MenuItem verisini siler.\n' +
+      '   Devam etmek için: ALLOW_PROD_SEED=1 npm run db:seed\n' +
+      '   Aksi halde sadece güvenli upsert\'leri çalıştır.'
+    );
+  }
   console.log('🌱 Seeding database...');
 
   // Create default admin user
@@ -331,6 +341,40 @@ async function main() {
   });
 
   console.log('✅ Settings created');
+
+  // ==================== EXPENSE CATEGORIES (sabit/default) ====================
+  const defaultExpenseCategories = [
+    { name: 'Personel', icon: '👥', color: '#3b82f6', sortOrder: 1 },
+    { name: 'Kira', icon: '🏠', color: '#8b5cf6', sortOrder: 2 },
+    { name: 'Elektrik', icon: '⚡', color: '#eab308', sortOrder: 3 },
+    { name: 'Su', icon: '💧', color: '#06b6d4', sortOrder: 4 },
+    { name: 'Doğalgaz', icon: '🔥', color: '#f97316', sortOrder: 5 },
+    { name: 'İnternet & Telefon', icon: '📡', color: '#6366f1', sortOrder: 6 },
+    { name: 'Malzeme / Hammadde', icon: '📦', color: '#10b981', sortOrder: 7 },
+    { name: 'Ekipman / Onarım', icon: '🔧', color: '#64748b', sortOrder: 8 },
+    { name: 'Vergi / Yasal', icon: '📋', color: '#ef4444', sortOrder: 9 },
+    { name: 'Pazarlama / Reklam', icon: '📢', color: '#ec4899', sortOrder: 10 },
+    { name: 'Yakıt / Ulaşım', icon: '🚚', color: '#14b8a6', sortOrder: 11 },
+    { name: 'Temizlik', icon: '🧹', color: '#84cc16', sortOrder: 12 },
+    { name: 'Diğer', icon: '💼', color: '#71717a', sortOrder: 99 },
+  ];
+  for (const cat of defaultExpenseCategories) {
+    await prisma.expenseCategory.upsert({
+      where: { name: cat.name },
+      update: { icon: cat.icon, color: cat.color, sortOrder: cat.sortOrder, isSystem: true },
+      create: { ...cat, isSystem: true, active: true },
+    });
+  }
+  console.log(`✅ Expense categories seeded: ${defaultExpenseCategories.length}`);
+
+  // Auto-approve threshold (büyük giderler admin onayı bekler)
+  await prisma.settings.upsert({
+    where: { key: 'expense_auto_approve_threshold' },
+    update: {},
+    create: { key: 'expense_auto_approve_threshold', value: { amount: 10000 } },
+  });
+  console.log('✅ Expense auto-approve threshold: 10000 ₺');
+
   console.log('🎉 Seeding completed!');
 }
 

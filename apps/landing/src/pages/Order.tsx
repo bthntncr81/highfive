@@ -33,15 +33,22 @@ export const Order = () => {
   const {
     items,
     bundles,
+    builders,
     removeItem,
     updateQuantity,
     removeBundle,
+    removeBuilderItem,
     clearCart,
     totalItems,
     totalPrice,
     tableSession,
     clearTableSession,
   } = useCart();
+
+  // Builder (Kendin Tasarla) + Bundle (Paket Menü) sepetiyle birleşik kontrol:
+  // tek başına items.length kontrolü builder/bundle'lı sepette "Sepetiniz boş" gösterir
+  // ve checkout butonunu kilitler — gerçek müşteri kaybı sebebi olmuştu.
+  const hasCart = items.length + bundles.length + builders.length > 0;
 
   const [orderMode, setOrderMode] = useState<OrderMode>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | null>(null);
@@ -227,7 +234,7 @@ export const Order = () => {
   };
 
   const handleSubmitOrder = async () => {
-    if (items.length === 0) return;
+    if (!hasCart) return;
 
     // Form validations
     if (orderMode === 'takeaway' || orderMode === 'delivery') {
@@ -284,9 +291,9 @@ export const Order = () => {
         }
       }
 
-      // Only block if there are no items AND no bundles — a bundle-only
-      // order is valid (e.g., customer just ordered the Family Combo).
-      if (orderItems.length === 0 && bundles.length === 0) {
+      // Only block if there are no items, bundles AND builders — a builder-only
+      // or bundle-only order is also valid.
+      if (orderItems.length === 0 && bundles.length === 0 && builders.length === 0) {
         setError('Seçilen ürünler şu anda mevcut değil');
         setIsSubmitting(false);
         return;
@@ -298,6 +305,14 @@ export const Order = () => {
           groupId: s.groupId,
           menuItemIds: s.items.map((i) => i.id),
         })),
+      }));
+
+      // Builder (custom pizza/sandwich) — backend "builder:" prefix'li cart id
+      // ile expanded. Backend builder-expansion.ts ile re-validate eder.
+      const orderBuilders = builders.map((b) => ({
+        cartId: `builder:${b.builderType}:${b.baseId}:${b.ingredientIds.slice().sort().join(',')}`,
+        price: b.totalPrice,
+        quantity: 1,
       }));
 
       // Determine order type
@@ -321,6 +336,7 @@ export const Order = () => {
           : undefined,
         items: orderItems,
         bundles: orderBundles.length > 0 ? orderBundles : undefined,
+        builders: orderBuilders.length > 0 ? orderBuilders : undefined,
         type: orderType,
         notes: orderNotes,
         tip: tipAmount > 0 ? tipAmount : undefined,
@@ -557,7 +573,7 @@ export const Order = () => {
               </button>
             </div>
 
-            {items.length === 0 ? (
+            {!hasCart ? (
               <div className="text-center py-8">
                 <div className="text-5xl mb-3">🛒</div>
                 <p className="text-foreground-muted">Sepetiniz boş</p>
@@ -572,6 +588,121 @@ export const Order = () => {
               </div>
             ) : (
               <div className="space-y-3">
+                {/* Özel ürün (Kendin Tasarla) satırları */}
+                <AnimatePresence>
+                  {builders.map((b) => {
+                    const emoji = b.builderType === 'pizza' ? '🍕' : '🥪';
+                    const productName = b.builderType === 'pizza' ? 'Özel Pizza' : 'Özel Sandviç';
+                    return (
+                      <motion.div
+                        key={b.uid}
+                        layout
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20, height: 0 }}
+                        className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20"
+                      >
+                        {b.baseImage ? (
+                          <div
+                            className="relative w-16 h-16 flex-shrink-0 overflow-hidden bg-white"
+                            style={{ borderRadius: b.builderType === 'pizza' ? '50%' : '8px' }}
+                          >
+                            <img src={b.baseImage} alt={productName} className="absolute inset-0 w-full h-full object-cover" />
+                            {b.previewLayers?.map((url, i) => (
+                              <img key={i} src={url} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+                            {emoji}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white px-2 py-0.5 rounded">
+                              Özel
+                            </span>
+                            <h4 className="font-display text-foreground truncate">
+                              {emoji} {productName}
+                            </h4>
+                          </div>
+                          <p className="text-xs text-foreground-muted mt-0.5">
+                            <span className="text-foreground-subtle">Hamur:</span> {b.baseName}
+                          </p>
+                          <ul className="text-xs text-foreground-muted">
+                            {b.selections.map((s) => (
+                              <li key={s.category}>
+                                <span className="text-foreground-subtle">{s.category}:</span>{' '}
+                                {s.items.map((it) => it.name).join(', ')}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-sm text-primary font-display font-bold mt-1">
+                            ₺{b.totalPrice.toFixed(2)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeBuilderItem(b.uid)}
+                          className="text-foreground-muted hover:text-primary p-1"
+                          aria-label="Özel ürünü kaldır"
+                        >
+                          🗑️
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+                {/* Paket Menü (Bundle) satırları */}
+                <AnimatePresence>
+                  {bundles.map((b) => (
+                    <motion.div
+                      key={b.uid}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20, height: 0 }}
+                      className="flex items-start gap-3 p-3 bg-accent/5 rounded-lg border border-accent/20"
+                    >
+                      {b.image ? (
+                        <img src={b.image} alt={b.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-accent/20 flex items-center justify-center text-3xl flex-shrink-0">
+                          📦
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wide bg-accent text-white px-2 py-0.5 rounded">
+                            Paket
+                          </span>
+                          <h4 className="font-display text-foreground truncate">{b.name}</h4>
+                        </div>
+                        <ul className="mt-1 text-xs text-foreground-muted space-y-0.5">
+                          {b.fixedItemNames.map((n, i) => (
+                            <li key={`f${i}`}>• {n}</li>
+                          ))}
+                          {b.selections.flatMap((s) =>
+                            s.items.map((it, i) => (
+                              <li key={`${s.groupId}-${i}`}>
+                                • <span className="text-foreground-subtle">{s.groupName}:</span> {it.name}
+                              </li>
+                            )),
+                          )}
+                        </ul>
+                        <p className="text-sm text-primary font-display font-bold mt-1">
+                          ₺{b.totalPrice}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeBundle(b.uid)}
+                        className="text-foreground-muted hover:text-primary p-1"
+                        aria-label="Paketi kaldır"
+                      >
+                        🗑️
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
                 <AnimatePresence>
                   {items.map((cartItem) => (
                     <motion.div
@@ -625,7 +756,7 @@ export const Order = () => {
         )}
 
         {/* Customer Info (for takeaway & delivery) */}
-        {(orderMode === 'takeaway' || orderMode === 'delivery') && items.length > 0 && (
+        {(orderMode === 'takeaway' || orderMode === 'delivery') && hasCart && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -773,7 +904,7 @@ export const Order = () => {
         )}
 
         {/* Order Notes */}
-        {orderMode && items.length > 0 && (
+        {orderMode && hasCart && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -791,7 +922,7 @@ export const Order = () => {
         )}
 
         {/* Tipping Section */}
-        {orderMode && items.length > 0 && (
+        {orderMode && hasCart && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -876,7 +1007,7 @@ export const Order = () => {
         )}
 
         {/* Payment Method Selection */}
-        {orderMode && items.length > 0 && (
+        {orderMode && hasCart && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -1031,7 +1162,7 @@ export const Order = () => {
         )}
 
         {/* Order Summary & Submit */}
-        {orderMode && items.length > 0 && (
+        {orderMode && hasCart && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

@@ -26,8 +26,16 @@ import tipRoutes from './routes/tip';
 import locationRoutes from './routes/location';
 import loyaltyRoutes from './routes/loyalty';
 import loyaltyProgramsRoutes from './routes/loyalty-programs';
+import loyaltyClaimsRoutes from './routes/loyalty-claims';
 import campaignsRoutes from './routes/campaigns';
+import optionGroupsRoutes from './routes/option-groups';
+import gamesRoutes from './routes/games';
+import pizzaGameRoutes from './routes/pizza-game';
+import builderRoutes from './routes/builder';
+import googleReviewsRoutes from './routes/google-reviews';
 import rawMaterialRoutes from './routes/rawmaterials';
+import expenseCategoryRoutes from './routes/expense-categories';
+import expenseRoutes from './routes/expenses';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
 import integrationPartnerRoutes from './routes/integration-partners';
@@ -35,11 +43,15 @@ import mobileAuthRoutes from './routes/mobile-auth';
 import devicesRoutes from './routes/devices';
 import notificationRoutes, { processScheduledNotifications } from './routes/notifications';
 import { processBirthdayPrograms } from './lib/loyalty-engine';
+import { startDailyCloseScheduler } from './lib/daily-close';
+import { startWinbackScheduler } from './lib/winback';
 import mobileOrdersRoutes from './routes/mobile-orders';
 import mobileLoyaltyRoutes from './routes/mobile-loyalty';
 import mobileAddressesRoutes from './routes/mobile-addresses';
 import mobileFavoritesRoutes from './routes/mobile-favorites';
 import mobilePrefsRoutes from './routes/mobile-prefs';
+import courierRoutes from './routes/courier';
+import { scheduleCourierLocationCleanup } from './lib/courier-location-cleanup';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -101,8 +113,16 @@ server.register(tipRoutes, { prefix: '/api' }); // tip routes
 server.register(locationRoutes, { prefix: '/api' }); // /api/locations
 server.register(loyaltyRoutes, { prefix: '/api/loyalty' }); // Loyalty program
 server.register(loyaltyProgramsRoutes, { prefix: '/api/loyalty/programs' }); // Loyalty Programs (12 tür)
+server.register(loyaltyClaimsRoutes, { prefix: '/api/loyalty' }); // Admin claim onayı (Google review screenshot)
 server.register(campaignsRoutes, { prefix: '/api' }); // /api/campaigns, /api/bundles, /api/coupons
+server.register(optionGroupsRoutes, { prefix: '/api/option-groups' }); // Reusable bundle opsiyon grupları
+server.register(gamesRoutes, { prefix: '/api/games' }); // Spin wheel + achievements + scratch card
+server.register(pizzaGameRoutes, { prefix: '/api/pizza-game' }); // Pizza Şefi mini-oyun global liderlik
+server.register(builderRoutes, { prefix: '/api/builder' }); // Pizza & Sandwich builder
+server.register(googleReviewsRoutes, { prefix: '/api/google-reviews' }); // Google Places reviews + curated fallback
 server.register(rawMaterialRoutes, { prefix: '/api/raw-materials' }); // Ham madde yönetimi
+server.register(expenseCategoryRoutes, { prefix: '/api/expense-categories' }); // Gider kategorileri (sabit + custom)
+server.register(expenseRoutes, { prefix: '/api/expenses' }); // Gider CRUD + approve + stats
 server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
 server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
 server.register(integrationPartnerRoutes, { prefix: '/api/integration-partners' }); // Partner management UI
@@ -114,6 +134,7 @@ server.register(mobileLoyaltyRoutes, { prefix: '/api/mobile/loyalty' }); // Mobi
 server.register(mobileAddressesRoutes, { prefix: '/api/mobile/addresses' }); // Mobile addresses
 server.register(mobileFavoritesRoutes, { prefix: '/api/mobile/favorites' }); // Mobile favorites
 server.register(mobilePrefsRoutes, { prefix: '/api/mobile/prefs' }); // Mobile notification prefs
+server.register(courierRoutes, { prefix: '/api/courier' }); // Courier mobile app endpoints
 
 // WebSocket - must be registered AFTER websocket plugin is ready
 server.after(() => {
@@ -144,6 +165,17 @@ const start = async () => {
     setTimeout(() => {
       processBirthdayPrograms(prisma).catch(() => {});
     }, 60_000);
+
+    // Gün sonu auto-close — her gece 00:00'da açık siparişleri COMPLETED yap,
+    // masaları FREE'ye çek (servisin garson "ödendi" basmayı unutmasına karşı).
+    startDailyCloseScheduler(prisma);
+
+    // Win-back kampanyası — sabah 10:00'da uzun süredir sipariş geçmeyen
+    // pushConsent açık müşterilere %15 indirim teklifi push'u gönderir.
+    startWinbackScheduler(prisma);
+
+    // Courier konum geçmişi temizleme — 24 saatten eski kayıtlar saatte 1 kez silinir.
+    scheduleCourierLocationCleanup(prisma);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

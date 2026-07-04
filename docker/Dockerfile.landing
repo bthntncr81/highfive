@@ -32,6 +32,11 @@ ENV VITE_WS_URL=$VITE_WS_URL
 # Build the app
 RUN npx vite build
 
+# Per-route SEO prerender: canonical, title, description, OG, JSON-LD + gerçek 404
+# (saf Node, ek bağımlılık yok — dist/<route>/index.html + dist/404.html üretir)
+COPY apps/landing/scripts ./scripts
+RUN node scripts/prerender.mjs
+
 # Production image with nginx
 FROM nginx:alpine
 

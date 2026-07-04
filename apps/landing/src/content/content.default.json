@@ -29,7 +29,7 @@
   "highlights": [
     {
       "title": "Hızlı Teslimat",
-      "desc": "30 dakikada kapınızda, sıcacık!",
+      "desc": "18 dakikada kapınızda, sıcacık!",
       "icon": "🚀"
     },
     {
@@ -240,8 +240,8 @@
       {
         "id": "s2",
         "category": "sandvic",
-        "name": "Füme Dana Schiacciatta",
-        "desc": "Schiacciatta, dana füme, mozzarella, karamelize soğan, köz kapya, hardal.",
+        "name": "Füme Dana Panouzzo",
+        "desc": "Panouzzo, dana füme, mozzarella, karamelize soğan, köz kapya, hardal.",
         "price": 275,
         "image": "/placeholders/sandwich-fume-dana.svg",
         "badges": ["Popüler"]
@@ -267,8 +267,8 @@
       {
         "id": "s5",
         "category": "sandvic",
-        "name": "Dört Peynir Schiacciatta",
-        "desc": "Schiacciatta, mozzarella, kaşar, parmesan, labne krem, fesleğen.",
+        "name": "Dört Peynir Panouzzo",
+        "desc": "Panouzzo, mozzarella, kaşar, parmesan, labne krem, fesleğen.",
         "price": 250,
         "image": "/placeholders/sandwich-dort-peynir.svg",
         "badges": ["Popüler"]
@@ -294,8 +294,8 @@
       {
         "id": "s8",
         "category": "sandvic",
-        "name": "Et Bombası Schiacciatta",
-        "desc": "Schiacciatta, dana salam, pastırma, dana füme, karamelize soğan, sour chilli sos.",
+        "name": "Et Bombası Panouzzo",
+        "desc": "Panouzzo, dana salam, pastırma, dana füme, karamelize soğan, sour chilli sos.",
         "price": 400,
         "image": "/placeholders/sandwich-et-bombasi.svg",
         "badges": ["Yeni", "Popüler"]
@@ -312,8 +312,8 @@
       {
         "id": "s10",
         "category": "sandvic",
-        "name": "Trüflü Füme Schiacciatta",
-        "desc": "Schiacciatta, dana füme, mozzarella, karamelize soğan, jalapeno, trüflü mayonez.",
+        "name": "Trüflü Füme Panouzzo",
+        "desc": "Panouzzo, dana füme, mozzarella, karamelize soğan, jalapeno, trüflü mayonez.",
         "price": 275,
         "image": "/placeholders/sandwich-truflu-fume.svg",
         "badges": ["Yeni"]
@@ -321,8 +321,8 @@
       {
         "id": "s11",
         "category": "sandvic",
-        "name": "Tulum & Salam Schiacciatta",
-        "desc": "Schiacciatta, tulum peyniri, dana salam, köz kapya, kornişon, hardal.",
+        "name": "Tulum & Salam Panouzzo",
+        "desc": "Panouzzo, tulum peyniri, dana salam, köz kapya, kornişon, hardal.",
         "price": 275,
         "image": "/placeholders/sandwich-tulum-salam.svg",
         "badges": []
@@ -357,8 +357,8 @@
       {
         "id": "s15",
         "category": "sandvic",
-        "name": "Sarımsaklı Hindi Schiacciatta",
-        "desc": "Schiacciatta, hindi füme, kaşar, sarımsaklı yoğurt, marul, karamelize soğan.",
+        "name": "Sarımsaklı Hindi Panouzzo",
+        "desc": "Panouzzo, hindi füme, kaşar, sarımsaklı yoğurt, marul, karamelize soğan.",
         "price": 175,
         "image": "/placeholders/sandwich-sarimsakli-hindi.svg",
         "badges": []
@@ -385,7 +385,7 @@
         "id": "s18",
         "category": "sandvic",
         "name": "Acılı Domates Mozzarella",
-        "desc": "Schiacciatta, mozzarella, acılı domates sosu, jalapeno, yeşil biber, roka.",
+        "desc": "Panouzzo, mozzarella, acılı domates sosu, jalapeno, yeşil biber, roka.",
         "price": 167,
         "image": "/placeholders/sandwich-acili-domates-mozz.svg",
         "badges": ["Acılı"]
@@ -402,8 +402,8 @@
       {
         "id": "s20",
         "category": "sandvic",
-        "name": "Full House Schiacciatta",
-        "desc": "Schiacciatta, mozzarella, dana salam, köz kapya, karamelize soğan, kornişon, trüflü mayonez.",
+        "name": "Full House Panouzzo",
+        "desc": "Panouzzo, mozzarella, dana salam, köz kapya, karamelize soğan, kornişon, trüflü mayonez.",
         "price": 265,
         "image": "/placeholders/sandwich-full-house.svg",
         "badges": ["Popüler"]
@@ -472,13 +472,13 @@
   "contact": {
     "address": "Cumhuriyet Mahallesi, İstanbul Caddesi No 151/1, Akçakoca, Düzce",
     "hours": [
-      { "day": "Pazartesi", "open": "11:00", "close": "23:00" },
-      { "day": "Salı", "open": "11:00", "close": "23:00" },
-      { "day": "Çarşamba", "open": "11:00", "close": "23:00" },
-      { "day": "Perşembe", "open": "11:00", "close": "23:00" },
-      { "day": "Cuma", "open": "11:00", "close": "00:00" },
-      { "day": "Cumartesi", "open": "11:00", "close": "00:00" },
-      { "day": "Pazar", "open": "12:00", "close": "23:00" }
+      { "day": "Pazartesi", "open": "11:00", "close": "02:00" },
+      { "day": "Salı", "open": "11:00", "close": "02:00" },
+      { "day": "Çarşamba", "open": "11:00", "close": "02:00" },
+      { "day": "Perşembe", "open": "11:00", "close": "02:00" },
+      { "day": "Cuma", "open": "11:00", "close": "02:00" },
+      { "day": "Cumartesi", "open": "11:00", "close": "02:00" },
+      { "day": "Pazar", "open": "11:00", "close": "02:00" }
     ],
     "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12000!2d30.6333!3d41.0889!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zQWvDp2Frb2NhLCBEw7x6Y2U!5e0!3m2!1str!2str!4v1234567890"
   },

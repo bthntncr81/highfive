@@ -34,6 +34,26 @@ export type BundleCartEntry = {
   fixedItemNames: string[]          // for display
 }
 
+// Builder (custom pizza/sandviç) cart entry — kullanıcının kendi tasarladığı ürün.
+// Server-side fiyat doğrulaması yapılır (cart id "builder:" ile başlar).
+export type BuilderCartEntry = {
+  uid: string                       // lokal key
+  builderType: 'pizza' | 'sandwich'
+  baseId: string
+  baseName: string
+  baseImage?: string
+  // Layered preview için tüm seçili katmanların URL'leri (layerOrder'a göre sıralı).
+  // Sepette base + her layer üst üste render edilir → kullanıcı tasarladığı pizzayı görür.
+  previewLayers?: string[]
+  ingredientIds: string[]           // sıralı, server'da reuse için
+  totalPrice: number                // gösterim için (server validate eder)
+  // Detay: kategoriye göre seçilen ingredients (cart UI gösterimi için)
+  selections: {
+    category: string                // BASE_SAUCE / CHEESE / MEAT / VEGETABLE / TOP_SAUCE
+    items: { id: string; name: string; extraPrice: number }[]
+  }[]
+}
+
 export type TableSession = {
   id: string
   number: number
@@ -44,12 +64,15 @@ export type TableSession = {
 type CartContextValue = {
   items: CartItem[]
   bundles: BundleCartEntry[]
+  builders: BuilderCartEntry[]
   addItem: (item: MenuItem) => void
   addItemFromAPI: (apiItem: APIMenuItemForCart) => void // API formatından ekleme
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, quantity: number) => void
   addBundle: (entry: Omit<BundleCartEntry, 'uid'>) => void
   removeBundle: (uid: string) => void
+  addBuilderItem: (entry: Omit<BuilderCartEntry, 'uid'>) => void
+  removeBuilderItem: (uid: string) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -65,6 +88,7 @@ type CartContextValue = {
 
 const CART_STORAGE_KEY = 'highfive-cart'
 const BUNDLES_STORAGE_KEY = 'highfive-cart-bundles'
+const BUILDERS_STORAGE_KEY = 'highfive-cart-builders'
 const TABLE_SESSION_KEY = 'highfive-table-session'
 
 const CartContext = createContext<CartContextValue | undefined>(undefined)
@@ -101,6 +125,22 @@ const saveBundles = (entries: BundleCartEntry[]) => {
   localStorage.setItem(BUNDLES_STORAGE_KEY, JSON.stringify(entries))
 }
 
+const loadBuilders = (): BuilderCartEntry[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(BUILDERS_STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as BuilderCartEntry[]
+  } catch {
+    return []
+  }
+}
+
+const saveBuilders = (entries: BuilderCartEntry[]) => {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(BUILDERS_STORAGE_KEY, JSON.stringify(entries))
+}
+
 const loadTableSession = (): TableSession => {
   if (typeof window === 'undefined') return null
   try {
@@ -124,6 +164,7 @@ const saveTableSession = (table: TableSession) => {
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => loadCart())
   const [bundles, setBundles] = useState<BundleCartEntry[]>(() => loadBundles())
+  const [builders, setBuilders] = useState<BuilderCartEntry[]>(() => loadBuilders())
   const [isOpen, setIsOpen] = useState(false)
   const [tableSession, setTableSessionState] = useState<TableSession>(() => loadTableSession())
 
@@ -135,6 +176,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     saveBundles(bundles)
   }, [bundles])
+
+  useEffect(() => {
+    saveBuilders(builders)
+  }, [builders])
 
   const addItem = useCallback((item: MenuItem) => {
     setItems((prev) => {
@@ -202,9 +247,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBundles((prev) => prev.filter((b) => b.uid !== uid))
   }, [])
 
+  const addBuilderItem = useCallback((entry: Omit<BuilderCartEntry, 'uid'>) => {
+    const uid = `bdr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    setBuilders((prev) => [...prev, { ...entry, uid }])
+  }, [])
+
+  const removeBuilderItem = useCallback((uid: string) => {
+    setBuilders((prev) => prev.filter((b) => b.uid !== uid))
+  }, [])
+
   const clearCart = useCallback(() => {
     setItems([])
     setBundles([])
+    setBuilders([])
   }, [])
 
   const openCart = useCallback(() => setIsOpen(true), [])
@@ -222,27 +277,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const totalItems = useMemo(
-    () => items.reduce((sum, ci) => sum + ci.quantity, 0) + bundles.length,
-    [items, bundles]
+    () => items.reduce((sum, ci) => sum + ci.quantity, 0) + bundles.length + builders.length,
+    [items, bundles, builders]
   )
 
   const totalPrice = useMemo(
     () =>
       items.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0) +
-      bundles.reduce((sum, b) => sum + b.totalPrice, 0),
-    [items, bundles]
+      bundles.reduce((sum, b) => sum + b.totalPrice, 0) +
+      builders.reduce((sum, b) => sum + b.totalPrice, 0),
+    [items, bundles, builders]
   )
 
   const value = useMemo(
     () => ({
       items,
       bundles,
+      builders,
       addItem,
       addItemFromAPI,
       removeItem,
       updateQuantity,
       addBundle,
       removeBundle,
+      addBuilderItem,
+      removeBuilderItem,
       clearCart,
       totalItems,
       totalPrice,
@@ -254,7 +313,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTableSession,
       clearTableSession,
     }),
-    [items, bundles, addItem, addItemFromAPI, removeItem, updateQuantity, addBundle, removeBundle, clearCart, totalItems, totalPrice, isOpen, openCart, closeCart, toggleCart, tableSession, setTableSession, clearTableSession]
+    [items, bundles, builders, addItem, addItemFromAPI, removeItem, updateQuantity, addBundle, removeBundle, addBuilderItem, removeBuilderItem, clearCart, totalItems, totalPrice, isOpen, openCart, closeCart, toggleCart, tableSession, setTableSession, clearTableSession]
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

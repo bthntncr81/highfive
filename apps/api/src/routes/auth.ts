@@ -86,14 +86,17 @@ export default async function authRoutes(server: FastifyInstance) {
     },
   );
 
-  // Login with PIN (quick login for POS)
+  // -----------------------------------------------------------------
+  // 6 haneli şifre ile giriş — TEK giriş yöntemi (POS web + POS/Kitchen mobile).
+  // Kullanıcı adı / e-posta gerekmez. Sadece 6 haneli sayısal şifre (User.pin).
+  // -----------------------------------------------------------------
   server.post(
     '/pin-login',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { pin } = request.body as { pin: string };
 
-      if (!pin || pin.length !== 4) {
-        return reply.status(400).send({ error: 'Geçerli bir PIN giriniz' });
+      if (!pin || !/^\d{6}$/.test(pin)) {
+        return reply.status(400).send({ error: '6 haneli şifre giriniz' });
       }
 
       const user = await prisma.user.findFirst({
@@ -101,24 +104,20 @@ export default async function authRoutes(server: FastifyInstance) {
       });
 
       if (!user) {
-        return reply.status(401).send({ error: 'Geçersiz PIN' });
+        return reply.status(401).send({ error: 'Geçersiz şifre' });
       }
 
       const token = jwt.sign(
         { userId: user.id, role: user.role },
         JWT_SECRET,
-        { expiresIn: 60 * 60 * 12 }, // 12 hours in seconds
+        { expiresIn: 60 * 60 * 24 * 7 }, // 7 gün
       );
 
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 12);
+      expiresAt.setDate(expiresAt.getDate() + 7);
 
       await prisma.session.create({
-        data: {
-          userId: user.id,
-          token,
-          expiresAt,
-        },
+        data: { userId: user.id, token, expiresAt },
       });
 
       await prisma.activityLog.create({
@@ -138,6 +137,69 @@ export default async function authRoutes(server: FastifyInstance) {
           name: user.name,
           role: user.role,
           avatar: user.avatar,
+          phone: user.phone,
+          locationId: user.locationId,
+          isOnline: user.isOnline,
+        },
+      };
+    },
+  );
+
+  // -----------------------------------------------------------------
+  // Kurye girişi — aynı 6 haneli şifre, server tarafında role=COURIER kontrolü.
+  // -----------------------------------------------------------------
+  server.post(
+    '/courier-login',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { pin } = request.body as { pin?: string };
+
+      if (!pin || !/^\d{6}$/.test(pin)) {
+        return reply.status(400).send({ error: '6 haneli şifre giriniz' });
+      }
+
+      const user = await prisma.user.findFirst({
+        where: { pin, active: true },
+      });
+
+      if (!user || user.role !== 'COURIER') {
+        return reply
+          .status(401)
+          .send({ error: 'Geçersiz şifre veya bu hesap kurye hesabı değil' });
+      }
+
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        JWT_SECRET,
+        { expiresIn: 60 * 60 * 24 * 7 },
+      );
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await prisma.session.create({
+        data: { userId: user.id, token, expiresAt },
+      });
+
+      await prisma.activityLog.create({
+        data: {
+          userId: user.id,
+          action: 'LOGIN',
+          details: { method: 'courier-pin' },
+          ipAddress: request.ip,
+        },
+      });
+
+      return {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar,
+          phone: user.phone,
+          locationId: user.locationId,
+          isOnline: user.isOnline,
         },
       };
     },
@@ -162,7 +224,7 @@ export default async function authRoutes(server: FastifyInstance) {
     },
   );
 
-  // Get current user
+  // Get current user (staff token gerekli — customer token reddedilir)
   server.get('/me', async (request: FastifyRequest, reply: FastifyReply) => {
     const authHeader = request.headers.authorization;
     if (!authHeader) {
@@ -172,7 +234,10 @@ export default async function authRoutes(server: FastifyInstance) {
     const token = authHeader.replace('Bearer ', '');
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; customerId?: string };
+      if (!decoded.userId) {
+        return reply.status(401).send({ error: 'Bu endpoint personel/kurye token gerektirir' });
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
@@ -182,6 +247,10 @@ export default async function authRoutes(server: FastifyInstance) {
           name: true,
           role: true,
           avatar: true,
+          phone: true,
+          locationId: true,
+          isOnline: true,
+          lastSeenAt: true,
           active: true,
         },
       });
@@ -192,6 +261,28 @@ export default async function authRoutes(server: FastifyInstance) {
 
       return { user };
     } catch (err) {
+      return reply.status(401).send({ error: 'Geçersiz token' });
+    }
+  });
+
+  // POST /me — alternatif (bazı mobile-shared client'lar POST yapar)
+  server.post('/me', async (request: FastifyRequest, reply: FastifyReply) => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader) return reply.status(401).send({ error: 'Token gerekli' });
+    const token = authHeader.replace('Bearer ', '');
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string };
+      if (!decoded.userId) return reply.status(401).send({ error: 'Personel token gerekli' });
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true, email: true, name: true, role: true, avatar: true,
+          phone: true, locationId: true, isOnline: true, lastSeenAt: true, active: true,
+        },
+      });
+      if (!user || !user.active) return reply.status(401).send({ error: 'Kullanıcı bulunamadı' });
+      return { user };
+    } catch {
       return reply.status(401).send({ error: 'Geçersiz token' });
     }
   });
@@ -275,12 +366,18 @@ export default async function authRoutes(server: FastifyInstance) {
       phone,
       gender,
       birthDate,
+      termsAccepted,
+      kvkkAccepted,
+      marketingConsent,
     } = request.body as {
       email?: string;
       name?: string;
       phone?: string;
       gender?: string;     // "MALE" | "FEMALE" | "OTHER"
       birthDate?: string;  // "YYYY-MM-DD"
+      termsAccepted?: boolean;
+      kvkkAccepted?: boolean;
+      marketingConsent?: boolean;
     };
     if (!email || !isValidEmail(email)) {
       return reply.status(400).send({ error: 'Geçerli bir e-posta adresi gerekli' });
@@ -318,6 +415,14 @@ export default async function authRoutes(server: FastifyInstance) {
     const code = generateOtp();
     const expiresAt = new Date(Date.now() + CUSTOMER_OTP_TTL_MS);
 
+    // Consent / KVKK timestamps — yalnızca ilk explicit kabul anında kaydet
+    const now = new Date();
+    const setTermsAt = termsAccepted === true ? now : undefined;
+    const setKvkkAt = kvkkAccepted === true ? now : undefined;
+    const setMarketingAt = marketingConsent === true ? now : null; // false ise null (geri çekme)
+    const setEmailMarketing = marketingConsent === true ? true : marketingConsent === false ? false : undefined;
+    const setSmsMarketing = marketingConsent === true ? true : marketingConsent === false ? false : undefined;
+
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
@@ -328,7 +433,11 @@ export default async function authRoutes(server: FastifyInstance) {
           gender: normalizedGender,
           verificationCode: code,
           verificationCodeExpiresAt: expiresAt,
-          emailConsent: false, // explicit opt-in later
+          emailConsent: setEmailMarketing ?? false,
+          smsConsent: setSmsMarketing ?? false,
+          termsAcceptedAt: setTermsAt,
+          kvkkAcceptedAt: setKvkkAt,
+          marketingConsentAt: marketingConsent === true ? now : null,
         },
       });
     } else {
@@ -342,6 +451,15 @@ export default async function authRoutes(server: FastifyInstance) {
           phone: customer.phone ?? cleanPhone,
           birthDate: customer.birthDate ?? parsedBirth ?? null,
           gender: customer.gender ?? normalizedGender ?? null,
+          // Consent: yalnızca ilk kabulde set, sonra korunur
+          termsAcceptedAt: customer.termsAcceptedAt ?? setTermsAt,
+          kvkkAcceptedAt: customer.kvkkAcceptedAt ?? setKvkkAt,
+          // Marketing — kullanıcı her seferinde değiştirebilir
+          ...(marketingConsent !== undefined ? {
+            emailConsent: setEmailMarketing,
+            smsConsent: setSmsMarketing,
+            marketingConsentAt: setMarketingAt,
+          } : {}),
         },
       });
     }
@@ -391,7 +509,8 @@ export default async function authRoutes(server: FastifyInstance) {
       where: { id: customer.id },
       data: {
         isVerified: true,
-        emailConsent: true, // verifying = implicit opt-in to transactional+marketing
+        // KVKK uyumu: emailConsent yalnızca request-otp'ta marketingConsent=true ile set edilir
+        // Doğrulama otomatik opt-in YAPMAZ
         verificationCode: null,
         verificationCodeExpiresAt: null,
       },

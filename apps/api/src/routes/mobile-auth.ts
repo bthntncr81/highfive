@@ -209,8 +209,10 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       return reply.status(401).send({ error: 'Token gerekli' });
     }
     try {
-      const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { customerId: string; type: string };
-      if (decoded.type !== 'customer') {
+      const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { customerId: string; type?: string; aud?: string };
+      // SMS OTP token'ı type='customer', email OTP token'ı aud='customer' kullanır
+      const isCustomer = decoded.type === 'customer' || decoded.aud === 'customer';
+      if (!isCustomer || !decoded.customerId) {
         return reply.status(401).send({ error: 'Geçersiz token' });
       }
       const customer = await prisma.customer.findUnique({
@@ -240,21 +242,82 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       return reply.status(401).send({ error: 'Token gerekli' });
     }
     try {
-      const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { customerId: string; type: string };
-      if (decoded.type !== 'customer') {
+      const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { customerId: string; type?: string; aud?: string };
+      const isCustomer = decoded.type === 'customer' || decoded.aud === 'customer';
+      if (!isCustomer || !decoded.customerId) {
         return reply.status(401).send({ error: 'Geçersiz token' });
       }
-      const { name, email } = (request.body ?? {}) as { name?: string; email?: string };
+      const {
+        name,
+        email,
+        emailConsent,
+        smsConsent,
+      } = (request.body ?? {}) as {
+        name?: string;
+        email?: string;
+        emailConsent?: boolean;
+        smsConsent?: boolean;
+      };
+      const now = new Date();
+      // marketingConsentAt — herhangi biri true'ya geçince güncelle
+      const marketingChange = emailConsent === true || smsConsent === true;
       const customer = await prisma.customer.update({
         where: { id: decoded.customerId },
         data: {
           ...(name !== undefined ? { name } : {}),
           ...(email !== undefined ? { email } : {}),
+          ...(emailConsent !== undefined ? { emailConsent } : {}),
+          ...(smsConsent !== undefined ? { smsConsent } : {}),
+          // Audit timestamp — en az birini açıyorsa şimdi, ikisi de kapalıysa null
+          ...(emailConsent !== undefined || smsConsent !== undefined
+            ? { marketingConsentAt: marketingChange ? now : null }
+            : {}),
         },
       });
       return { user: customer };
     } catch (e: any) {
       return reply.status(400).send({ error: e?.message ?? 'Güncellenemedi' });
+    }
+  });
+
+  // Hesabı kalıcı olarak sil — Apple 5.1.1(v) / Google Play hesap silme zorunluluğu.
+  // İlişkili kayıtlar (puan, adres, favori, cihaz, sadakat ilerlemesi, oyun ödülleri)
+  // şemadaki onDelete: Cascade ile birlikte silinir. Geçmiş sipariş kayıtları (Order)
+  // işletme muhasebesi için kalır; müşteri-sipariş bağı (CustomerOrder) cascade ile kalkar.
+  server.delete('/me', async (request: any, reply: any) => {
+    const auth = request.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return reply.status(401).send({ error: 'Token gerekli' });
+    }
+    let customerId: string;
+    try {
+      const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as {
+        customerId: string;
+        type?: string;
+        aud?: string;
+      };
+      const isCustomer = decoded.type === 'customer' || decoded.aud === 'customer';
+      if (!isCustomer || !decoded.customerId) {
+        return reply.status(401).send({ error: 'Geçersiz token' });
+      }
+      customerId = decoded.customerId;
+    } catch {
+      return reply.status(401).send({ error: 'Geçersiz veya süresi dolmuş token' });
+    }
+
+    try {
+      const existing = await prisma.customer.findUnique({ where: { id: customerId } });
+      if (!existing) {
+        return reply.status(404).send({ error: 'Hesap bulunamadı' });
+      }
+      await prisma.customer.delete({ where: { id: customerId } });
+      server.log.info({ customerId }, '[MOBILE-AUTH] Hesap kalıcı olarak silindi');
+      return { ok: true, message: 'Hesabın ve tüm verilerin kalıcı olarak silindi.' };
+    } catch (e: any) {
+      server.log.error({ err: e, customerId }, '[MOBILE-AUTH] Hesap silme hatası');
+      return reply
+        .status(500)
+        .send({ error: 'Hesap silinemedi. Lütfen tekrar deneyin.' });
     }
   });
 }

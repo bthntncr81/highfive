@@ -7,7 +7,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
+import { evaluateCartOffers, type CartItem } from '../lib/cart-offers';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
 /**
  * Program listesini reward/applicable menu item objeleriyle zenginleştir.
@@ -119,6 +124,37 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       programs: await decorateProgramsWithMenuItems(prisma, programs),
       progress,
     };
+  });
+
+  // ==================== CART OFFERS — sepete uygun en avantajlı sadakat ====================
+  // Auth opsiyonel: giriş yapmamış kullanıcı sadece public offer'lar görür
+  // POST body: { items: [{ menuItemId, quantity, unitPrice }] }
+  // Yanıt: { bestOffer, allOffers, subtotal }
+  server.post('/cart/evaluate', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { items } = (request.body ?? {}) as { items?: CartItem[] };
+    if (!Array.isArray(items) || items.length === 0) {
+      return { bestOffer: null, allOffers: [], subtotal: 0 };
+    }
+
+    // Auth optional — token varsa customerId çek
+    let customerId: string | null = null;
+    const auth = request.headers.authorization;
+    if (auth?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(
+          auth.slice(7),
+          process.env.JWT_SECRET || 'your-secret-key',
+        ) as { customerId?: string; type?: string; aud?: string };
+        if (decoded.customerId && (decoded.type === 'customer' || decoded.aud === 'customer')) {
+          customerId = decoded.customerId;
+        }
+      } catch { /* token geçersiz, anonim olarak devam */ }
+    }
+
+    const subtotal = items.reduce((s, it) => s + Number(it.unitPrice) * Number(it.quantity), 0);
+    const { bestOffer, allOffers } = await evaluateCartOffers(prisma, customerId, items);
+    return { bestOffer, allOffers, subtotal };
   });
 
   // ==================== APPLY REFERRAL CODE — yeni kullanıcı kayıt sırasında ====================
@@ -258,6 +294,155 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       pointsToRedeem: points,
       discountAmount: points / 10,
       remainingPoints: customer.totalPoints - points,
+    };
+  });
+
+  // ==================== GOOGLE REVIEW SUBMIT ====================
+  // Müşteri Google'da yorum yapar → screenshot yükler → admin POS'tan onaylar.
+  // Onur sistemi DEĞİL: gerçek doğrulama (200 TL'lik 2000 puan ödülü için).
+  // Akış:
+  //   1. Müşteri burada multipart ile screenshot gönderir → PENDING claim oluşur (puan YOK)
+  //   2. Admin /api/loyalty/claims/:id/approve çağırır → puan müşteriye yatar
+  //   3. /reject çağrılırsa müşteri yeniden submit edebilir
+
+  // POST /google-review/submit (multipart) — screenshot yükle
+  server.post('/google-review/submit', { preHandler: verifyCustomerAuth }, async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    const customerId = (request as any).customerId as string;
+
+    // Aktif GOOGLE_REVIEW programı var mı?
+    const program = await prisma.loyaltyProgram.findFirst({
+      where: { type: 'GOOGLE_REVIEW', isActive: true },
+    });
+    if (!program) {
+      return reply.status(404).send({ error: 'Google yorum programı aktif değil' });
+    }
+
+    // Aynı program için PENDING veya APPROVED talep zaten var mı?
+    const existing = await prisma.loyaltyClaim.findFirst({
+      where: { customerId, programId: program.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      if (existing.status === 'PENDING') {
+        return reply.status(400).send({
+          error: 'Talebin incelemede — sonucu bekle.',
+          code: 'PENDING',
+        });
+      }
+      if (existing.status === 'APPROVED') {
+        return reply.status(400).send({
+          error: 'Bu ödülü zaten aldın.',
+          code: 'ALREADY_APPROVED',
+        });
+      }
+      // REJECTED → yeni screenshot ile yeniden submit edilebilir (aşağıda update yolu)
+    }
+
+    // Multipart dosyayı al
+    const data = await (request as any).file?.();
+    if (!data) {
+      return reply.status(400).send({ error: 'Ekran görüntüsü yüklenmeli' });
+    }
+    // Dosya tipi kontrolü (basit) — image/* MIME
+    const mimetype = data.mimetype || '';
+    if (!mimetype.startsWith('image/')) {
+      return reply.status(400).send({ error: 'Sadece görsel dosya kabul edilir' });
+    }
+
+    // Dosyayı kaydet
+    const ext = path.extname(data.filename || '.jpg') || '.jpg';
+    const filename = `googlereview_${customerId}_${Date.now()}${ext}`;
+    const fullPath = path.join(UPLOAD_DIR, filename);
+    try {
+      if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      const ws = fs.createWriteStream(fullPath);
+      await new Promise<void>((resolve, rej) => {
+        data.file.pipe(ws);
+        ws.on('finish', () => resolve());
+        ws.on('error', rej);
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'Yükleme başarısız', detail: err?.message });
+    }
+
+    const proofImageUrl = `/uploads/${filename}`;
+    const cfg = (program.config ?? {}) as any;
+    const rewardPoints = Math.max(0, Math.min(10000, Number(cfg.rewardPoints ?? 2000)));
+
+    // REJECTED varsa update, yoksa yeni kayıt
+    let claim;
+    if (existing && existing.status === 'REJECTED') {
+      claim = await prisma.loyaltyClaim.update({
+        where: { id: existing.id },
+        data: {
+          proofImageUrl,
+          status: 'PENDING',
+          rewardPoints,
+          adminNote: null,
+          reviewedById: null,
+          reviewedAt: null,
+        },
+      });
+    } else {
+      claim = await prisma.loyaltyClaim.create({
+        data: {
+          customerId,
+          programId: program.id,
+          proofImageUrl,
+          status: 'PENDING',
+          rewardPoints,
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      claim: {
+        id: claim.id,
+        status: claim.status,
+        rewardPoints: claim.rewardPoints,
+        proofImageUrl: claim.proofImageUrl,
+        createdAt: claim.createdAt,
+      },
+      message: 'Talebin incelemeye alındı. Onaylanınca puan hesabına yatar (~24 saat).',
+    };
+  });
+
+  // GET /google-review/status — müşterinin Google review talep durumunu döner
+  server.get('/google-review/status', { preHandler: verifyCustomerAuth }, async (
+    request: FastifyRequest,
+  ) => {
+    const customerId = (request as any).customerId as string;
+    const program = await prisma.loyaltyProgram.findFirst({
+      where: { type: 'GOOGLE_REVIEW', isActive: true },
+    });
+    if (!program) {
+      return { program: null, claim: null };
+    }
+    const claim = await prisma.loyaltyClaim.findFirst({
+      where: { customerId, programId: program.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      program: {
+        id: program.id,
+        name: program.name,
+        description: program.description,
+        config: program.config,
+      },
+      claim: claim
+        ? {
+            id: claim.id,
+            status: claim.status,
+            rewardPoints: claim.rewardPoints,
+            adminNote: claim.adminNote,
+            createdAt: claim.createdAt,
+            reviewedAt: claim.reviewedAt,
+          }
+        : null,
     };
   });
 }

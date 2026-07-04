@@ -374,7 +374,10 @@ async function handleWelcome(
   if (data.claimed) return;
 
   if (customer.orderCount === 1) {
-    const bonusPoints = Number(program.config?.bonusPoints ?? 50);
+    const cfg = (program.config ?? {}) as any;
+    const bonusPoints = Number(cfg.bonusPoints ?? 50);
+
+    // 1) Bonus puan
     if (bonusPoints > 0) {
       await prisma.customer.update({
         where: { id: customer.id },
@@ -393,13 +396,45 @@ async function handleWelcome(
       });
     }
 
+    // 2) İndirim kuponu (% veya ₺) — varsa kupon yarat (sonraki sipariş için)
+    const discountType: 'PERCENT' | 'FIXED' = cfg.discountType === 'FIXED' ? 'FIXED' : 'PERCENT';
+    const discountValue =
+      discountType === 'PERCENT'
+        ? Number(cfg.discountPercent ?? 0)
+        : Number(cfg.discountValue ?? 0);
+    let couponNote = '';
+    if (discountValue > 0) {
+      const code = generateCouponCode('WLC');
+      const minPurchase = Number(cfg.minOrder ?? 0);
+      await prisma.coupon.create({
+        data: {
+          code,
+          name: 'Hoş Geldin İndirimi',
+          description: '🎉 Bir sonraki siparişine özel',
+          discountType,
+          discountValue,
+          minPurchase: minPurchase > 0 ? minPurchase : null,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 60 * 86400_000), // 60 gün
+          usageLimit: 1,
+          usagePerCustomer: 1,
+          isActive: true,
+          loyaltyTierIds: [],
+        },
+      });
+      couponNote =
+        discountType === 'PERCENT'
+          ? ` + %${discountValue} indirim kuponu (kod: ${code})`
+          : ` + ${discountValue}₺ indirim kuponu (kod: ${code})`;
+    }
+
     await updateProgress(prisma, customer.id, program.id, { claimed: true });
 
     await sendLoyaltyPush(
       prisma,
       customer.id,
       `👋 Hoş geldin!`,
-      `${bonusPoints} puan + sıradaki siparişine özel teklifler hazır`,
+      `${bonusPoints} puan${couponNote}`,
       { type: 'WELCOME', route: '/loyalty' },
     );
   }
@@ -631,7 +666,13 @@ export async function processBirthdayPrograms(prisma: PrismaClient): Promise<voi
     const cfg = (p.config ?? {}) as any;
     const daysBefore = Number(cfg.daysBeforeBirthday ?? 0);
     const validDays = Number(cfg.validDays ?? 7);
-    const discount = Number(cfg.discountPercent ?? 20);
+    // PERCENT veya FIXED indirim
+    const discountType: 'PERCENT' | 'FIXED' = cfg.discountType === 'FIXED' ? 'FIXED' : 'PERCENT';
+    const discountValue =
+      discountType === 'PERCENT'
+        ? Number(cfg.discountPercent ?? 20)
+        : Number(cfg.discountValue ?? 50);
+    const minPurchase = Number(cfg.minOrder ?? 0);
 
     // Hedef tarih: bugün + daysBefore
     const target = new Date();
@@ -664,8 +705,9 @@ export async function processBirthdayPrograms(prisma: PrismaClient): Promise<voi
           code,
           name: 'Doğum Günü İndirimi',
           description: 'Mutlu yıllar! 🎂',
-          discountType: 'PERCENT',
-          discountValue: discount,
+          discountType,
+          discountValue,
+          minPurchase: minPurchase > 0 ? minPurchase : null,
           startDate: new Date(),
           endDate: new Date(Date.now() + validDays * 86400_000),
           usageLimit: 1,
@@ -677,11 +719,15 @@ export async function processBirthdayPrograms(prisma: PrismaClient): Promise<voi
 
       await updateProgress(prisma, customer.id, p.id, { lastClaimedYear: today.getFullYear() });
 
+      const friendlyDiscount =
+        discountType === 'PERCENT'
+          ? `%${discountValue} indirim`
+          : `${discountValue}₺ indirim`;
       await sendLoyaltyPush(
         prisma,
         customer.id,
         `🎂 İyi ki doğdun, ${customer.name ?? 'değerli müşterimiz'}!`,
-        `%${discount} indirim kuponun hazır: ${code}`,
+        `${friendlyDiscount} kuponun hazır: ${code}`,
         { type: 'BIRTHDAY', code, route: '/loyalty' },
       );
     }

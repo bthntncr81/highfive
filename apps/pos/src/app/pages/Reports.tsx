@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import {
   TrendingUp,
+  TrendingDown,
   DollarSign,
   ShoppingBag,
   Clock,
@@ -14,6 +15,8 @@ import {
   Copy,
   ExternalLink,
   X,
+  Wallet,
+  PiggyBank,
 } from 'lucide-react';
 
 interface DailyReport {
@@ -27,9 +30,12 @@ interface DailyReport {
     otherAmount: number;
     cancelledOrders: number;
     avgOrderTime?: number;
+    totalExpenses?: number;
+    netProfit?: number;
   };
   topItems: { id: string; name: string; count: number; revenue: number }[];
   hourlyBreakdown: Record<number, { orders: number; revenue: number }>;
+  expensesByCategory?: { name: string; amount: number; icon?: string | null; color?: string | null }[];
 }
 
 export default function Reports() {
@@ -72,6 +78,11 @@ export default function Reports() {
       lines.push(`## ${monthLabel} — Aylık Özet`);
       lines.push(`- Toplam tamamlanmış sipariş: ${monthly?.summary?.totalOrders ?? 0}`);
       lines.push(`- Toplam ciro: ${tl(monthly?.summary?.totalRevenue)}`);
+      lines.push(`- Toplam gider: ${tl(monthly?.summary?.totalExpenses)}`);
+      const netP = Number(monthly?.summary?.netProfit ?? 0);
+      const totRev = Number(monthly?.summary?.totalRevenue ?? 0);
+      lines.push(`- **Net kâr (ciro − gider): ${tl(netP)}**`);
+      lines.push(`- Kâr marjı: ${totRev > 0 ? ((netP / totRev) * 100).toFixed(1) : 0}%`);
       lines.push(`- Günlük ortalama sipariş: ${monthly?.summary?.avgDailyOrders ?? 0}`);
       lines.push(`- Günlük ortalama ciro: ${tl(monthly?.summary?.avgDailyRevenue)}`);
       lines.push(`- Aydaki gün sayısı: ${monthly?.summary?.daysInMonth ?? '-'}`);
@@ -82,6 +93,15 @@ export default function Reports() {
         lines.push('## Kategori Dağılımı (ciroya göre azalan)');
         for (const c of cats) {
           lines.push(`- ${c.name}: ${c.orders} adet • ${tl(c.revenue)}`);
+        }
+        lines.push('');
+      }
+
+      const expCats = Array.isArray(monthly?.expenseBreakdown) ? monthly.expenseBreakdown : [];
+      if (expCats.length > 0) {
+        lines.push('## Gider Dağılımı (kategoriye göre azalan)');
+        for (const c of expCats) {
+          lines.push(`- ${c.name}: ${c.count} kalem • ${tl(c.amount)}`);
         }
         lines.push('');
       }
@@ -101,6 +121,9 @@ export default function Reports() {
           }
           lines.push(`- Sipariş: ${d.orders} • Ciro: ${tl(d.revenue)} • İptal: ${d.cancelled || 0}`);
           lines.push(`- Ödeme: nakit ${tl(d.cashAmount)} • kart ${tl(d.cardAmount)} • diğer ${tl(d.otherAmount)}`);
+          if (typeof d.expenses === 'number' && d.expenses > 0) {
+            lines.push(`- Gider: ${tl(d.expenses)} • Net: ${tl((d.netProfit ?? (d.revenue - d.expenses)))}`);
+          }
           if (d.topItems?.length) {
             lines.push(`- En çok satan ürünler:`);
             for (const t of d.topItems) {
@@ -126,6 +149,7 @@ export default function Reports() {
       lines.push('4. **Gün/Saat Bazlı İçgörüler**: En yoğun ve en sönük gün/saat dilimleri; haftanın günlerinde örüntüler. Hangi günü hangi saatte hangi aksiyon?');
       lines.push('5. **Aksiyon Önerileri**: 5 somut öneri — her biri için *neden* + *uygulama yolu* + *beklenen etki*. Genel tavsiye değil, bu restorana özel ve veriye dayalı.');
       lines.push('6. **KPI Hedefi**: Gelecek ay için 3 ölçülebilir hedef (ör. günlük ortalama ciroda %X artış, peak hour\'da Y sipariş, iptal oranı %Z altı).');
+      lines.push('7. **Kâr/Gider Analizi**: Hangi gider kategorilerinde tasarruf imkânı var? Net kâr marjını artırmak için 2-3 alan ve uygulanabilir öneri.');
       lines.push('');
       lines.push('Türkçe yaz. Madde madde, net ve uygulanabilir ol. Belirsiz "iletişim güçlendirilebilir" gibi cümlelerden kaçın — somut rakam, gün adı, saat dilimi ve aksiyon ver.');
 
@@ -396,6 +420,45 @@ export default function Reports() {
 
         <div className="card">
           <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-100 rounded-lg">
+              <TrendingDown className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Toplam Gider</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {(report?.summary.totalExpenses ?? 0).toLocaleString('tr-TR')} ₺
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center gap-4">
+            <div
+              className="p-3 rounded-lg"
+              style={{
+                backgroundColor: (report?.summary.netProfit ?? 0) >= 0 ? '#d1fae5' : '#fee2e2',
+              }}
+            >
+              <PiggyBank
+                className="w-6 h-6"
+                style={{ color: (report?.summary.netProfit ?? 0) >= 0 ? '#059669' : '#dc2626' }}
+              />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Net Kâr</p>
+              <p
+                className="text-2xl font-bold"
+                style={{ color: (report?.summary.netProfit ?? 0) >= 0 ? '#047857' : '#b91c1c' }}
+              >
+                {(report?.summary.netProfit ?? 0).toLocaleString('tr-TR')} ₺
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <ShoppingBag className="w-6 h-6 text-blue-600" />
             </div>
@@ -430,13 +493,47 @@ export default function Reports() {
               <Clock className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Ort. Hazırlık Süresi</p>
+              <p className="text-sm text-gray-500">Ort. Hazırlık</p>
               <p className="text-2xl font-bold text-gray-900">
                 {report?.summary.avgOrderTime || '-'} dk
               </p>
             </div>
           </div>
         </div>
+
+        {/* Kâr marjı bilgi kartı (ciro > 0 ise) */}
+        {report?.summary.totalRevenue && report.summary.totalRevenue > 0 && (
+          <div className="card md:col-span-2">
+            <div className="flex items-center gap-4">
+              <div
+                className="p-3 rounded-lg"
+                style={{
+                  backgroundColor: (report.summary.netProfit ?? 0) >= 0 ? '#ecfdf5' : '#fef2f2',
+                }}
+              >
+                <Wallet
+                  className="w-6 h-6"
+                  style={{ color: (report.summary.netProfit ?? 0) >= 0 ? '#059669' : '#dc2626' }}
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-500">Kâr Marjı (Net Kâr ÷ Ciro)</p>
+                <div className="flex items-baseline gap-3">
+                  <p
+                    className="text-2xl font-bold"
+                    style={{ color: (report.summary.netProfit ?? 0) >= 0 ? '#047857' : '#b91c1c' }}
+                  >
+                    {(((report.summary.netProfit ?? 0) / report.summary.totalRevenue) * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {(report.summary.totalRevenue - (report.summary.totalExpenses ?? 0)).toLocaleString('tr-TR')} ₺ /{' '}
+                    {report.summary.totalRevenue.toLocaleString('tr-TR')} ₺
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -48,37 +48,33 @@ export default async function userRoutes(server: FastifyInstance) {
     return { user };
   });
 
-  // Create user (admin only)
+  // Create user (admin only) — isim + rol + 6 haneli şifre. E-posta/kullanıcı adı yok.
   server.post('/', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const { email, password, name, role, pin } = request.body as {
-      email: string;
-      password: string;
+    const { name, role, pin } = request.body as {
       name: string;
-      role: UserRole;
-      pin?: string;
+      role?: UserRole;
+      pin: string;
     };
 
-    if (!email || !password || !name) {
-      return reply.status(400).send({ error: 'Email, şifre ve isim gerekli' });
+    if (!name || !pin) {
+      return reply.status(400).send({ error: 'İsim ve 6 haneli şifre gerekli' });
+    }
+    if (!/^\d{6}$/.test(pin)) {
+      return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return reply.status(400).send({ error: 'Bu email zaten kullanılıyor' });
+    const existingPin = await prisma.user.findFirst({ where: { pin } });
+    if (existingPin) {
+      return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor, başka bir şifre seç' });
     }
 
-    if (pin) {
-      const existingPin = await prisma.user.findFirst({ where: { pin } });
-      if (existingPin) {
-        return reply.status(400).send({ error: 'Bu PIN zaten kullanılıyor' });
-      }
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // email + password DB'de zorunlu — sentetik üret. Giriş yalnızca 6 haneli şifreyle.
+    const syntheticEmail = `personel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@highfive.local`;
+    const hashedPassword = await bcrypt.hash(pin, 10);
 
     const user = await prisma.user.create({
       data: {
-        email,
+        email: syntheticEmail,
         password: hashedPassword,
         name,
         role: role || UserRole.WAITER,
@@ -86,7 +82,6 @@ export default async function userRoutes(server: FastifyInstance) {
       },
       select: {
         id: true,
-        email: true,
         name: true,
         role: true,
         active: true,
@@ -97,16 +92,14 @@ export default async function userRoutes(server: FastifyInstance) {
     return { user };
   });
 
-  // Update user (admin only)
+  // Update user (admin only) — isim / rol / 6 haneli şifre / aktiflik
   server.put('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const { email, name, role, pin, active, password } = request.body as {
-      email?: string;
+    const { name, role, pin, active } = request.body as {
       name?: string;
       role?: UserRole;
       pin?: string;
       active?: boolean;
-      password?: string;
     };
 
     const user = await prisma.user.findUnique({ where: { id } });
@@ -114,36 +107,32 @@ export default async function userRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
 
-    // Check email uniqueness
-    if (email && email !== user.email) {
-      const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) {
-        return reply.status(400).send({ error: 'Bu email zaten kullanılıyor' });
-      }
-    }
-
-    // Check PIN uniqueness
+    // Şifre değişiyorsa 6 haneli + benzersiz olmalı
     if (pin && pin !== user.pin) {
+      if (!/^\d{6}$/.test(pin)) {
+        return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
+      }
       const existingPin = await prisma.user.findFirst({ where: { pin } });
       if (existingPin) {
-        return reply.status(400).send({ error: 'Bu PIN zaten kullanılıyor' });
+        return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor' });
       }
     }
 
     const updateData: any = {};
-    if (email) updateData.email = email;
     if (name) updateData.name = name;
     if (role) updateData.role = role;
-    if (pin !== undefined) updateData.pin = pin;
     if (active !== undefined) updateData.active = active;
-    if (password) updateData.password = await bcrypt.hash(password, 10);
+    // Şifre değişince hem pin hem (yedek) password güncellenir
+    if (pin) {
+      updateData.pin = pin;
+      updateData.password = await bcrypt.hash(pin, 10);
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
       select: {
         id: true,
-        email: true,
         name: true,
         role: true,
         active: true,

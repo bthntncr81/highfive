@@ -125,6 +125,21 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   const bundleInclude = {
     items: { include: { menuItem: true } },
     optionGroups: { orderBy: { sortOrder: 'asc' as const } },
+    optionGroupAssignments: {
+      orderBy: { sortOrder: 'asc' as const },
+      include: {
+        optionGroup: {
+          include: {
+            items: {
+              orderBy: { sortOrder: 'asc' as const },
+              include: {
+                menuItem: { select: { id: true, name: true, price: true, image: true } },
+              },
+            },
+          },
+        },
+      },
+    },
   };
 
   // Get all bundles
@@ -168,10 +183,13 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     // Need a name + price + (fixed items OR option groups). Pure-fixed bundles
     // and pure-customizable combos are both valid; an empty bundle is not.
     const hasFixedItems = Array.isArray(data.items) && data.items.length > 0;
-    const hasGroups = Array.isArray(data.optionGroups) && data.optionGroups.length > 0;
-    if (!data.name || data.bundlePrice == null || (!hasFixedItems && !hasGroups)) {
+    const hasLegacyGroups = Array.isArray(data.optionGroups) && data.optionGroups.length > 0;
+    const hasReusableGroups =
+      (Array.isArray(data.assignedOptionGroups) && data.assignedOptionGroups.length > 0) ||
+      (Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0);
+    if (!data.name || data.bundlePrice == null || (!hasFixedItems && !hasLegacyGroups && !hasReusableGroups)) {
       return reply.status(400).send({
-        error: 'Ad, fiyat ve en az bir sabit ürün veya seçim grubu gerekli',
+        error: 'Ad, fiyat ve en az bir sabit ürün ya da opsiyon grubu gerekli',
       });
     }
 
@@ -180,6 +198,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         name: data.name,
         description: data.description,
         image: data.image,
+        categoryId: data.categoryId || null,
         originalPrice: data.originalPrice ?? 0,
         bundlePrice: data.bundlePrice,
         savings: data.savings ?? Math.max(0, (data.originalPrice ?? 0) - data.bundlePrice),
@@ -199,7 +218,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
-        optionGroups: hasGroups
+        optionGroups: hasLegacyGroups
           ? {
               create: data.optionGroups.map((g: any, i: number) => ({
                 name: g.name,
@@ -211,6 +230,31 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
+        optionGroupAssignments: (() => {
+          // Yeni format: assignedOptionGroups: [{ groupId, quantity }]
+          if (Array.isArray(data.assignedOptionGroups) && data.assignedOptionGroups.length > 0) {
+            return {
+              create: data.assignedOptionGroups
+                .filter((a: any) => a && a.groupId && (a.quantity ?? 1) > 0)
+                .map((a: any, i: number) => ({
+                  optionGroupId: a.groupId,
+                  quantity: Math.max(1, Number(a.quantity) || 1),
+                  sortOrder: i,
+                })),
+            };
+          }
+          // Eski format: assignedOptionGroupIds: string[]
+          if (Array.isArray(data.assignedOptionGroupIds) && data.assignedOptionGroupIds.length > 0) {
+            return {
+              create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
+                optionGroupId: groupId,
+                quantity: 1,
+                sortOrder: i,
+              })),
+            };
+          }
+          return undefined;
+        })(),
       },
       include: bundleInclude,
     });
@@ -230,6 +274,9 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     if (data.optionGroups) {
       await prisma.bundleOptionGroup.deleteMany({ where: { bundleId: id } });
     }
+    if (Array.isArray(data.assignedOptionGroupIds) || Array.isArray(data.assignedOptionGroups)) {
+      await prisma.bundleOptionGroupAssignment.deleteMany({ where: { bundleId: id } });
+    }
 
     const bundle = await prisma.bundleDeal.update({
       where: { id },
@@ -237,6 +284,9 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         name: data.name,
         description: data.description,
         image: data.image,
+        // categoryId açık olarak null gönderilmezse mevcut değer korunur;
+        // undefined → no-op, null → "Paket Menüler" default'a dön
+        categoryId: data.categoryId === undefined ? undefined : data.categoryId || null,
         originalPrice: data.originalPrice,
         bundlePrice: data.bundlePrice,
         savings: data.savings,
@@ -259,6 +309,29 @@ export default async function campaignsRoutes(server: FastifyInstance) {
               })),
             }
           : undefined,
+        optionGroupAssignments: (() => {
+          if (Array.isArray(data.assignedOptionGroups)) {
+            return {
+              create: data.assignedOptionGroups
+                .filter((a: any) => a && a.groupId && (a.quantity ?? 1) > 0)
+                .map((a: any, i: number) => ({
+                  optionGroupId: a.groupId,
+                  quantity: Math.max(1, Number(a.quantity) || 1),
+                  sortOrder: i,
+                })),
+            };
+          }
+          if (Array.isArray(data.assignedOptionGroupIds)) {
+            return {
+              create: data.assignedOptionGroupIds.map((groupId: string, i: number) => ({
+                optionGroupId: groupId,
+                quantity: 1,
+                sortOrder: i,
+              })),
+            };
+          }
+          return undefined;
+        })(),
         items: data.items
           ? {
               create: data.items.map((item: any) => ({

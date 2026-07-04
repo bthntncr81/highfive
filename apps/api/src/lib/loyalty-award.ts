@@ -4,6 +4,7 @@
 
 import type { PrismaClient, Order } from '@prisma/client';
 import { sendPushToTokens } from './push';
+import { checkAchievementsForCustomer } from './achievement-checker';
 
 export async function awardMobileOrderPoints(
   prisma: PrismaClient,
@@ -61,6 +62,11 @@ export async function awardMobileOrderPoints(
 
   // Tier upgrade kontrolü
   await maybeUpgradeTier(prisma, customer.id);
+
+  // Achievement auto-unlock — Customer.orderCount, totalSpent vb. zaten güncel
+  await checkAchievementsForCustomer(prisma, customer.id).catch((e) => {
+    console.error('[achievement-checker] failed:', e);
+  });
 
   // Push: puan kazandın bildirimi (notif prefs kontrolü)
   const prefs = await prisma.notificationPreference.findUnique({

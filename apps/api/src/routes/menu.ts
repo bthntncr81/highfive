@@ -62,6 +62,25 @@ export default async function menuRoutes(server: FastifyInstance) {
           items: {
             include: { menuItem: true },
           },
+          // Reusable opsiyon grupları (mobile bundle detayında seçim ekranı)
+          optionGroupAssignments: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              optionGroup: {
+                include: {
+                  items: {
+                    where: { menuItem: { available: true } },
+                    orderBy: { sortOrder: 'asc' },
+                    include: {
+                      menuItem: {
+                        select: { id: true, name: true, price: true, image: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: { sortOrder: 'asc' },
       }),

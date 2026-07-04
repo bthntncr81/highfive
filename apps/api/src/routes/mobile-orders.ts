@@ -9,6 +9,10 @@ import { PrismaClient, OrderStatus, OrderType, PaymentStatus, PaymentMethod } fr
 import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
+import { notifyNewOrder } from '../lib/order-notify';
+import { expandBundles } from '../lib/bundle-expansion';
+import { expandBuilderItem } from '../lib/builder-expansion';
+import { evaluateCartOffers } from '../lib/cart-offers';
 
 const DELIVERY_FEE = 29; // Sabit (CUSTOMER_API.md ile uyumlu)
 
@@ -40,6 +44,16 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       customerName?: string;                                    // override; yoksa Customer.name
       customerPhone?: string;                                   // override; yoksa Customer.phone
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      bundles?: {
+        bundleId: string;
+        quantity?: number;
+        // Yeni: slot bazlı (assignmentId + slotIndex)
+        selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
+        // Eski: groupId bazlı (geriye uyumluluk)
+        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+      }[];
+      // Custom pizza/sandwich builder — server re-validate eder
+      builders?: { cartId: string; price: number; quantity: number }[];
       notes?: string;
       tip?: number;                                             // bahşiş
       pointsToRedeem?: number;                                  // puanla indirim
@@ -47,8 +61,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';        // ONLINE = iyzico 3DS akışı
     };
 
-    if (!body.items || body.items.length === 0) {
-      return reply.status(400).send({ error: 'En az bir ürün gerekli' });
+    if (
+      (!body.items || body.items.length === 0) &&
+      (!body.bundles || body.bundles.length === 0) &&
+      (!body.builders || body.builders.length === 0)
+    ) {
+      return reply.status(400).send({ error: 'En az bir ürün, paket veya özel ürün gerekli' });
     }
     if (!body.type || !['TAKEAWAY', 'DELIVERY'].includes(body.type)) {
       return reply.status(400).send({ error: 'Geçersiz sipariş tipi' });
@@ -105,7 +123,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Items + subtotal
     let subtotal = 0;
     const orderItems: any[] = [];
-    for (const item of body.items) {
+    for (const item of body.items || []) {
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
@@ -127,6 +145,28 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         notes: item.notes,
         modifiers: item.modifiers || [],
       });
+    }
+
+    // Bundle expansion: paket fiyatı + reusable opsiyon grupları seçimleri
+    if (body.bundles && body.bundles.length > 0) {
+      const res = await expandBundles(prisma, body.bundles);
+      if (!res.ok) return reply.status(400).send({ error: res.error });
+      subtotal += res.subtotalDelta;
+      for (const oi of res.orderItems) orderItems.push(oi);
+    }
+
+    // Builder expansion: özel pizza/sandviç — server-side fiyat re-validation
+    if (body.builders && body.builders.length > 0) {
+      for (const builderReq of body.builders) {
+        const res = await expandBuilderItem(prisma, {
+          id: builderReq.cartId,
+          price: Number(builderReq.price),
+          quantity: builderReq.quantity ?? 1,
+        });
+        if (!res.ok) return reply.status(400).send({ error: res.error });
+        subtotal += res.subtotalDelta;
+        orderItems.push(res.orderItem);
+      }
     }
 
     // Tax
@@ -169,7 +209,39 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       ? subtotal * (Number(customer.loyaltyTier.discountPercent) / 100)
       : 0;
 
-    const totalDiscount = pointsDiscount + couponDiscount + tierDiscount;
+    // Otomatik en avantajlı sadakat offer'ı (puan/kupon kullanılmadıysa)
+    // — UI'de sepette gösterilen 🎁 banner indirimi backend'de re-evaluate edilerek
+    //   güvenli şekilde uygulanır. Kullanıcı kupon veya puan kullanmadıysa devreye girer.
+    let autoOfferDiscount = 0;
+    let autoOfferLabel: string | null = null;
+    if (couponDiscount === 0 && pointsDiscount === 0) {
+      const cartItemsForOffer = orderItems
+        .filter((oi) => oi.menuItemId)
+        .map((oi) => ({
+          menuItemId: oi.menuItemId as string,
+          quantity: oi.quantity,
+          unitPrice: Number(oi.unitPrice),
+        }));
+      // Bundle wrapper line'ları da subtotal'a dahil etmek için fake menuItemId ile ekle
+      for (const oi of orderItems.filter((x) => !x.menuItemId)) {
+        cartItemsForOffer.push({
+          menuItemId: 'bundle-line',
+          quantity: oi.quantity,
+          unitPrice: Number(oi.unitPrice),
+        });
+      }
+      try {
+        const offerRes = await evaluateCartOffers(prisma, customerId, cartItemsForOffer);
+        if (offerRes.bestOffer && offerRes.bestOffer.calculatedDiscount > 0) {
+          autoOfferDiscount = offerRes.bestOffer.calculatedDiscount;
+          autoOfferLabel = offerRes.bestOffer.name;
+        }
+      } catch {
+        // offer hesabı patlarsa siparişi durdurmayalım
+      }
+    }
+
+    const totalDiscount = pointsDiscount + couponDiscount + tierDiscount + autoOfferDiscount;
     const tipAmount = Math.max(0, body.tip || 0);
     const deliveryAmount = body.type === 'DELIVERY' ? DELIVERY_FEE : 0;
     const finalTotal = Math.max(0, subtotal + tax + tipAmount + deliveryAmount - totalDiscount);
@@ -256,6 +328,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Push (sadece ONLINE değilse hemen — ONLINE'da ödeme tamamlanınca tetiklenir)
     if (body.paymentMethod !== 'ONLINE') {
       broadcastNewOrder(order);
+      notifyNewOrder(prisma, order.id).catch(() => {});
       sendOrderCreatedPush(prisma, order).catch(() => {});
     }
 
@@ -268,6 +341,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
           points: pointsDiscount,
           coupon: couponDiscount,
           tier: tierDiscount,
+          autoOffer: autoOfferDiscount,
+          autoOfferLabel,
         },
       },
     };
@@ -313,13 +388,25 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       },
     });
 
-    // CustomerOrder ile birleştir (points info için)
+    // Müşterinin TÜM sipariş listesi (asc) — "5. siparişin" kişisel sayacı için.
+    // orderNumber global POS serial; müşteri için anlamsız. customerOrderIndex
+    // ise bu müşterinin kaçıncı siparişi olduğunu söyler (1, 2, 3...).
+    const allCo = await prisma.customerOrder.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'asc' },
+      select: { orderId: true },
+    });
+    const indexMap = new Map<string, number>();
+    allCo.forEach((co, i) => indexMap.set(co.orderId, i + 1));
+
+    // CustomerOrder ile birleştir (points info + kişisel sıra)
     const ordersWithPoints = orders.map((o) => {
       const co = customerOrders.find((c) => c.orderId === o.id);
       return {
         ...o,
         pointsEarned: co?.pointsEarned ?? 0,
         pointsSpent: co?.pointsSpent ?? 0,
+        customerOrderIndex: indexMap.get(o.id) ?? null,
       };
     });
 
@@ -353,11 +440,20 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
 
+    // Kişisel sıra: müşterinin TÜM sipariş listesi içinde bu order'ın 1-bazlı sırası
+    const allCo = await prisma.customerOrder.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'asc' },
+      select: { orderId: true },
+    });
+    const customerOrderIndex = allCo.findIndex((x) => x.orderId === id) + 1;
+
     return {
       order: {
         ...order,
         pointsEarned: co.pointsEarned,
         pointsSpent: co.pointsSpent,
+        customerOrderIndex: customerOrderIndex || null,
       },
     };
   });
@@ -433,6 +529,13 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       customerLatitude?: number;
       customerLongitude?: number;
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
+      bundles?: {
+        bundleId: string;
+        quantity?: number;
+        selections?: { assignmentId: string; slotIndex: number; optionGroupItemIds: string[] }[];
+        assignedSelections?: { optionGroupId: string; optionGroupItemIds: string[] }[];
+      }[];
+      builders?: { cartId: string; price: number; quantity: number }[];
       notes?: string;
       tip?: number;
       paymentMethod?: 'CASH' | 'ONLINE' | 'CREDIT_CARD';
@@ -441,8 +544,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     if (!body.customerName?.trim() || !body.customerPhone?.trim()) {
       return reply.status(400).send({ error: 'Ad ve telefon gerekli' });
     }
-    if (!body.items || body.items.length === 0) {
-      return reply.status(400).send({ error: 'En az bir ürün gerekli' });
+    if (
+      (!body.items || body.items.length === 0) &&
+      (!body.bundles || body.bundles.length === 0) &&
+      (!body.builders || body.builders.length === 0)
+    ) {
+      return reply.status(400).send({ error: 'En az bir ürün, paket veya özel ürün gerekli' });
     }
     if (!body.type || !['TAKEAWAY', 'DELIVERY'].includes(body.type)) {
       return reply.status(400).send({ error: 'Geçersiz sipariş tipi' });
@@ -486,7 +593,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Items + subtotal
     let subtotal = 0;
     const orderItems: any[] = [];
-    for (const item of body.items) {
+    for (const item of body.items || []) {
       const menuItem = await prisma.menuItem.findUnique({ where: { id: item.menuItemId } });
       if (!menuItem || !menuItem.available) {
         return reply.status(400).send({ error: `Ürün mevcut değil: ${item.menuItemId}` });
@@ -505,6 +612,27 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         notes: item.notes,
         modifiers: item.modifiers || [],
       });
+    }
+    // Bundle expansion (guest)
+    if (body.bundles && body.bundles.length > 0) {
+      const res = await expandBundles(prisma, body.bundles);
+      if (!res.ok) return reply.status(400).send({ error: res.error });
+      subtotal += res.subtotalDelta;
+      for (const oi of res.orderItems) orderItems.push(oi);
+    }
+
+    // Builder expansion (guest) — özel pizza/sandviç
+    if (body.builders && body.builders.length > 0) {
+      for (const builderReq of body.builders) {
+        const res = await expandBuilderItem(prisma, {
+          id: builderReq.cartId,
+          price: Number(builderReq.price),
+          quantity: builderReq.quantity ?? 1,
+        });
+        if (!res.ok) return reply.status(400).send({ error: res.error });
+        subtotal += res.subtotalDelta;
+        orderItems.push(res.orderItem);
+      }
     }
 
     const restaurantSettings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
@@ -563,6 +691,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     if (body.paymentMethod !== 'ONLINE') {
       broadcastNewOrder(order);
+      notifyNewOrder(prisma, order.id).catch(() => {});
       sendOrderCreatedPush(prisma, order).catch(() => {});
     }
 

@@ -354,7 +354,7 @@ export default function CourierDashboard() {
                         <span className="bg-blue-100 text-blue-700 text-sm font-bold px-2 py-1 rounded">
                           {item.quantity}x
                         </span>
-                        <span className="text-sm">{item.menuItem.name}</span>
+                        <span className="text-sm">{item.menuItem?.name ?? item.menuItemName ?? item.notes ?? "Özel Ürün"}</span>
                       </div>
                       {item.notes && (
                         <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">

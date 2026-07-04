@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Admin sayfalarını dizine alma
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /payment
+Disallow: /order
+
+Sitemap: https://highfivepps.com/sitemap.xml

@@ -9,6 +9,21 @@ import { MenuGridFromAPI } from '../components/MenuGridFromAPI'
 import { BundleSection } from '../components/BundleSection'
 import { RevealOnScroll } from '../components/RevealOnScroll'
 import { useSettings } from '../hooks/useSettings'
+import { HfPizza, HfPasta, HfSandwich, HfDrink, HfDessert, HfWhatsapp, HfClock, HfStar, HfPin } from '../components/BrandIcons'
+
+const catIconFor = (name?: string) => {
+  const n = (name || '').toLocaleLowerCase('tr')
+  if (n.includes('pizza')) return HfPizza
+  if (n.includes('makarna') || n.includes('pasta')) return HfPasta
+  if (n.includes('sandvi') || n.includes('sandwich')) return HfSandwich
+  if (n.includes('içecek') || n.includes('icecek') || n.includes('drink')) return HfDrink
+  if (n.includes('tatl') || n.includes('dessert')) return HfDessert
+  return HfStar
+}
+const CatIcon = ({ name, className }: { name?: string; className?: string }) => {
+  const I = catIconFor(name)
+  return <I className={className} />
+}
 
 export const Menu = () => {
   const { content } = useContent()
@@ -98,7 +113,7 @@ export const Menu = () => {
       {services.estimatedDeliveryTime && (
         <div className="bg-blue-50 border-b border-blue-200">
           <div className="container-diner py-2 flex items-center justify-center gap-2 text-blue-700 text-sm">
-            <span>🕐</span>
+            <HfClock className="w-4 h-4" />
             <span>Tahmini teslimat süresi: <strong>{services.estimatedDeliveryTime}</strong></span>
           </div>
         </div>
@@ -113,7 +128,7 @@ export const Menu = () => {
         >
           <div className="container-diner py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🪑</span>
+              <HfPin className="w-6 h-6" />
               <div>
                 <p className="font-display text-foreground text-lg">
                   {tableSession.name}
@@ -237,7 +252,7 @@ export const Menu = () => {
                     : 'bg-surface text-foreground border border-border hover:border-primary'
                 }`}
               >
-                {cat.icon} {cat.name}
+                <CatIcon name={cat.name} className="w-4 h-4 inline-block align-text-bottom mr-1.5" />{cat.name}
               </button>
             ))}
           </div>
@@ -292,7 +307,7 @@ export const Menu = () => {
                         : 'bg-surface text-foreground hover:bg-primary/10'
                     }`}
                   >
-                    {cat.icon} {cat.name}
+                    <CatIcon name={cat.name} className="w-4 h-4 inline-block align-text-bottom mr-1.5" />{cat.name}
                   </button>
                 ))}
               </div>
@@ -353,16 +368,51 @@ export const Menu = () => {
           <div className="flex items-center justify-center py-12">
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1 }}
-              className="text-4xl"
+              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              className="text-primary"
             >
-              🍕
+              <HfPizza className="w-10 h-10" />
             </motion.div>
           </div>
         )}
 
-        {/* Paket Menüler — kategori filtresi olmadan, üstte */}
-        {!loading && !activeCategory && <BundleSection />}
+        {/* Paket Menüler — ana sayfada kategorisizleri (null) göster */}
+        {!loading && !activeCategory && <BundleSection categoryFilter={null} />}
+
+        {/* HighFive Kazandıran Menüler kategorisi: Builder kartları + bundle'lar */}
+        {!loading && activeCategory === 'cat-highfive' && (
+          <>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <a
+                href="/build/pizza"
+                className="group rounded-2xl border-2 border-primary bg-white overflow-hidden hover:shadow-md transition"
+              >
+                <div className="h-32 flex items-center justify-center bg-amber-100 text-primary"><HfPizza className="w-16 h-16" /></div>
+                <div className="p-4">
+                  <p className="font-display font-extrabold text-foreground text-base">Pizzanı Tasarla</p>
+                  <p className="text-xs text-foreground-muted mt-0.5">5 adımda kendi pizzan</p>
+                  <span className="text-xs text-primary font-semibold mt-2 inline-flex items-center">
+                    Başla →
+                  </span>
+                </div>
+              </a>
+              <a
+                href="/build/sandwich"
+                className="group rounded-2xl border-2 border-accent bg-white overflow-hidden hover:shadow-md transition"
+              >
+                <div className="h-32 flex items-center justify-center bg-blue-100 text-accent"><HfSandwich className="w-16 h-16" /></div>
+                <div className="p-4">
+                  <p className="font-display font-extrabold text-foreground text-base">Sandviçini Tasarla</p>
+                  <p className="text-xs text-foreground-muted mt-0.5">Ekmek + içerik özgür</p>
+                  <span className="text-xs text-accent font-semibold mt-2 inline-flex items-center">
+                    Başla →
+                  </span>
+                </div>
+              </a>
+            </div>
+            <BundleSection categoryFilter="cat-highfive" />
+          </>
+        )}
 
         {/* Grid */}
         {!loading && (
@@ -397,7 +447,7 @@ export const Menu = () => {
                   rel="noopener noreferrer"
                   className="btn-whatsapp inline-flex"
                 >
-                  <span>💬</span>
+                  <HfWhatsapp className="w-5 h-5" />
                   Bize Yazın
                 </a>
               </div>

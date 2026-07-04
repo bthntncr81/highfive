@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { AlertCircle, Delete, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Delete } from 'lucide-react';
 
 export default function PinLogin() {
   const [pin, setPin] = useState('');
@@ -17,13 +17,13 @@ export default function PinLogin() {
   }, []);
 
   useEffect(() => {
-    if (pin.length === 4) {
+    if (pin.length === 6) {
       handleSubmit();
     }
   }, [pin]);
 
   const handleSubmit = async () => {
-    if (pin.length !== 4) return;
+    if (pin.length !== 6) return;
     
     setError('');
     setIsLoading(true);
@@ -40,7 +40,7 @@ export default function PinLogin() {
   };
 
   const handleKeyPress = (num: string) => {
-    if (pin.length < 4 && !isLoading) {
+    if (pin.length < 6 && !isLoading) {
       setPin(pin + num);
       setError('');
     }
@@ -82,15 +82,6 @@ export default function PinLogin() {
 
       {/* Login Card */}
       <div className="w-full max-w-sm relative z-10 animate-bounce-in">
-        {/* Back button */}
-        <Link 
-          to="/login"
-          className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">E-posta ile Giriş</span>
-        </Link>
-
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#bb1e10] to-[#8a1610] p-6 relative">
@@ -99,9 +90,9 @@ export default function PinLogin() {
                 <span className="text-3xl">🔐</span>
               </div>
               <h1 className="font-display text-3xl text-white tracking-wider">
-                PIN GİRİŞİ
+                GİRİŞ
               </h1>
-              <p className="text-white/70 text-sm mt-1">4 haneli PIN kodunuzu girin</p>
+              <p className="text-white/70 text-sm mt-1">6 haneli şifrenizi girin</p>
             </div>
           </div>
 
@@ -115,12 +106,12 @@ export default function PinLogin() {
               </div>
             )}
 
-            {/* PIN display */}
-            <div className="flex justify-center gap-4 mb-6">
-              {[0, 1, 2, 3].map((i) => (
+            {/* PIN display — 6 hane */}
+            <div className="flex justify-center gap-2 mb-6">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                     pin.length > i
                       ? 'bg-gradient-to-br from-[#bb1e10] to-[#8a1610] shadow-lg scale-110'
                       : 'bg-gray-100 border-2 border-gray-200'
@@ -141,11 +132,11 @@ export default function PinLogin() {
               type="tel"
               value={pin}
               onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setPin(value);
               }}
               className="sr-only"
-              maxLength={4}
+              maxLength={6}
               disabled={isLoading}
             />
 
@@ -188,26 +179,6 @@ export default function PinLogin() {
           </div>
         </div>
 
-        {/* Demo PIN */}
-        <div className="mt-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/80 text-sm">
-            <span className="font-semibold">Demo PIN:</span>
-            <code className="bg-white/20 px-3 py-1 rounded-lg font-mono tracking-wider">1234</code>
-          </div>
-        </div>
-
-        {/* Quick access buttons */}
-        <div className="mt-4 flex justify-center gap-3">
-          {['1111', '2222', '3333'].map((quickPin) => (
-            <button
-              key={quickPin}
-              onClick={() => setPin(quickPin)}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-white/70 hover:text-white text-sm font-medium transition-colors"
-            >
-              {quickPin}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

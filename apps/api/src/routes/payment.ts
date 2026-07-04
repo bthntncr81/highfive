@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { broadcastNewOrder } from '../websocket';
+import { notifyNewOrder } from '../lib/order-notify';
 import { sendOrderStatusPush } from '../lib/order-push';
 import * as crypto from 'crypto';
 
@@ -287,13 +288,18 @@ export default async function paymentRoutes(server: FastifyInstance) {
         return reply.status(404).send({ error: 'Sipariş bulunamadı' });
       }
 
-      orderItems = order.items.map((item: any) => ({
-        id: item.id,
-        name: item.menuItem?.name || 'Ürün',
-        category1: 'Yemek',
-        itemType: 'PHYSICAL',
-        price: (Number(item.unitPrice) * item.quantity).toFixed(2),
-      }));
+      // iyzico basketItemPrice > 0 zorunluluğu — 0₺ alt satırları (eski bundle
+      // expansion artığı) basket'e dahil etme. Wrapper zaten dolu fiyatla
+      // geliyor, 0₺ "Dahil" alt satırları zaten görsel kirlilikti.
+      orderItems = order.items
+        .filter((item: any) => Number(item.unitPrice) * item.quantity > 0)
+        .map((item: any) => ({
+          id: item.id,
+          name: item.menuItemName || item.menuItem?.name || 'Ürün',
+          category1: 'Yemek',
+          itemType: 'PHYSICAL',
+          price: (Number(item.unitPrice) * item.quantity).toFixed(2),
+        }));
 
       // iyzico requires sum(basketItems.price) == price. The order total
       // includes delivery fee, tip, service charge, and tax on top of the
@@ -635,6 +641,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
             // Broadcast as NEW order (payment just completed, first time appearing)
             broadcastNewOrder(updatedOrder);
+            notifyNewOrder(prisma, updatedOrder.id).catch(() => {});
 
             // Clean up payment session
             await prisma.settings.delete({
@@ -755,6 +762,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
           // Mobile sipariş ise lifecycle push'ları tetikle
           broadcastNewOrder(updatedOrder);
+          notifyNewOrder(prisma, updatedOrder.id).catch(() => {});
           sendOrderStatusPush(prisma, updatedOrder, 'CONFIRMED').catch(() => {});
 
           await prisma.settings.update({
