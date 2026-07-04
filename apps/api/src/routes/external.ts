@@ -1,5 +1,6 @@
+import type { DbLike } from '../lib/tenant-db';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { OrderStatus, OrderType, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createHash } from 'crypto';
 import { verifyApiKey, requirePermission } from '../middleware/api-key';
 import { broadcastNewOrder } from '../websocket';
@@ -7,7 +8,7 @@ import { notifyNewOrder } from '../lib/order-notify';
 
 // Sipariş verildiğinde ham madde stoklarını düş (orders.ts'den kopyalanmış)
 async function deductRawMaterialStock(
-  prisma: PrismaClient,
+  prisma: DbLike,
   orderItems: { menuItemId: string; quantity: number }[],
 ) {
   try {
@@ -299,7 +300,7 @@ export default async function externalRoutes(server: FastifyInstance) {
 
       // Get tax rate from settings — yapılandırılmadıysa 0 (diğer endpoint'lerle tutarlı).
       // Eskiden 10 default'tu ve WhatsApp siparişlerinde sebepsiz yere KDV ekliyordu.
-      const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+      const settings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
       const taxRate = (settings?.value as any)?.taxRate ?? 0;
       const tax = subtotal * (taxRate / 100);
       const deliveryAmount = deliveryFee || 0;
@@ -328,7 +329,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       // Auto-create or update Customer record for WhatsApp orders
       if (customerPhone) {
         try {
-          let customer = await request.db.customer.findUnique({
+          let customer = await request.db.customer.findFirst({
             where: { phone: customerPhone },
           });
 

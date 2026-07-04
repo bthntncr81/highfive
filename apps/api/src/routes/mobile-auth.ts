@@ -46,7 +46,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     }
 
     // Mevcut customer
-    let customer = await request.db.customer.findUnique({ where: { phone: normalized } });
+    let customer = await request.db.customer.findFirst({ where: { phone: normalized } });
 
     // Rate limit: son OTP isteği 60 saniyeden yeni mi?
     if (customer?.verificationCode && customer.updatedAt) {
@@ -109,7 +109,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     // Email çakışma kontrolü — başka bir customer aynı email ile kullanmasın
     if (email && email.trim()) {
       const emailTrim = email.trim().toLowerCase();
-      const existingEmail = await request.db.customer.findUnique({
+      const existingEmail = await request.db.customer.findFirst({
         where: { email: emailTrim },
       });
       if (existingEmail && existingEmail.phone !== normalized) {
@@ -120,7 +120,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       }
     }
 
-    let customer = await request.db.customer.findUnique({ where: { phone: normalized } });
+    let customer = await request.db.customer.findFirst({ where: { phone: normalized } });
 
     // YENİ kayıt mı? Eğer Customer yok VE master OTP değilse, name zorunlu.
     // (Signup ekranı verifyOtp'a name gönderir; Login ekranı göndermez.)

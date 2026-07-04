@@ -130,7 +130,7 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
   });
 
   // ==================== LIST ====================
-  server.get('/', { preHandler: verifyAdmin }, async () => {
+  server.get('/', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const programs = await request.db.loyaltyProgram.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });

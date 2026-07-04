@@ -402,16 +402,15 @@ export default async function reportRoutes(server: FastifyInstance) {
       },
       include: {
         user: {
-          select: { id: true, name: true, role: true },
+          select: { id: true, name: true },
         },
       },
     });
 
-    const staffStats: Record<string, { 
-      id: string; 
-      name: string; 
-      role: string;
-      orderCount: number; 
+    const staffStats: Record<string, {
+      id: string;
+      name: string;
+      orderCount: number;
       totalRevenue: number;
       avgOrderValue: number;
     }> = {};
@@ -423,7 +422,7 @@ export default async function reportRoutes(server: FastifyInstance) {
         staffStats[order.userId] = {
           id: order.userId,
           name: order.user?.name || 'Bilinmiyor',
-          role: order.user?.role || 'WAITER',
+          // rol artık Membership'te — personel istatistiği için isim yeterli
           orderCount: 0,
           totalRevenue: 0,
           avgOrderValue: 0,

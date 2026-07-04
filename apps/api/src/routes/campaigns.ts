@@ -7,7 +7,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // ==================== CAMPAIGNS ====================
 
   // Get all campaigns
-  server.get('/campaigns', { preHandler: verifyAuth }, async () => {
+  server.get('/campaigns', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const campaigns = await request.db.campaign.findMany({
       orderBy: { createdAt: 'desc' },
     });
@@ -18,7 +18,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // - Mobil ve landing'de gösterilenler
   // - O gün aktif yoksa ileri tarihli kampanyalar da gözükür
   // - Bitmiş olanlar gizli
-  server.get('/campaigns/active', async () => {
+  server.get('/campaigns/active', async (request: FastifyRequest) => {
     const now = new Date();
     const campaigns = await request.db.campaign.findMany({
       where: {
@@ -140,7 +140,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   };
 
   // Get all bundles
-  server.get('/bundles', async () => {
+  server.get('/bundles', async (request: FastifyRequest) => {
     const bundles = await request.db.bundleDeal.findMany({
       include: bundleInclude,
       orderBy: { sortOrder: 'asc' },
@@ -149,7 +149,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   });
 
   // Get active bundles (public)
-  server.get('/bundles/active', async () => {
+  server.get('/bundles/active', async (request: FastifyRequest) => {
     const now = new Date();
     const bundles = await request.db.bundleDeal.findMany({
       where: {
@@ -356,7 +356,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // ==================== COUPONS ====================
 
   // Get all coupons
-  server.get('/coupons', { preHandler: verifyAuth }, async () => {
+  server.get('/coupons', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const coupons = await request.db.coupon.findMany({
       orderBy: { createdAt: 'desc' },
     });
@@ -371,7 +371,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       orderTotal: number;
     };
 
-    const coupon = await request.db.coupon.findUnique({
+    const coupon = await request.db.coupon.findFirst({
       where: { code: code.toUpperCase() },
     });
 
@@ -443,7 +443,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     }
 
     // Check if code exists
-    const existing = await request.db.coupon.findUnique({ where: { code: data.code.toUpperCase() } });
+    const existing = await request.db.coupon.findFirst({ where: { code: data.code.toUpperCase() } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu kupon kodu zaten mevcut' });
     }

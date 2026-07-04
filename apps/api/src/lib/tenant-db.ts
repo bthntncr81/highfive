@@ -77,7 +77,7 @@ function makeTenantClient(tenantId: string) {
   return base.$extends({
     query: {
       $allModels: {
-        async $allOperations({ model, operation, args, query }) {
+        async $allOperations({ model, operation, args, query }: any) {
           if (!model) return query(args);
           if (!TENANT_MODELS.has(model)) {
             if (PLATFORM_MODELS.has(model)) return query(args);

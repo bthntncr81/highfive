@@ -1,3 +1,4 @@
+import type { DbLike } from '../lib/tenant-db';
 // Mobile (Customer) Loyalty: kendi puan bilgisi + geçmiş + redemption hesaplama
 // GET   /api/mobile/loyalty/me            - tier + totalPoints + lifetime + son tx
 // GET   /api/mobile/loyalty/history       - tüm puan tx'leri sayfalı
@@ -5,7 +6,6 @@
 // (Gerçek redeem checkout sırasında /api/mobile/orders POST ile yapılır)
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 import { evaluateCartOffers, type CartItem } from '../lib/cart-offers';
 import * as crypto from 'crypto';
@@ -19,7 +19,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads')
  * Mobile UI bu sayede "🎁 bedava alacağın ürünler" listesini gösterir.
  */
 async function decorateProgramsWithMenuItems(
-  prisma: PrismaClient,
+  prisma: DbLike,
   programs: any[],
 ): Promise<any[]> {
   const allIds = new Set<string>();
@@ -47,14 +47,14 @@ async function decorateProgramsWithMenuItems(
 }
 
 // Müşteri için unique referral code üret
-async function ensureReferralCode(prisma: PrismaClient, customerId: string): Promise<string> {
+async function ensureReferralCode(prisma: DbLike, customerId: string): Promise<string> {
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (customer?.referralCode) return customer.referralCode;
 
   // Üret + benzersizlik kontrolü
   for (let i = 0; i < 10; i++) {
     const code = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6 char
-    const existing = await prisma.customer.findUnique({ where: { referralCode: code } });
+    const existing = await prisma.customer.findFirst({ where: { referralCode: code } });
     if (!existing) {
       await prisma.customer.update({ where: { id: customerId }, data: { referralCode: code } });
       return code;
@@ -65,7 +65,7 @@ async function ensureReferralCode(prisma: PrismaClient, customerId: string): Pro
 
 export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
   // ==================== ACTIVE PROGRAMS (public) ====================
-  server.get('/programs', async () => {
+  server.get('/programs', async (request: FastifyRequest) => {
     const programs = await request.db.loyaltyProgram.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
@@ -173,7 +173,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş geçmişin var, davet kodu kullanılamaz' });
     }
 
-    const referrer = await request.db.customer.findUnique({
+    const referrer = await request.db.customer.findFirst({
       where: { referralCode: code.toUpperCase() },
     });
     if (!referrer || referrer.id === customerId) {

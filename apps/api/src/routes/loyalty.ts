@@ -6,7 +6,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   // ==================== TIERS ====================
 
   // Get all loyalty tiers
-  server.get('/tiers', { preHandler: verifyAuth }, async () => {
+  server.get('/tiers', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const tiers = await request.db.loyaltyTier.findMany({
       where: { isActive: true },
       orderBy: { minPoints: 'asc' },
@@ -120,7 +120,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   server.get('/customers/phone/:phone', async (request: FastifyRequest) => {
     const { phone } = request.params as { phone: string };
 
-    const customer = await request.db.customer.findUnique({
+    const customer = await request.db.customer.findFirst({
       where: { phone },
       include: { loyaltyTier: true },
     });
@@ -156,7 +156,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
     }
 
     // Check if already exists
-    const existing = await request.db.customer.findUnique({ where: { phone } });
+    const existing = await request.db.customer.findFirst({ where: { phone } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu telefon numarası zaten kayıtlı' });
     }

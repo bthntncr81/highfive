@@ -30,7 +30,7 @@ export default async function expenseCategoryRoutes(server: FastifyInstance) {
     const name = body.name?.trim();
     if (!name) return reply.status(400).send({ error: 'Kategori adı gerekli' });
 
-    const existing = await request.db.expenseCategory.findUnique({ where: { name } });
+    const existing = await request.db.expenseCategory.findFirst({ where: { name } });
     if (existing) return reply.status(409).send({ error: 'Bu kategori zaten var' });
 
     const category = await request.db.expenseCategory.create({

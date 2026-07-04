@@ -10,12 +10,12 @@
 // POST   /api/bundles/:bundleId/option-groups — bundle'a grup ata
 // DELETE /api/bundles/:bundleId/option-groups/:groupId — atamayı kaldır
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function optionGroupsRoutes(server: FastifyInstance) {
   // ==================== LIST ====================
-  server.get('/', { preHandler: verifyAdmin }, async () => {
+  server.get('/', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const groups = await request.db.optionGroup.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
       include: {

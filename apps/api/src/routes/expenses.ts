@@ -3,8 +3,9 @@
 // Auto-approve: ADMIN/MANAGER her zaman APPROVED. CASHIER amount >= threshold ise PENDING_APPROVAL.
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, ExpenseStatus, PaymentMethod, UserRole, Prisma } from '@prisma/client';
+import { ExpenseStatus, PaymentMethod, UserRole, Prisma } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
+import type { DbLike } from '../lib/tenant-db';
 
 type AuthUser = { userId: string; role: UserRole };
 
@@ -20,8 +21,8 @@ function canEditExpense(user: AuthUser, expense: { createdById: string }): boole
   return false;
 }
 
-async function getAutoApproveThreshold(prisma: PrismaClient): Promise<number> {
-  const setting = await prisma.settings.findUnique({
+async function getAutoApproveThreshold(prisma: DbLike): Promise<number> {
+  const setting = await prisma.settings.findFirst({
     where: { key: 'expense_auto_approve_threshold' },
   });
   const v = setting?.value as { amount?: number } | null;
@@ -78,7 +79,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
         where,
         include: {
           category: true,
-          createdBy: { select: { id: true, name: true, role: true } },
+          createdBy: { select: { id: true, name: true } },
           approvedBy: { select: { id: true, name: true } },
         },
         orderBy: { [sortBy]: sortOrder },
@@ -178,7 +179,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
       where: { id },
       include: {
         category: true,
-        createdBy: { select: { id: true, name: true, role: true } },
+        createdBy: { select: { id: true, name: true } },
         approvedBy: { select: { id: true, name: true } },
       },
     });
@@ -236,7 +237,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
       },
       include: {
         category: true,
-        createdBy: { select: { id: true, name: true, role: true } },
+        createdBy: { select: { id: true, name: true } },
         approvedBy: { select: { id: true, name: true } },
       },
     });
@@ -275,7 +276,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
       data,
       include: {
         category: true,
-        createdBy: { select: { id: true, name: true, role: true } },
+        createdBy: { select: { id: true, name: true } },
         approvedBy: { select: { id: true, name: true } },
       },
     });
@@ -292,7 +293,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     const expense = await request.db.expense.update({
       where: { id },
       data: { status: ExpenseStatus.APPROVED, approvedById: user.userId, approvedAt: new Date() },
-      include: { category: true, createdBy: { select: { id: true, name: true, role: true } }, approvedBy: { select: { id: true, name: true } } },
+      include: { category: true, createdBy: { select: { id: true, name: true } }, approvedBy: { select: { id: true, name: true } } },
     });
     return { expense };
   });
@@ -307,7 +308,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     const expense = await request.db.expense.update({
       where: { id },
       data: { status: ExpenseStatus.REJECTED, approvedById: user.userId, approvedAt: new Date() },
-      include: { category: true, createdBy: { select: { id: true, name: true, role: true } }, approvedBy: { select: { id: true, name: true } } },
+      include: { category: true, createdBy: { select: { id: true, name: true } }, approvedBy: { select: { id: true, name: true } } },
     });
     return { expense };
   });

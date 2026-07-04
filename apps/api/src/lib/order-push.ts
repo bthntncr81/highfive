@@ -71,7 +71,7 @@ async function findCustomerTokensForOrder(
   if (!customerId && order.customerPhone) {
     const phoneNorm = normalizePhone(order.customerPhone);
     if (phoneNorm) {
-      const customer = await prisma.customer.findUnique({
+      const customer = await prisma.customer.findFirst({
         where: { phone: phoneNorm },
         select: { id: true },
       });

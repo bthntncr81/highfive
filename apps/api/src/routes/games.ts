@@ -301,7 +301,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
   });
 
   // Admin: tüm achievement'ları listele (POS yönetim ekranı için)
-  server.get('/achievements', { preHandler: verifyAdmin }, async () => {
+  server.get('/achievements', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const all = await request.db.achievement.findMany({
       orderBy: { sortOrder: 'asc' },
     });
@@ -315,7 +315,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'key, name, type, criteria gerekli' });
     }
     const a = await req.db.achievement.upsert({
-      where: { key: body.key },
+      where: { tenantId_key: { tenantId: req.tenant!.id, key: body.key } },
       update: {
         name: body.name,
         description: body.description ?? '',
@@ -468,7 +468,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
 
   // ==================== MYSTERY BOX ====================
   // Listele
-  server.get('/mysterybox/list', async () => {
+  server.get('/mysterybox/list', async (request: FastifyRequest) => {
     const boxes = await request.db.mysteryBoxConfig.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },

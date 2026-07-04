@@ -11,7 +11,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   // Get all tables.
   // We also surface tables that were soft-deleted (active:false) but still carry open orders,
   // so staff never loses visibility on a table with live work on it.
-  server.get('/', { preHandler: verifyAuth }, async () => {
+  server.get('/', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const tables = await request.db.table.findMany({
       where: {
         OR: [
@@ -62,7 +62,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   });
 
   // Get all tables (public - for QR code generator)
-  server.get('/public', async () => {
+  server.get('/public', async (request: FastifyRequest) => {
     const tables = await request.db.table.findMany({
       where: { active: true },
       select: {

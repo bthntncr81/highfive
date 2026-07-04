@@ -3,173 +3,189 @@ import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { verifyAdmin } from '../middleware/auth';
 
+// Personel = User (platform kimliği: email/name/password) + Membership (bu tenant'ta
+// rol + PIN + aktiflik). Rol/PIN artık Membership'te olduğundan tüm CRUD üyelik
+// üzerinden döner. req.db.user platform-passthrough (global), req.db.membership
+// tenant-scoped'tur.
 export default async function userRoutes(server: FastifyInstance) {
-  // Get all users (admin only)
+  // Get all staff (bu tenant'ın üyelikleri)
   server.get('/', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
-    const users = await request.db.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        avatar: true,
-        active: true,
-        createdAt: true,
-      },
+    const memberships = await request.db.membership.findMany({
+      include: { user: { select: { id: true, email: true, name: true, avatar: true, createdAt: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    const users = memberships.map((m) => ({
+      id: m.user.id,
+      email: m.user.email,
+      name: m.user.name,
+      role: m.role,
+      avatar: m.user.avatar,
+      active: m.active,
+      locationId: m.locationId,
+      createdAt: m.user.createdAt,
+    }));
     return { users };
   });
 
-  // Get single user
+  // Get single staff (bu tenant'taki üyeliği)
   server.get('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    
-    const user = await request.db.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        avatar: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const membership = await request.db.membership.findFirst({
+      where: { userId: id },
+      include: { user: { select: { id: true, email: true, name: true, avatar: true, createdAt: true, updatedAt: true } } },
     });
-
-    if (!user) {
+    if (!membership) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
-
-    return { user };
+    return {
+      user: {
+        id: membership.user.id,
+        email: membership.user.email,
+        name: membership.user.name,
+        role: membership.role,
+        avatar: membership.user.avatar,
+        active: membership.active,
+        locationId: membership.locationId,
+        createdAt: membership.user.createdAt,
+        updatedAt: membership.user.updatedAt,
+      },
+    };
   });
 
-  // Create user (admin only) — isim + rol + 6 haneli şifre. E-posta/kullanıcı adı yok.
+  // Create staff — isim + rol + 6 haneli PIN. Yeni User + bu tenant'a Membership.
   server.post('/', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const { name, role, pin } = request.body as {
+    const { name, role, pin, locationId } = request.body as {
       name: string;
       role?: UserRole;
       pin: string;
+      locationId?: string;
     };
 
     if (!name || !pin) {
       return reply.status(400).send({ error: 'İsim ve 6 haneli şifre gerekli' });
     }
-    if (!/^\d{6}$/.test(pin)) {
-      return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
+    if (!/^\d{4,6}$/.test(pin)) {
+      return reply.status(400).send({ error: 'Şifre 4-6 haneli sayı olmalı' });
     }
 
-    const existingPin = await request.db.user.findFirst({ where: { pin } });
+    // PIN bu TENANT içinde benzersiz (Membership [tenantId, pin])
+    const existingPin = await request.db.membership.findFirst({ where: { pin } });
     if (existingPin) {
       return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor, başka bir şifre seç' });
     }
 
-    // email + password DB'de zorunlu — sentetik üret. Giriş yalnızca 6 haneli şifreyle.
+    // email + password DB'de zorunlu — sentetik üret. Giriş yalnızca PIN'le.
     const syntheticEmail = `personel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@highfive.local`;
     const hashedPassword = await bcrypt.hash(pin, 10);
 
     const user = await request.db.user.create({
+      data: { email: syntheticEmail, password: hashedPassword, name },
+      select: { id: true, name: true },
+    });
+    const membership = await request.db.membership.create({
       data: {
-        email: syntheticEmail,
-        password: hashedPassword,
-        name,
+        userId: user.id,
         role: role || UserRole.WAITER,
         pin,
-      },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        active: true,
-        createdAt: true,
+        locationId: locationId ?? null,
       },
     });
 
-    return { user };
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        role: membership.role,
+        active: membership.active,
+        locationId: membership.locationId,
+        createdAt: membership.createdAt,
+      },
+    };
   });
 
-  // Update user (admin only) — isim / rol / 6 haneli şifre / aktiflik
+  // Update staff — isim (User) / rol · PIN · aktiflik · şube (Membership)
   server.put('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const { name, role, pin, active } = request.body as {
+    const { name, role, pin, active, locationId } = request.body as {
       name?: string;
       role?: UserRole;
       pin?: string;
       active?: boolean;
+      locationId?: string | null;
     };
 
-    const user = await request.db.user.findUnique({ where: { id } });
-    if (!user) {
+    const membership = await request.db.membership.findFirst({ where: { userId: id } });
+    if (!membership) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
 
-    // Şifre değişiyorsa 6 haneli + benzersiz olmalı
-    if (pin && pin !== user.pin) {
-      if (!/^\d{6}$/.test(pin)) {
-        return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
+    // PIN değişiyorsa 4-6 haneli + tenant içinde benzersiz olmalı
+    if (pin && pin !== membership.pin) {
+      if (!/^\d{4,6}$/.test(pin)) {
+        return reply.status(400).send({ error: 'Şifre 4-6 haneli sayı olmalı' });
       }
-      const existingPin = await request.db.user.findFirst({ where: { pin } });
+      const existingPin = await request.db.membership.findFirst({ where: { pin } });
       if (existingPin) {
         return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor' });
       }
     }
 
-    const updateData: any = {};
-    if (name) updateData.name = name;
-    if (role) updateData.role = role;
-    if (active !== undefined) updateData.active = active;
-    // Şifre değişince hem pin hem (yedek) password güncellenir
-    if (pin) {
-      updateData.pin = pin;
-      updateData.password = await bcrypt.hash(pin, 10);
+    // İsim User'da; şifre değişince User.password (yedek) da güncellenir
+    if (name || pin) {
+      await request.db.user.update({
+        where: { id },
+        data: {
+          ...(name ? { name } : {}),
+          ...(pin ? { password: await bcrypt.hash(pin, 10) } : {}),
+        },
+      });
     }
 
-    const updatedUser = await request.db.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        active: true,
-        updatedAt: true,
+    const updated = await request.db.membership.update({
+      where: { id: membership.id },
+      data: {
+        ...(role ? { role } : {}),
+        ...(pin ? { pin } : {}),
+        ...(active !== undefined ? { active } : {}),
+        ...(locationId !== undefined ? { locationId } : {}),
       },
+      include: { user: { select: { name: true } } },
     });
 
-    return { user: updatedUser };
+    return {
+      user: {
+        id,
+        name: updated.user.name,
+        role: updated.role,
+        active: updated.active,
+        locationId: updated.locationId,
+        updatedAt: updated.updatedAt,
+      },
+    };
   });
 
-  // Delete user (admin only)
+  // Delete staff (soft) — bu tenant'taki üyeliği pasifleştir (global User'a dokunma)
   server.delete('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-
-    const user = await request.db.user.findUnique({ where: { id } });
-    if (!user) {
+    const membership = await request.db.membership.findFirst({ where: { userId: id } });
+    if (!membership) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
-
-    // Soft delete - just deactivate
-    await request.db.user.update({
-      where: { id },
+    await request.db.membership.update({
+      where: { id: membership.id },
       data: { active: false },
     });
-
     return { success: true };
   });
 
-  // Get activity logs for a user
+  // Get activity logs for a user (tenant-scoped)
   server.get('/:id/activity', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
-
     const logs = await request.db.activityLog.findMany({
       where: { userId: id },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
-
     return { logs };
   });
 }
-

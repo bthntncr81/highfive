@@ -3,7 +3,7 @@ import { verifyAdmin } from '../middleware/auth';
 
 export default async function categoryRoutes(server: FastifyInstance) {
   // Get all categories
-  server.get('/', async () => {
+  server.get('/', async (request: FastifyRequest) => {
     const categories = await request.db.category.findMany({
       where: { active: true },
       include: {

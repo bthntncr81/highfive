@@ -83,7 +83,7 @@ const throwingDb: any = new Proxy(
 
 export default fp(async function tenantPlugin(server: FastifyInstance) {
   server.decorateRequest('tenant', null);
-  server.decorateRequest('db', null);
+  server.decorateRequest('db', null as any); // gerçek değer onRequest hook'unda atanır
 
   server.addHook('onRequest', async (req, reply) => {
     (req as any).db = throwingDb;

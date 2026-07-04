@@ -204,7 +204,7 @@ export async function notifyNewOrder(
   orderId: string,
 ): Promise<void> {
   try {
-    const setting = await prisma.settings.findUnique({
+    const setting = await prisma.settings.findFirst({
       where: { key: 'orderNotifications' },
     });
     const cfg = (setting?.value as NotifyConfig) || {};

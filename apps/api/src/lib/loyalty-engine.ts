@@ -454,7 +454,7 @@ async function handleReferral(
   const minOrder = Number(program.config?.minOrderForReward ?? 0);
   if (Number(order.subtotal) < minOrder) return;
 
-  const referrer = await prisma.customer.findUnique({
+  const referrer = await prisma.customer.findFirst({
     where: { referralCode: customer.referredByCode },
   });
   if (!referrer) return;

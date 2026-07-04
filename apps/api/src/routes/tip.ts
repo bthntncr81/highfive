@@ -138,7 +138,7 @@ export default async function tipRoutes(server: FastifyInstance) {
     }
 
     // Return default from settings
-    const settings = await request.db.settings.findUnique({
+    const settings = await request.db.settings.findFirst({
       where: { key: 'serviceCharge' },
     });
 
@@ -167,7 +167,7 @@ export default async function tipRoutes(server: FastifyInstance) {
         });
       } else {
         await request.db.settings.upsert({
-          where: { key: 'serviceCharge' },
+          where: { tenantId_key: { tenantId: request.tenant!.id, key: 'serviceCharge' } },
           update: { value: { rate, type, enabled } },
           create: { key: 'serviceCharge', value: { rate, type, enabled } },
         });
@@ -199,7 +199,7 @@ export default async function tipRoutes(server: FastifyInstance) {
         serviceChargeType = location.serviceChargeType;
       }
     } else {
-      const settings = await request.db.settings.findUnique({
+      const settings = await request.db.settings.findFirst({
         where: { key: 'serviceCharge' },
       });
       if (settings?.value) {

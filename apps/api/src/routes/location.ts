@@ -53,7 +53,7 @@ export default async function locationRoutes(server: FastifyInstance) {
         };
 
       // Check if code is unique
-      const existing = await request.db.location.findUnique({ where: { code } });
+      const existing = await request.db.location.findFirst({ where: { code } });
       if (existing) {
         return reply.status(400).send({ error: 'Bu lokasyon kodu zaten kullanımda' });
       }
@@ -272,7 +272,7 @@ export default async function locationRoutes(server: FastifyInstance) {
           _sum: { total: true, tip: true },
         }),
         request.db.table.count({ where: { locationId: id, active: true } }),
-        request.db.user.count({ where: { locationId: id, active: true } }),
+        request.db.membership.count({ where: { locationId: id, active: true } }),
       ]);
 
       return {

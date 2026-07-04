@@ -301,23 +301,24 @@ export default async function courierRoutes(server: FastifyInstance) {
   // ---------------------------------------------------------------------------
   // GET /active — admin: çevrimiçi kuryeler
   // ---------------------------------------------------------------------------
-  server.get('/active', { preHandler: verifyAdmin }, async () => {
-    const couriers = await request.db.user.findMany({
-      where: {
-        role: 'COURIER',
-        active: true,
-        isOnline: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        avatar: true,
-        lastSeenLat: true,
-        lastSeenLng: true,
-        lastSeenAt: true,
+  server.get('/active', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
+    // Kurye rolü Membership'te; online/konum User'da → COURIER üyeliklerini alıp
+    // aktif + çevrimiçi kullanıcıları süz.
+    const courierMemberships = await request.db.membership.findMany({
+      where: { role: 'COURIER', active: true },
+      include: {
+        user: {
+          select: {
+            id: true, name: true, phone: true, avatar: true, active: true,
+            isOnline: true, lastSeenLat: true, lastSeenLng: true, lastSeenAt: true,
+          },
+        },
       },
     });
+    const couriers = courierMemberships
+      .map((m) => m.user)
+      .filter((u) => u.active && u.isOnline)
+      .map(({ active, isOnline, ...rest }) => rest);
 
     // Aktif sipariş sayıları
     const withStats = await Promise.all(

@@ -6,7 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 export default async function pizzaGameRoutes(server: FastifyInstance) {
-  server.get('/leaderboard', async () => {
+  server.get('/leaderboard', async (request: FastifyRequest) => {
     const leaderboard = await request.db.pizzaGameScore.findMany({
       orderBy: { score: 'desc' },
       take: 20,

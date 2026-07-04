@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
+import { OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcastKitchenNewItems } from '../websocket';
 import { notifyNewOrder } from '../lib/order-notify';
@@ -8,6 +8,7 @@ import { sendOrderStatusPush } from '../lib/order-push';
 import { awardMobileOrderPoints } from '../lib/loyalty-award';
 import { processOrderForLoyalty } from '../lib/loyalty-engine';
 import { checkAchievementsForCustomer } from '../lib/achievement-checker';
+import type { DbLike } from '../lib/tenant-db';
 import { expandBuilderItem } from '../lib/builder-expansion';
 
 // Eski hardcoded e-posta bildirimi kaldırıldı — artık lib/order-notify.ts
@@ -63,13 +64,13 @@ async function sendWhatsAppNotification(order: any) {
 
 
 // Award loyalty points after payment
-async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: string, totalAmount: number) {
+async function awardLoyaltyPoints(prisma: DbLike, phone: string, orderId: string, totalAmount: number) {
   try {
     // Clean phone number
     const cleanPhone = phone.replace(/\D/g, '');
     
     // Find customer by phone
-    const customer = await prisma.customer.findUnique({
+    const customer = await prisma.customer.findFirst({
       where: { phone: cleanPhone },
       include: { loyaltyTier: true },
     });
@@ -90,7 +91,7 @@ async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: 
     }
 
     // Get loyalty settings (default: 10 TL = 1 point)
-    const settings = await prisma.settings.findUnique({ where: { key: 'loyalty' } });
+    const settings = await prisma.settings.findFirst({ where: { key: 'loyalty' } });
     const pointsPerTL = (settings?.value as any)?.pointsPerTL || 10;
     
     // Calculate points (with tier multiplier)
@@ -172,7 +173,7 @@ async function awardLoyaltyPoints(prisma: PrismaClient, phone: string, orderId: 
 
 // Sipariş verildiğinde ham madde stoklarını düş
 async function deductRawMaterialStock(
-  prisma: PrismaClient,
+  prisma: DbLike,
   orderItems: { menuItemId: string; quantity: number }[]
 ) {
   try {
@@ -208,7 +209,7 @@ async function deductRawMaterialStock(
 
 // Sipariş iptal edildiğinde stokları geri ekle
 async function restoreRawMaterialStock(
-  prisma: PrismaClient,
+  prisma: DbLike,
   orderItems: { menuItemId: string | null; quantity: number }[]
 ) {
   try {
@@ -314,7 +315,8 @@ export default async function orderRoutes(server: FastifyInstance) {
   });
 
   // Get active orders (for kitchen display) - no auth required for kitchen screens
-  server.get('/active', async () => {
+  // (tenant subdomain/X-Tenant-ID ile çözülür; req.db scoped)
+  server.get('/active', async (request: FastifyRequest) => {
     const orders = await request.db.order.findMany({
       where: {
         status: {
@@ -344,12 +346,14 @@ export default async function orderRoutes(server: FastifyInstance) {
     });
 
     // Mutfağa düşmeyecek ürünleri filtrele (İçecek gibi)
-    const filteredOrders = orders.map(order => ({
-      ...order,
-      items: order.items.filter(item =>
-        item.menuItem?.category?.printToKitchen !== false
-      ),
-    })).filter(order => order.items.length > 0); // Tüm ürünleri filtrelenen siparişleri çıkar
+    const filteredOrders = orders
+      .map((order) => ({
+        ...order,
+        items: order.items.filter(
+          (item) => item.menuItem?.category?.printToKitchen !== false,
+        ),
+      }))
+      .filter((order) => order.items.length > 0); // Tüm ürünleri filtrelenen siparişleri çıkar
 
     return { orders: filteredOrders };
   });
@@ -534,7 +538,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Check if takeaway/delivery is enabled
     if (type === 'TAKEAWAY' || type === 'DELIVERY') {
-      const servicesSetting = await request.db.settings.findUnique({
+      const servicesSetting = await request.db.settings.findFirst({
         where: { key: 'services' },
       });
       const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
@@ -765,7 +769,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Get tax rate from settings
-    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
@@ -907,7 +911,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Get tax rate from settings
-    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
@@ -1159,7 +1163,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     await deductRawMaterialStock(request.db, items);
 
     // Update order totals
-    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const newSubtotal = Number(order.subtotal) + additionalTotal;
     const newTax = newSubtotal * (taxRate / 100);
@@ -1246,7 +1250,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const freshItems = await request.db.orderItem.findMany({ where: { orderId: id } });
     const remainingItems = freshItems;
     const newSubtotal = remainingItems.reduce((sum, i) => sum + Number(i.total), 0);
-    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const newTax = newSubtotal * (taxRate / 100);
 
@@ -1676,11 +1680,12 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     }
 
-    const courier = await request.db.user.findUnique({
-      where: { id: courierId },
+    // Kurye artık Membership'te — bu tenant'ta COURIER üyeliği olan aktif kullanıcı mı?
+    const courierMembership = await request.db.membership.findFirst({
+      where: { userId: courierId, role: 'COURIER', active: true },
+      include: { user: { select: { active: true } } },
     });
-
-    if (!courier || courier.role !== 'COURIER') {
+    if (!courierMembership || !courierMembership.user.active) {
       return reply.status(400).send({ error: 'Geçersiz kurye' });
     }
 
@@ -1703,20 +1708,19 @@ export default async function orderRoutes(server: FastifyInstance) {
     return { order: updatedOrder, message: 'Kurye atandı' };
   });
 
-  // Kuryeleri listele
-  server.get('/couriers/list', { preHandler: verifyAuth }, async () => {
-    const couriers = await request.db.user.findMany({
-      where: {
-        role: 'COURIER',
-        active: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        avatar: true,
+  // Kuryeleri listele — tenant'ın COURIER üyelikleri (rol Membership'te)
+  server.get('/couriers/list', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
+    const courierMemberships = await request.db.membership.findMany({
+      where: { role: 'COURIER', active: true },
+      include: {
+        user: {
+          select: { id: true, name: true, phone: true, avatar: true, active: true },
+        },
       },
     });
+    const couriers = courierMemberships
+      .filter((m) => m.user.active)
+      .map((m) => ({ id: m.user.id, name: m.user.name, phone: m.user.phone, avatar: m.user.avatar }));
 
     // Her kurye için aktif sipariş sayısını hesapla
     const couriersWithStats = await Promise.all(

@@ -12,8 +12,8 @@ export interface JWTPayload {
   locationId?: string;
 }
 
-export function signStaffToken(payload: JWTPayload, expiresIn = '7d'): string {
-  return jwt.sign(payload as object, JWT_SECRET, { expiresIn });
+export function signStaffToken(payload: JWTPayload, expiresIn: string | number = '7d'): string {
+  return jwt.sign(payload as object, JWT_SECRET, { expiresIn } as jwt.SignOptions);
 }
 
 // Ortak çözümleme: token doğrula + tenant bağlamıyla eşleştir.

@@ -53,7 +53,7 @@ export default async function authRoutes(server: FastifyInstance) {
       }
 
       // Kimlik: platform-seviyesi (tenant bağlamı gerektirmez)
-      const user = await platformDb.user.findUnique({ where: { email } });
+      const user = await platformDb.user.findFirst({ where: { email } });
       if (!user || !user.active) {
         return reply.status(401).send({ error: 'Geçersiz email veya şifre' });
       }

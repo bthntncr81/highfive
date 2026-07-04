@@ -79,7 +79,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     }
 
     // Check for duplicate name
-    const existing = await request.db.rawMaterial.findUnique({ where: { name } });
+    const existing = await request.db.rawMaterial.findFirst({ where: { name } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu isimde bir ham madde zaten var' });
     }
@@ -196,7 +196,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   });
 
   // Get low stock materials
-  server.get('/alerts/low-stock', { preHandler: verifyAuth }, async () => {
+  server.get('/alerts/low-stock', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     // Manual filter since Prisma doesn't support comparing two columns directly
     const allActive = await request.db.rawMaterial.findMany({
       where: { active: true },

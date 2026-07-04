@@ -83,7 +83,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Service availability kontrolü
-    const servicesSetting = await request.db.settings.findUnique({ where: { key: 'services' } });
+    const servicesSetting = await request.db.settings.findFirst({ where: { key: 'services' } });
     const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
     if (body.type === 'TAKEAWAY' && services.takeawayEnabled === false) {
       return reply.status(403).send({ error: 'Gel Al siparişi şu anda kapalıdır' });
@@ -168,7 +168,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Tax
-    const restaurantSettings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const restaurantSettings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (restaurantSettings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
 
@@ -188,7 +188,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     let couponDiscount = 0;
     let couponId: string | null = null;
     if (body.couponCode) {
-      const coupon = await request.db.coupon.findUnique({
+      const coupon = await request.db.coupon.findFirst({
         where: { code: body.couponCode.trim().toUpperCase() },
       });
       if (coupon && coupon.isActive && coupon.startDate <= new Date() && coupon.endDate >= new Date()) {
@@ -559,7 +559,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Service availability
-    const servicesSetting = await request.db.settings.findUnique({ where: { key: 'services' } });
+    const servicesSetting = await request.db.settings.findFirst({ where: { key: 'services' } });
     const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
     if (body.type === 'TAKEAWAY' && services.takeawayEnabled === false) {
       return reply.status(403).send({ error: 'Gel Al siparişi şu anda kapalıdır' });
@@ -573,7 +573,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Customer upsert (isVerified=false — guest)
     const customer = await request.db.customer.upsert({
-      where: { phone: phoneNorm },
+      where: { tenantId_phone: { tenantId: request.tenant!.id, phone: phoneNorm } },
       update: {
         // Ad/email yoksa doldur, varsa dokunma
         name: body.customerName.trim() || undefined,
@@ -633,7 +633,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       }
     }
 
-    const restaurantSettings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
+    const restaurantSettings = await request.db.settings.findFirst({ where: { key: 'restaurant' } });
     const taxRate = (restaurantSettings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
 

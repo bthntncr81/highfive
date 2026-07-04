@@ -155,7 +155,7 @@ export default async function builderRoutes(server: FastifyInstance) {
   });
 
   // ==================== ADMIN LIST ====================
-  server.get('/admin/list', { preHandler: verifyAdmin }, async () => {
+  server.get('/admin/list', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const [bases, ingredients] = await Promise.all([
       request.db.builderBase.findMany({ orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] }),
       request.db.builderIngredient.findMany({

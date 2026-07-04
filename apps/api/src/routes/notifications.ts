@@ -1,6 +1,6 @@
 // Push Notifications — POS yönetim ekranı için
 // CRUD + schedule + send-now + history + stats
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 import { sendCampaignPush, sendPushToTokens } from '../lib/push';
@@ -47,7 +47,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
   });
 
   // ==================== STATS ====================
-  server.get('/notifications/stats', { preHandler: verifyAdmin }, async () => {
+  server.get('/notifications/stats', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     // Tüm aktif cihazlar (push'lu + push'suz placeholder'lar dahil — POS aktif cihazlar listesi için)
     const totalDevices = await request.db.deviceToken.count({ where: { isActive: true } });
     // Push gönderilebilir cihazlar (nopush-* placeholder'lar hariç)
@@ -120,7 +120,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
     });
     // Token ham gözükmesin, sadece push tipi göster
     return {
-      devices: devices.map((d) => ({
+      devices: devices.map((d: (typeof devices)[number]) => ({
         ...d,
         token: undefined,
         canPush: !d.token.startsWith('nopush-'),
