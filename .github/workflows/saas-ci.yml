@@ -38,6 +38,22 @@ jobs:
         run: npx prisma generate --schema packages/database/prisma/schema.prisma
       - name: Type-check API (strict)
         run: npx tsc --noEmit -P apps/api/tsconfig.app.json
-      - name: API tests (vitest)
+      - name: DB migrate (schema + RLS)
+        run: npx prisma migrate deploy --schema packages/database/prisma/schema.prisma
+      - name: Seed demo tenants (A temiz / B XTENANT_B_* marker)
+        run: npx ts-node packages/database/prisma/seed-tenants.ts
+      - name: Create highfive_app login role (RLS-on turu için)
+        run: |
+          PGPASSWORD=highfive123 psql -h localhost -U highfive -d highfive_test \
+            -c "ALTER ROLE highfive_app WITH LOGIN PASSWORD 'app_pw_ci';"
+      # --- Tur 1: RLS KAPALI — extension katmanı tek başına izolasyonu kanıtlar ---
+      - name: API tests + isolation (RLS off)
         working-directory: apps/api
         run: npx vitest run
+      # --- Tur 2: RLS AÇIK — DB backstop + raw SQL izolasyonu bağımsız kanıtlanır ---
+      - name: Isolation harness (RLS on, highfive_app role)
+        working-directory: apps/api
+        env:
+          TENANT_RLS: 'on'
+          APP_DATABASE_URL: postgresql://highfive_app:app_pw_ci@localhost:5432/highfive_test
+        run: npx vitest run tests/isolation.dbfor.test.ts tests/isolation.rls.test.ts

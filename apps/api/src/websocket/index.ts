@@ -4,13 +4,15 @@ import * as jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // =============================================================================
-// Client model
+// Client model — TENANT-NAMESPACED
 // =============================================================================
-// Her bağlı client'ı bir Set'te tutuyoruz; her client opsiyonel auth context'e
-// sahip olabilir. Default: anonymous (yalnız public channel'lara abone olabilir).
-// COURIER_LOCATION gibi PII içeren channel'lar için scope filtresi uygulanır.
+// Her bağlı client bir tenant'a bağlıdır (token'daki tenantId veya `?tenant=`
+// query param'ından). Kanal anahtarı `${tenantId}:${channel}` olur; böylece bir
+// tenant'ın yayını asla başka tenant'ın client'ına gitmez (çapraz sızıntı yok).
+// tenantId çözülemeyen anonim client hiçbir tenant-kanalına abone olamaz.
 
 type AuthContext = {
+  tenantId?: string;     // ZORUNLU (tenant-namespace anahtarı) — yoksa abone olamaz
   userId?: string;       // Staff (POS/Kitchen/Courier) — User.id
   role?: string;         // UserRole
   customerId?: string;   // Müşteri — Customer.id
@@ -19,11 +21,15 @@ type AuthContext = {
 type ConnectedClient = {
   id: string;
   send: (data: string) => void;
-  auth: AuthContext; // her zaman tanımlı, boş ise anonymous
+  auth: AuthContext; // her zaman tanımlı; auth.tenantId boş ise anonymous
 };
 
-// channel -> Set<ConnectedClient>
+// namespacedChannel (`${tenantId}:${channel}`) -> Set<ConnectedClient>
 const clients = new Map<string, Set<ConnectedClient>>();
+
+function nsKey(tenantId: string, channel: string): string {
+  return `${tenantId}:${channel}`;
+}
 
 const CHANNELS = {
   ORDERS: 'orders',
@@ -47,6 +53,7 @@ function decodeToken(token: string | undefined): AuthContext {
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
     return {
+      tenantId: payload.tenantId,
       userId: payload.userId,
       role: payload.role,
       customerId: payload.customerId,
@@ -73,13 +80,16 @@ export function setupWebSocket(server: FastifyInstance) {
       return;
     }
 
-    // İlk handshake'te query string'ten token alabiliriz (opsiyonel)
-    // ws://api/ws?token=xxx — courier mobile app bunu kullanacak
+    // İlk handshake'te query string'ten tenant + token alabiliriz.
+    //   ws://api/ws?token=<JWT>   → staff/customer (tenantId token'dan)
+    //   ws://api/ws?tenant=<id>   → public sipariş sitesi (anonim, sadece bu tenant)
     let initialAuth: AuthContext = {};
     try {
       const urlObj = new URL(request.url, 'http://localhost');
       const qToken = urlObj.searchParams.get('token');
       if (qToken) initialAuth = decodeToken(qToken);
+      const qTenant = urlObj.searchParams.get('tenant');
+      if (qTenant && !initialAuth.tenantId) initialAuth.tenantId = qTenant;
     } catch { /* ignore */ }
 
     const client: ConnectedClient = {
@@ -90,18 +100,41 @@ export function setupWebSocket(server: FastifyInstance) {
       auth: initialAuth,
     };
 
-    // Default abonelikler — auth gerektirmeyen kanallar
-    const subscribedChannels = new Set<string>([
-      CHANNELS.NOTIFICATIONS,
-      CHANNELS.KITCHEN,
-      CHANNELS.ORDERS,
-    ]);
-    subscribedChannels.forEach((channel) => {
-      if (!clients.has(channel)) clients.set(channel, new Set());
-      clients.get(channel)!.add(client);
-    });
+    // Bu client'ın abone olduğu namespaced kanal anahtarları (cleanup için)
+    const subscribedKeys = new Set<string>();
 
-    console.log(`📢 ${clientId} subscribed: orders, kitchen, notifications (auth=${client.auth.role ?? client.auth.customerId ?? 'anon'})`);
+    function subscribeDefault() {
+      if (!client.auth.tenantId) return; // tenant yok → abonelik yok
+      for (const channel of [CHANNELS.NOTIFICATIONS, CHANNELS.KITCHEN, CHANNELS.ORDERS]) {
+        const key = nsKey(client.auth.tenantId, channel);
+        if (!clients.has(key)) clients.set(key, new Set());
+        clients.get(key)!.add(client);
+        subscribedKeys.add(key);
+      }
+    }
+
+    function unsubscribeAll() {
+      for (const key of subscribedKeys) clients.get(key)?.delete(client);
+      subscribedKeys.clear();
+    }
+
+    // Tenant değişirse (anon→authed veya token güncelleme) tüm abonelikleri
+    // yeni namespace'e taşı.
+    function retargetTenant(newAuth: AuthContext) {
+      const changed = client.auth.tenantId !== newAuth.tenantId;
+      client.auth = newAuth;
+      if (changed) {
+        unsubscribeAll();
+        subscribeDefault();
+      }
+    }
+
+    subscribeDefault();
+
+    console.log(
+      `📢 ${clientId} connected tenant=${client.auth.tenantId ?? 'none'} ` +
+      `(auth=${client.auth.role ?? client.auth.customerId ?? 'anon'})`,
+    );
 
     const onMessage = (rawMessage: any) => {
       try {
@@ -112,9 +145,10 @@ export function setupWebSocket(server: FastifyInstance) {
           case 'auth': {
             // Sonradan token güncelleme — login flow'undan sonra
             const newAuth = decodeToken(message.token);
-            client.auth = newAuth;
+            retargetTenant(newAuth);
             client.send(JSON.stringify({
               type: 'authed',
+              tenantId: newAuth.tenantId ?? null,
               role: newAuth.role ?? null,
               userId: newAuth.userId ?? null,
               customerId: newAuth.customerId ?? null,
@@ -127,9 +161,13 @@ export function setupWebSocket(server: FastifyInstance) {
               client.send(JSON.stringify({ type: 'subscribe_error', channel: ch, error: 'Geçersiz kanal' }));
               return;
             }
-            // Subscribe sırasında token verilirse auth'u güncelle
+            // Subscribe sırasında token verilirse auth'u güncelle (tenant taşımalı olabilir)
             if (message.token) {
-              client.auth = decodeToken(message.token);
+              retargetTenant(decodeToken(message.token));
+            }
+            if (!client.auth.tenantId) {
+              client.send(JSON.stringify({ type: 'subscribe_denied', channel: ch, error: 'Tenant çözümlenemedi' }));
+              return;
             }
             if (AUTHED_CHANNELS.has(ch)) {
               const ok = isAuthorizedForChannel(ch, client.auth);
@@ -138,17 +176,19 @@ export function setupWebSocket(server: FastifyInstance) {
                 return;
               }
             }
-            subscribedChannels.add(ch);
-            if (!clients.has(ch)) clients.set(ch, new Set());
-            clients.get(ch)!.add(client);
+            const key = nsKey(client.auth.tenantId, ch);
+            if (!clients.has(key)) clients.set(key, new Set());
+            clients.get(key)!.add(client);
+            subscribedKeys.add(key);
             client.send(JSON.stringify({ type: 'subscribed', channel: ch }));
             break;
           }
           case 'unsubscribe': {
             const ch = message.channel;
-            if (ch) {
-              subscribedChannels.delete(ch);
-              clients.get(ch)?.delete(client);
+            if (ch && client.auth.tenantId) {
+              const key = nsKey(client.auth.tenantId, ch);
+              subscribedKeys.delete(key);
+              clients.get(key)?.delete(client);
               client.send(JSON.stringify({ type: 'unsubscribed', channel: ch }));
             }
             break;
@@ -164,9 +204,7 @@ export function setupWebSocket(server: FastifyInstance) {
 
     const onClose = () => {
       console.log(`❌ WS Client disconnected: ${clientId}`);
-      subscribedChannels.forEach((channel) => {
-        clients.get(channel)?.delete(client);
-      });
+      unsubscribeAll();
     };
 
     if (typeof ws.on === 'function') {
@@ -188,7 +226,6 @@ function isAuthorizedForChannel(channel: string, auth: AuthContext): boolean {
   if (channel === CHANNELS.COURIER_LOCATION) {
     // Admin/Manager/Kitchen/POS — yetkili. Customer (token'lı) sadece kendi
     // siparişinin kuryesini görebilir; bu broadcast filtresinde kontrol edilir.
-    // Subscribe yetkisi: staff veya verified customer (yani token sahibi).
     return !!(auth.userId || auth.customerId);
   }
   if (channel === CHANNELS.COURIER_STATUS) {
@@ -198,13 +235,17 @@ function isAuthorizedForChannel(channel: string, auth: AuthContext): boolean {
 }
 
 // =============================================================================
-// Broadcasting
+// Broadcasting — HER yayın bir tenantId'ye scope'lanır
 // =============================================================================
 
 type BroadcastFilter = (auth: AuthContext) => boolean;
 
-function broadcastFiltered(channel: string, data: any, filter?: BroadcastFilter) {
-  const channelClients = clients.get(channel);
+function broadcastFiltered(tenantId: string, channel: string, data: any, filter?: BroadcastFilter) {
+  if (!tenantId) {
+    console.warn(`⚠️ Broadcast ${channel}: tenantId yok — atlandı (fail-closed)`);
+    return;
+  }
+  const channelClients = clients.get(nsKey(tenantId, channel));
   if (!channelClients || channelClients.size === 0) return;
 
   const message = JSON.stringify({
@@ -232,59 +273,85 @@ function broadcastFiltered(channel: string, data: any, filter?: BroadcastFilter)
   dead.forEach((c) => channelClients.delete(c));
 
   if (skippedCount > 0) {
-    console.log(`📡 Broadcast ${channel}: ${sentCount} sent, ${skippedCount} filtered`);
+    console.log(`📡 Broadcast ${tenantId}:${channel}: ${sentCount} sent, ${skippedCount} filtered`);
   } else {
-    console.log(`📡 Broadcast ${channel}: ${sentCount} sent`);
+    console.log(`📡 Broadcast ${tenantId}:${channel}: ${sentCount} sent`);
   }
 }
 
-export function broadcast(channel: string, data: any) {
-  broadcastFiltered(channel, data);
+export function broadcast(tenantId: string, channel: string, data: any) {
+  broadcastFiltered(tenantId, channel, data);
+}
+
+// Entity taşıyan yayınlar tenantId'yi entity'den türetir (tüm tenant modeli
+// tenantId taşır). Eksikse fail-closed: uyar + atla.
+function tenantOf(entity: any, label: string): string | null {
+  const t = entity?.tenantId;
+  if (!t) {
+    console.warn(`⚠️ ${label}: entity.tenantId yok — yayın atlandı`);
+    return null;
+  }
+  return t;
 }
 
 export function broadcastOrderUpdate(order: any) {
-  broadcast(CHANNELS.ORDERS, { action: 'update', order });
-  broadcast(CHANNELS.KITCHEN, { action: 'update', order });
+  const t = tenantOf(order, 'broadcastOrderUpdate');
+  if (!t) return;
+  broadcast(t, CHANNELS.ORDERS, { action: 'update', order });
+  broadcast(t, CHANNELS.KITCHEN, { action: 'update', order });
 }
 
 export function broadcastNewOrder(order: any) {
-  broadcast(CHANNELS.ORDERS, { action: 'new', order });
-  broadcast(CHANNELS.KITCHEN, { action: 'new', order });
-  broadcast(CHANNELS.NOTIFICATIONS, { action: 'new_order', message: `Yeni sipariş: #${order.orderNumber}`, order });
+  const t = tenantOf(order, 'broadcastNewOrder');
+  if (!t) return;
+  broadcast(t, CHANNELS.ORDERS, { action: 'new', order });
+  broadcast(t, CHANNELS.KITCHEN, { action: 'new', order });
+  broadcast(t, CHANNELS.NOTIFICATIONS, { action: 'new_order', message: `Yeni sipariş: #${order.orderNumber}`, order });
 }
 
 export function broadcastKitchenNewItems(order: any, newItems: any[]) {
-  broadcast(CHANNELS.KITCHEN, { action: 'new_items', order, newItems });
+  const t = tenantOf(order, 'broadcastKitchenNewItems');
+  if (!t) return;
+  broadcast(t, CHANNELS.KITCHEN, { action: 'new_items', order, newItems });
 }
 
 export function broadcastTableUpdate(table: any) {
-  broadcast(CHANNELS.TABLES, { action: 'update', table });
+  const t = tenantOf(table, 'broadcastTableUpdate');
+  if (!t) return;
+  broadcast(t, CHANNELS.TABLES, { action: 'update', table });
 }
 
+// data.tenantId (zorunlu) — çağıran payload'a tenantId ekler; entity varsa
+// data.item.tenantId'den de türetilebilir.
 export function broadcastMenuUpdate(data: any) {
-  broadcast(CHANNELS.MENU, data);
+  const t = data?.tenantId ?? data?.item?.tenantId;
+  if (!t) {
+    console.warn('⚠️ broadcastMenuUpdate: tenantId yok — yayın atlandı');
+    return;
+  }
+  broadcast(t, CHANNELS.MENU, data);
   if (data.action === 'availability' && !data.item?.available) {
-    broadcast(CHANNELS.KITCHEN, { action: 'item_unavailable', item: data.item });
+    broadcast(t, CHANNELS.KITCHEN, { action: 'item_unavailable', item: data.item });
   }
   if (data.action === 'low-stock-alert') {
-    broadcast(CHANNELS.NOTIFICATIONS, { action: 'low_stock', message: `⚠️ Düşük stok: ${data.item.name}`, item: data.item });
+    broadcast(t, CHANNELS.NOTIFICATIONS, { action: 'low_stock', message: `⚠️ Düşük stok: ${data.item.name}`, item: data.item });
   }
 }
 
-export function broadcastAnalytics(data: any) {
-  broadcast(CHANNELS.ANALYTICS, data);
+export function broadcastAnalytics(tenantId: string, data: any) {
+  broadcast(tenantId, CHANNELS.ANALYTICS, data);
 }
 
 /**
- * Broadcast courier location with strict PII filter.
+ * Broadcast courier location with strict PII filter — tenant-scoped.
  *
+ * @param tenantId - Yayının ait olduğu tenant
  * @param courierId - Kuryenin ID'si (filter için)
- * @param point - { latitude, longitude, accuracy?, heading?, speed?, ... }
+ * @param point - { latitude, longitude, ... }
  * @param relevantCustomerIds - Bu kuryenin aktif teslimatlarının müşteri ID'leri
- *   Sadece bu listedeki customerId'ye sahip client'lar konum alır.
- *   Boş array geçilirse hiçbir customer almaz (sadece staff).
  */
 export function broadcastCourierLocation(
+  tenantId: string,
   courierId: string,
   point: any,
   relevantCustomerIds: string[] = [],
@@ -292,23 +359,20 @@ export function broadcastCourierLocation(
   const customerIdSet = new Set(relevantCustomerIds);
   const payload = { action: 'location', courierId, point };
 
-  broadcastFiltered(CHANNELS.COURIER_LOCATION, payload, (auth) => {
-    // Staff (userId + role): ADMIN/MANAGER/CASHIER/COURIER/KITCHEN/WAITER her şeyi görür
-    if (auth.userId) return true;
-    // Customer: yalnız kendi siparişinin kuryesini görür
+  broadcastFiltered(tenantId, CHANNELS.COURIER_LOCATION, payload, (auth) => {
+    if (auth.userId) return true; // staff her şeyi görür
     if (auth.customerId && customerIdSet.has(auth.customerId)) return true;
     return false;
   });
 }
 
 /**
- * Kurye online/offline durum yayını — yalnız staff'a gider.
+ * Kurye online/offline durum yayını — yalnız staff'a, tenant-scoped.
  */
-export function broadcastCourierStatus(courierId: string, isOnline: boolean, extra?: any) {
+export function broadcastCourierStatus(tenantId: string, courierId: string, isOnline: boolean, extra?: any) {
   const payload = { action: 'status', courierId, isOnline, ...extra };
-  broadcastFiltered(CHANNELS.COURIER_STATUS, payload, (auth) => !!auth.userId);
-  // Notifications kanalına da staff bildirimi gönder (eski POS web için)
-  broadcastFiltered(CHANNELS.NOTIFICATIONS, { action: 'courier_status', courierId, isOnline }, (auth) => !!auth.userId);
+  broadcastFiltered(tenantId, CHANNELS.COURIER_STATUS, payload, (auth) => !!auth.userId);
+  broadcastFiltered(tenantId, CHANNELS.NOTIFICATIONS, { action: 'courier_status', courierId, isOnline }, (auth) => !!auth.userId);
 }
 
 export { CHANNELS };

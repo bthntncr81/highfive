@@ -64,7 +64,7 @@ export default async function stockRoutes(server: FastifyInstance) {
         },
       });
 
-      broadcastMenuUpdate({ action: 'bulk-availability', itemIds, available });
+      broadcastMenuUpdate({ action: 'bulk-availability', itemIds, available, tenantId: request.tenant!.id });
 
       return {
         success: true,
@@ -227,6 +227,7 @@ export default async function stockRoutes(server: FastifyInstance) {
         broadcastMenuUpdate({
           action: 'auto-restock',
           itemIds: itemsToRestock.map((i) => i.id),
+          tenantId: request.tenant!.id,
         });
       }
 

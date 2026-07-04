@@ -196,6 +196,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     }
 
     broadcastCourierLocation(
+      user.tenantId,
       user.userId,
       {
         latitude: body.latitude,
@@ -284,7 +285,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       where: { id: user.userId },
       data: { isOnline: true, lastSeenAt: new Date() },
     });
-    broadcastCourierStatus(user.userId, true);
+    broadcastCourierStatus(user.tenantId, user.userId, true);
     return { ok: true, isOnline: true };
   });
 
@@ -294,7 +295,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       where: { id: user.userId },
       data: { isOnline: false, lastSeenAt: new Date() },
     });
-    broadcastCourierStatus(user.userId, false);
+    broadcastCourierStatus(user.tenantId, user.userId, false);
     return { ok: true, isOnline: false };
   });
 

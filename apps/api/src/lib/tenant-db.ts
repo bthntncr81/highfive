@@ -1,25 +1,36 @@
 // ============================================================================
 // dbFor(tenantId) — merkezi çok-kiracılı Prisma client (izolasyonun kalbi)
 // ============================================================================
-// Kurallar:
-//  1. tenantId alanı OLAN her model (DMMF'ten otomatik) → her sorguya tenant
-//     filtresi enjekte edilir; create/upsert data'sına tenantId yazılır.
-//     Nested create'ler de (order.create { items: { create: [...] } }) DMMF
-//     ilişki haritasıyla RECURSIVE olarak damgalanır.
-//  2. tenantId alanı OLMAYAN modeller: PLATFORM_MODELS (User, Tenant, Plan)
-//     ise passthrough; değilse HATA (default-deny — yeni model eklerken
-//     scoping unutulamaz).
-//  3. Raw SQL ($queryRaw/$executeRaw) bu katmanı BYPASS eder → Faz 3 RLS
-//     backstop'u + CI grep bunu yakalar. Route'larda raw kullanmayın.
+// Katmanlar:
+//  1. Uygulama katmanı (bu extension): tenantId alanı OLAN her model (DMMF'ten
+//     otomatik) → her sorguya tenant filtresi enjekte edilir; create/upsert
+//     data'sına tenantId yazılır (nested create'ler RECURSIVE damgalanır).
+//     tenantId taşımayan modeller: PLATFORM_MODELS ise passthrough; değilse HATA
+//     (default-deny — yeni model eklerken scoping unutulamaz).
+//  2. Veritabanı katmanı (RLS backstop, opsiyonel — TENANT_RLS=on): her sorgu
+//     transaction-local `app.tenant_id` GUC'si ile sarılır; app non-owner rolle
+//     (APP_DATABASE_URL) bağlanır. Raw SQL / ORM baypası da RLS ile yakalanır.
+//     RLS kapalıyken (varsayılan) sadece 1. katman çalışır — davranış aynıdır.
 //
 // Kullanım: route'lar request.db üzerinden konuşur (plugins/tenant.ts verir).
 // Platform işleri (kayıt, süper-admin, billing) platformDb kullanır — SADECE
-// routes/platform/* içinden (CI grep ile korunur).
+// routes/platform/* içinden (CI grep ile korunur). platformDb owner roldür ve
+// RLS'i bypass eder (FORCE kullanılmadı) → cross-tenant platform işleri çalışır.
 
 import { Prisma, PrismaClient } from '@prisma/client';
 
-// Tek gerçek bağlantı havuzu — extend edilmiş client'lar bunu paylaşır.
+// RLS aktif mi? (Faz 3 backstop). Varsayılan kapalı — davranış değişmez.
+const RLS_ENABLED = process.env.TENANT_RLS === 'on';
+
+// Owner bağlantı havuzu — migration/platform/süper-admin (RLS bypass).
 const base = new PrismaClient();
+
+// Uygulama (tenant) bağlantı havuzu. RLS açıkken non-owner role bağlanmalı ki
+// RLS'e tabi olsun; APP_DATABASE_URL verilmemişse base'e düşer (RLS'siz test).
+const appBase =
+  RLS_ENABLED && process.env.APP_DATABASE_URL
+    ? new PrismaClient({ datasources: { db: { url: process.env.APP_DATABASE_URL } } })
+    : base;
 
 // tenantId alanı taşıyan modeller (şemadan türetilir — elle liste YOK)
 const TENANT_MODELS = new Set(
@@ -73,48 +84,70 @@ function stampData(model: string, data: any, tenantId: string): void {
 // diğerlerinde AND ile sarılır.
 const UNIQUE_OPS = new Set(['findUnique', 'findUniqueOrThrow', 'update', 'delete', 'upsert']);
 
+// Model operasyonu için args'a tenant scope uygula (mutasyon: a mutate edilir).
+function applyTenantScope(model: string, operation: string, args: any, tenantId: string): any {
+  const a: any = args ?? {};
+
+  // --- WRITE: data damgalama ---
+  if (operation === 'create' || operation === 'createMany') {
+    if (a.data) stampData(model, a.data, tenantId);
+  }
+  if (operation === 'upsert') {
+    if (a.create) stampData(model, a.create, tenantId);
+  }
+
+  // --- READ/WRITE: where filtreleme ---
+  if (UNIQUE_OPS.has(operation)) {
+    a.where = { ...(a.where ?? {}), tenantId };
+  } else if (
+    operation.startsWith('find') ||
+    operation === 'count' ||
+    operation === 'aggregate' ||
+    operation === 'groupBy' ||
+    operation === 'updateMany' ||
+    operation === 'deleteMany'
+  ) {
+    a.where = { AND: [{ tenantId }, a.where ?? {}] };
+  }
+  return a;
+}
+
 function makeTenantClient(tenantId: string) {
-  return base.$extends({
+  // GUC'yi base (unextended) üzerinden set et → extension'a tekrar girmez.
+  const setGuc = () =>
+    appBase.$executeRawUnsafe(`SELECT set_config('app.tenant_id', $1, true)`, tenantId);
+
+  // RLS açıkken: op'u [setGuc, op] transaction-batch'i içinde çalıştır (aynı
+  // bağlantı, GUC transaction-local). appBase.$transaction extend'li op promise'ini
+  // kabul eder → `client` self-reference'ına gerek yok (döngüsel tip kırılır).
+  const withRls = (exec: () => any): Promise<any> =>
+    appBase.$transaction([setGuc(), exec()]).then((r: any[]) => r[1]);
+
+  const client = appBase.$extends({
     query: {
-      $allModels: {
-        async $allOperations({ model, operation, args, query }: any) {
-          if (!model) return query(args);
-          if (!TENANT_MODELS.has(model)) {
-            if (PLATFORM_MODELS.has(model)) return query(args);
-            throw new Error(
-              `[tenant-db] '${model}' ne tenant-owned ne platform modeli — scoping kararı verilmeden sorgulanamaz (default-deny)`,
-            );
-          }
+      // TOP-LEVEL: model ops + raw ($queryRaw/$executeRaw) hepsi buradan geçer.
+      async $allOperations({ model, operation, args, query }: any) {
+        // Raw / client-seviyesi op (model yok): tenant mantığı yok, ama RLS
+        // açıksa GUC ile sar (raw SQL de izole olsun).
+        if (!model) {
+          return RLS_ENABLED ? withRls(() => query(args)) : query(args);
+        }
 
-          const a: any = args ?? {};
-
-          // --- WRITE: data damgalama ---
-          if (operation === 'create' || operation === 'createMany') {
-            if (a.data) stampData(model, a.data, tenantId);
+        if (!TENANT_MODELS.has(model)) {
+          if (PLATFORM_MODELS.has(model)) {
+            return RLS_ENABLED ? withRls(() => query(args)) : query(args);
           }
-          if (operation === 'upsert') {
-            if (a.create) stampData(model, a.create, tenantId);
-          }
+          throw new Error(
+            `[tenant-db] '${model}' ne tenant-owned ne platform modeli — scoping kararı verilmeden sorgulanamaz (default-deny)`,
+          );
+        }
 
-          // --- READ/WRITE: where filtreleme ---
-          if (UNIQUE_OPS.has(operation)) {
-            a.where = { ...(a.where ?? {}), tenantId };
-          } else if (
-            operation.startsWith('find') ||
-            operation === 'count' ||
-            operation === 'aggregate' ||
-            operation === 'groupBy' ||
-            operation === 'updateMany' ||
-            operation === 'deleteMany'
-          ) {
-            a.where = { AND: [{ tenantId }, a.where ?? {}] };
-          }
-
-          return query(a);
-        },
+        const a = applyTenantScope(model, operation, args, tenantId);
+        return RLS_ENABLED ? withRls(() => query(a)) : query(a);
       },
     },
   });
+  return client;
 }
 
 export type TenantDb = ReturnType<typeof makeTenantClient>;
@@ -134,6 +167,7 @@ export function dbFor(tenantId: string): TenantDb {
 
 // Platform-seviyesi erişim (kayıt, süper-admin, abonelik cron'u).
 // SADECE routes/platform/* ve main.ts scheduler'ları kullanmalı — CI grep korur.
+// Owner roldür → RLS bypass (cross-tenant okuma yapabilir).
 export const platformDb = base;
 
 // Helper/lib imzaları için: hem req.db (TenantDb) hem platformDb (PrismaClient)
