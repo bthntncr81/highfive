@@ -251,3 +251,55 @@ export const session = {
   },
 };
 
+
+// ============================================================================
+// Tenant tema bootstrap — SPA'lar (POS/Kitchen/sipariş sitesi) için.
+// ============================================================================
+// /api/public/theme (subdomain'den çözülür) → CSS değişkenleri (--color-*) +
+// font. FOUC yok: önce localStorage cache anında uygulanır, sonra taze çekilir.
+// Tailwind config'i rgb(var(--color-primary) / <alpha>) kullanır.
+
+export interface TenantTheme {
+  name: string;
+  subdomain: string | null;
+  logoUrl: string | null;
+  fontFamily: string;
+  colors: Record<string, string>; // "220 38 38" gibi rgb kanalları
+}
+
+const THEME_CACHE_KEY = 'otorder.theme';
+
+export function applyTenantTheme(theme: TenantTheme): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  for (const [name, rgb] of Object.entries(theme.colors || {})) {
+    root.style.setProperty(`--color-${name}`, rgb);
+  }
+  if (theme.fontFamily) root.style.setProperty('--font-family', theme.fontFamily);
+  if (theme.name) document.title = theme.name;
+}
+
+// SPA girişinde çağrılır. cache anahtarı subdomain'e göre — çapraz tenant sızmaz.
+export async function bootstrapTenantTheme(apiBaseUrl = ''): Promise<TenantTheme | null> {
+  if (typeof window === 'undefined') return null;
+  const sub = window.location.hostname.split('.')[0];
+  const cacheKey = `${THEME_CACHE_KEY}.${sub}`;
+
+  // 1) Cache'i anında uygula (FOUC yok)
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) applyTenantTheme(JSON.parse(cached));
+  } catch { /* ignore */ }
+
+  // 2) Taze çek + uygula + cache'le
+  try {
+    const res = await fetch(`${apiBaseUrl}/api/settings/public/theme`);
+    if (!res.ok) return null;
+    const theme = (await res.json()) as TenantTheme;
+    applyTenantTheme(theme);
+    try { localStorage.setItem(cacheKey, JSON.stringify(theme)); } catch { /* ignore */ }
+    return theme;
+  } catch {
+    return null;
+  }
+}

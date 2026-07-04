@@ -84,6 +84,30 @@ export default async function settingsRoutes(server: FastifyInstance) {
     return { services };
   });
 
+  // Public tema — SPA bootstrap (POS/Kitchen/sipariş sitesi) subdomain'den çeker.
+  // { colors, logoUrl, fontFamily, name }. Sır yok; localStorage'da cache'lenir.
+  server.get('/public/theme', async (request: FastifyRequest) => {
+    const themeSetting = await request.db.settings.findFirst({ where: { key: 'theme' } });
+    const t = (themeSetting?.value as Record<string, any>) || {};
+    const tenant = (request as any).tenant as { name?: string; subdomain?: string } | undefined;
+    // OtOrder varsayılan paleti (tenant override etmezse)
+    const colors = {
+      primary: t.primary || '220 38 38',      // rgb kanalları (tailwind rgb(var(--...)))
+      secondary: t.secondary || '15 23 42',
+      accent: t.accent || '234 88 12',
+      background: t.background || '255 255 255',
+      foreground: t.foreground || '15 23 42',
+      ...(t.colors || {}),
+    };
+    return {
+      name: tenant?.name || t.name || 'OtOrder',
+      subdomain: tenant?.subdomain || null,
+      logoUrl: t.logoUrl || null,
+      fontFamily: t.fontFamily || 'Inter, system-ui, sans-serif',
+      colors,
+    };
+  });
+
   // Backup all settings (tenant'ın verisi)
   server.get('/backup', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const settings = await request.db.settings.findMany();
