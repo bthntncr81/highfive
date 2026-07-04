@@ -23,7 +23,7 @@
     "@types/uuid": "^11.0.0",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.0",
-    "@vitest/ui": "^4.0.0",
+    "@vitest/ui": "^2.1.9",
     "autoprefixer": "^10.4.23",
     "esbuild": "^0.19.2",
     "expo-server-sdk": "^3.15.0",
