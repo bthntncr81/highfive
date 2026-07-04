@@ -1,8 +1,8 @@
+import type { DbLike } from './tenant-db';
 // Expo Push Notification helper
 // FCM (Android) ve APNs (iOS) üstüne Expo'nun servisi.
 
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
-import { PrismaClient } from '@prisma/client';
 
 const expo = new Expo({
   // EAS Access Token — projenin push'a yetkili olması için gerekli
@@ -73,7 +73,7 @@ export async function sendPushToTokens(
 
 // Hedef segmentine göre push gönder + DB'ye kaydet
 export async function sendCampaignPush(
-  prisma: PrismaClient,
+  prisma: DbLike,
   args: {
     title: string;
     body: string;

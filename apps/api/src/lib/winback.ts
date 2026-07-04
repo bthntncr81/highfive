@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Win-back — uzun süredir sipariş geçmeyen müşterilere otomatik kampanya push'u.
 //
 // Mantık:
@@ -9,7 +10,6 @@
 //
 // Cron: günde 1 kere, sabah 10:00 (Türkiye saati). daily-close.ts pattern'i.
 
-import { PrismaClient } from '@prisma/client';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
 const WINBACK_AFTER_DAYS = 14;
@@ -22,7 +22,7 @@ const expo = new Expo({
 });
 
 export async function runWinbackCampaign(
-  prisma: PrismaClient,
+  prisma: DbLike,
 ): Promise<{ targeted: number; sent: number }> {
   const now = new Date();
   const orderCutoff = new Date(now.getTime() - WINBACK_AFTER_DAYS * 24 * 60 * 60 * 1000);
@@ -128,7 +128,7 @@ export async function runWinbackCampaign(
 /**
  * Server başlatıldığında çağrılır. Günde 1 kere sabah 10:00'da çalışır.
  */
-export function startWinbackScheduler(prisma: PrismaClient): NodeJS.Timeout {
+export function startWinbackScheduler(prisma: DbLike): NodeJS.Timeout {
   return setInterval(async () => {
     const now = new Date();
     if (now.getHours() !== 10 || now.getMinutes() > 4) return;

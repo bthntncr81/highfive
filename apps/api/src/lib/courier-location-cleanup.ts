@@ -1,12 +1,12 @@
+import type { DbLike } from './tenant-db';
 // Courier location TTL cleanup.
 // 24 saatten eski kayıtları siler. Tablo şişmesin diye günde 1 kez çalışır.
 
-import { PrismaClient } from '@prisma/client';
 
 const RETENTION_HOURS = 24;
 const BATCH_SIZE = 5000;
 
-export async function cleanupOldCourierLocations(prisma: PrismaClient): Promise<number> {
+export async function cleanupOldCourierLocations(prisma: DbLike): Promise<number> {
   const cutoff = new Date(Date.now() - RETENTION_HOURS * 60 * 60 * 1000);
   let totalDeleted = 0;
 
@@ -31,7 +31,7 @@ export async function cleanupOldCourierLocations(prisma: PrismaClient): Promise<
   return totalDeleted;
 }
 
-export function scheduleCourierLocationCleanup(prisma: PrismaClient) {
+export function scheduleCourierLocationCleanup(prisma: DbLike) {
   // İlk tick — app boot'tan 5dk sonra (DB ısınsın)
   setTimeout(() => {
     cleanupOldCourierLocations(prisma)

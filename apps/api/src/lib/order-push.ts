@@ -1,7 +1,8 @@
+import type { DbLike } from './tenant-db';
 // Order lifecycle push notifications (müşteri mobil uygulamasına)
 // orders.ts içinde status değişimi sonrası çağrılır.
 
-import type { PrismaClient, Order } from '@prisma/client';
+import type { Order } from '@prisma/client';
 import { sendPushToTokens } from './push';
 
 type OrderStatusKey =
@@ -56,7 +57,7 @@ const STATUS_TEMPLATES: Record<
 
 // Müşteriye bağlı aktif device token'ları getir (telefon match veya CustomerOrder bağlantısı)
 async function findCustomerTokensForOrder(
-  prisma: PrismaClient,
+  prisma: DbLike,
   order: Pick<Order, 'id' | 'customerPhone'>,
 ): Promise<{ tokens: string[]; customerId: string | null }> {
   // 1) CustomerOrder üzerinden direct bağ
@@ -103,7 +104,7 @@ function normalizePhone(input: string | null | undefined): string | null {
 }
 
 export async function sendOrderStatusPush(
-  prisma: PrismaClient,
+  prisma: DbLike,
   order: Pick<Order, 'id' | 'orderNumber' | 'customerPhone' | 'status'>,
   status: string,
 ): Promise<void> {
@@ -128,7 +129,7 @@ export async function sendOrderStatusPush(
 
 // Yeni sipariş oluşturulduğunda (mobile veya başka source)
 export async function sendOrderCreatedPush(
-  prisma: PrismaClient,
+  prisma: DbLike,
   order: Pick<Order, 'id' | 'orderNumber' | 'customerPhone' | 'status'>,
 ): Promise<void> {
   await sendOrderStatusPush(prisma, order, 'PENDING');

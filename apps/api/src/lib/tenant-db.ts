@@ -135,3 +135,7 @@ export function dbFor(tenantId: string): TenantDb {
 // Platform-seviyesi erişim (kayıt, süper-admin, abonelik cron'u).
 // SADECE routes/platform/* ve main.ts scheduler'ları kullanmalı — CI grep korur.
 export const platformDb = base;
+
+// Helper/lib imzaları için: hem req.db (TenantDb) hem platformDb (PrismaClient)
+// kabul eden sınır tipi. İç kullanımda tek cast yeterli: `db as TenantDb`.
+export type DbLike = TenantDb | PrismaClient;

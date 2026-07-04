@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Builder Expansion — kullanıcının "kendi pizzasını/sandviçini yap" cart item'ını
 // order item'a dönüştürür ve fiyatı SERVER-SIDE yeniden doğrular.
 //
@@ -8,7 +9,7 @@
 // Manipülasyon önlenir: client'ın gönderdiği fiyat backend'in hesapladığıyla
 // eşleşmiyorsa order reddedilir.
 
-import { PrismaClient, BuilderType } from '@prisma/client';
+import { BuilderType } from '@prisma/client';
 
 export type BuilderCartItem = {
   // Cart id formatı: "builder:pizza:<baseId>:<ingredientIds.sorted>"
@@ -66,7 +67,7 @@ function parseCartId(cartId: string): {
  * client'ın gönderdiği price ile eşleşmezse hata döner.
  */
 export async function expandBuilderItem(
-  prisma: PrismaClient,
+  prisma: DbLike,
   item: BuilderCartItem,
 ): Promise<BuilderExpansionResult> {
   const parsed = parseCartId(item.id);

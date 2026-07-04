@@ -1,13 +1,14 @@
+import type { DbLike } from './tenant-db';
 // Sipariş tamamlandığında customer'a puan ekle
 // Tetikleyici: order COMPLETED (POS) veya DELIVERED (kurye)
 // Güvenli idempotent — çift puanlama yapmaz.
 
-import type { PrismaClient, Order } from '@prisma/client';
+import type { Order } from '@prisma/client';
 import { sendPushToTokens } from './push';
 import { checkAchievementsForCustomer } from './achievement-checker';
 
 export async function awardMobileOrderPoints(
-  prisma: PrismaClient,
+  prisma: DbLike,
   order: Pick<Order, 'id' | 'orderNumber' | 'subtotal' | 'customerPhone'>,
 ): Promise<void> {
   // CustomerOrder bağlantısı var mı?
@@ -92,7 +93,7 @@ export async function awardMobileOrderPoints(
   }
 }
 
-async function maybeUpgradeTier(prisma: PrismaClient, customerId: string): Promise<void> {
+async function maybeUpgradeTier(prisma: DbLike, customerId: string): Promise<void> {
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer) return;
 

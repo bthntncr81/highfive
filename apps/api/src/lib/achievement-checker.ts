@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Achievement Auto-Unlock — sipariş tamamlandığında customer'ın açabileceği
 // rozetleri otomatik unlock eder. Yeni unlock olan rozetler için push gönderir.
 //
@@ -6,7 +7,6 @@
 //
 // Tüm logic SERVER-SIDE. Client manipule edemez.
 
-import type { PrismaClient } from '@prisma/client';
 import { sendPushToTokens } from './push';
 
 type Criteria = Record<string, any>;
@@ -16,7 +16,7 @@ type Criteria = Record<string, any>;
  * Yeni unlock olan rozetler döner.
  */
 export async function checkAchievementsForCustomer(
-  prisma: PrismaClient,
+  prisma: DbLike,
   customerId: string,
 ): Promise<{ id: string; key: string; name: string; icon: string; rewardPoints: number }[]> {
   const customer = await prisma.customer.findUnique({

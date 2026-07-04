@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Order arrival email alerts. When a new DELIVERY or TAKEAWAY order comes in from
 // an external channel (web, WhatsApp, mobile), email the full order — items,
 // customer, address + Google Maps link, total — to the recipients configured in
@@ -7,7 +8,6 @@
 // creation or payment processing. Delivery goes through Resend (mailer.ts), the
 // only channel that works from this host (ISP blocks outbound SMTP).
 
-import { PrismaClient } from '@prisma/client';
 import { sendMail } from './mailer';
 
 const ACCENT = '#bb1e10';
@@ -200,7 +200,7 @@ function buildHtml(order: any, forCustomer = false): string {
 }
 
 export async function notifyNewOrder(
-  prisma: PrismaClient,
+  prisma: DbLike,
   orderId: string,
 ): Promise<void> {
   try {

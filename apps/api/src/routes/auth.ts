@@ -2,9 +2,10 @@ import * as bcrypt from 'bcryptjs';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
 import { sendMail, emailOtpTemplate, welcomeTemplate } from '../lib/mailer';
+import { signStaffToken } from '../middleware/auth';
+import { dbFor, platformDb } from '../lib/tenant-db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = 60 * 60 * 24 * 7; // 7 days in seconds
 const CUSTOMER_OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const CUSTOMER_JWT_AUDIENCE = 'customer';
 
@@ -17,51 +18,94 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
+// Membership + tenant bilgisini istemciye dönecek şekle indirger
+function membershipSummary(m: { tenantId: string; role: string; locationId: string | null; tenant: { name: string; subdomain: string } }) {
+  return {
+    tenantId: m.tenantId,
+    tenantName: m.tenant.name,
+    subdomain: m.tenant.subdomain,
+    role: m.role,
+    locationId: m.locationId,
+  };
+}
+
 export default async function authRoutes(server: FastifyInstance) {
-  // Login with email and password
+  // ------------------------------------------------------------------
+  // E-posta + şifre girişi (çok-kiracılı):
+  //  - Kimlik platform-seviyesinde (User.email global unique)
+  //  - Yetki Membership'ten gelir. Tenant şu sırayla seçilir:
+  //      1. subdomain/X-Tenant-ID ile çözülen istek tenant'ı
+  //      2. body.tenantId (çok üyelikli kullanıcı, seçim ekranından)
+  //      3. tek üyelik varsa otomatik
+  //      4. çok üyelik + seçim yok → üyelik listesi döner (client seçtirir)
+  // ------------------------------------------------------------------
   server.post(
     '/login',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const { email, password } = request.body as {
+      const { email, password, tenantId: bodyTenantId } = request.body as {
         email: string;
         password: string;
+        tenantId?: string;
       };
 
       if (!email || !password) {
         return reply.status(400).send({ error: 'Email ve şifre gerekli' });
       }
 
-      const user = await request.db.user.findUnique({
-        where: { email },
-      });
-
+      // Kimlik: platform-seviyesi (tenant bağlamı gerektirmez)
+      const user = await platformDb.user.findUnique({ where: { email } });
       if (!user || !user.active) {
         return reply.status(401).send({ error: 'Geçersiz email veya şifre' });
       }
-
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return reply.status(401).send({ error: 'Geçersiz email veya şifre' });
       }
 
-      const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-        expiresIn: JWT_EXPIRES_IN,
+      const memberships = await platformDb.membership.findMany({
+        where: { userId: user.id, active: true },
+        include: { tenant: { select: { name: true, subdomain: true, status: true } } },
+      });
+      if (memberships.length === 0) {
+        return reply.status(403).send({ error: 'Aktif restoran üyeliğiniz yok' });
+      }
+
+      // Tenant seçimi
+      const reqTenantId = (request as any).tenant?.id as string | undefined;
+      let selected = reqTenantId
+        ? memberships.find((m) => m.tenantId === reqTenantId)
+        : bodyTenantId
+          ? memberships.find((m) => m.tenantId === bodyTenantId)
+          : memberships.length === 1
+            ? memberships[0]
+            : undefined;
+
+      if (reqTenantId && !selected) {
+        return reply.status(403).send({ error: 'Bu restoranda üyeliğiniz yok' });
+      }
+      if (!selected) {
+        // Çok üyelik — istemci seçim ekranı göstersin
+        return {
+          requiresTenantSelection: true,
+          memberships: memberships.map(membershipSummary),
+        };
+      }
+      if (selected.tenant.status === 'SUSPENDED') {
+        return reply.status(402).send({ error: 'Hesap askıda — ödeme gerekli', code: 'TENANT_SUSPENDED' });
+      }
+
+      const token = signStaffToken({
+        userId: user.id,
+        tenantId: selected.tenantId,
+        role: selected.role,
+        locationId: selected.locationId ?? undefined,
       });
 
-      // Create session
+      const db = dbFor(selected.tenantId);
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
-
-      await request.db.session.create({
-        data: {
-          userId: user.id,
-          token,
-          expiresAt,
-        },
-      });
-
-      // Log activity
-      await request.db.activityLog.create({
+      await db.session.create({ data: { userId: user.id, token, expiresAt } });
+      await db.activityLog.create({
         data: {
           userId: user.id,
           action: 'LOGIN',
@@ -76,54 +120,52 @@ export default async function authRoutes(server: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: selected.role,
           avatar: user.avatar,
+          locationId: selected.locationId,
+          tenant: membershipSummary(selected),
         },
       };
     },
   );
 
   // -----------------------------------------------------------------
-  // 6 haneli şifre ile giriş — TEK giriş yöntemi (POS web + POS/Kitchen mobile).
-  // Kullanıcı adı / e-posta gerekmez. Sadece 6 haneli sayısal şifre (User.pin).
+  // PIN girişi — TENANT-SCOPED (PIN artık Membership'te, tenant içinde benzersiz).
+  // Tenant bağlamı zorunlu: subdomain veya X-Tenant-ID.
   // -----------------------------------------------------------------
   server.post(
     '/pin-login',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { pin } = request.body as { pin: string };
-
-      if (!pin || !/^\d{6}$/.test(pin)) {
-        return reply.status(400).send({ error: '6 haneli şifre giriniz' });
+      if (!pin || !/^\d{4,6}$/.test(pin)) {
+        return reply.status(400).send({ error: 'Geçerli bir PIN giriniz' });
+      }
+      const tenant = (request as any).tenant;
+      if (!tenant) {
+        return reply.status(400).send({ error: 'Restoran belirlenemedi (subdomain veya X-Tenant-ID gerekli)' });
       }
 
-      const user = await request.db.user.findFirst({
+      const membership = await request.db.membership.findFirst({
         where: { pin, active: true },
+        include: { user: true, tenant: { select: { name: true, subdomain: true } } },
       });
-
-      if (!user) {
+      if (!membership || !membership.user.active) {
         return reply.status(401).send({ error: 'Geçersiz şifre' });
       }
+      const user = membership.user;
 
-      const token = jwt.sign(
-        { userId: user.id, role: user.role },
-        JWT_SECRET,
-        { expiresIn: 60 * 60 * 24 * 7 }, // 7 gün
-      );
+      const token = signStaffToken({
+        userId: user.id,
+        tenantId: membership.tenantId,
+        role: membership.role,
+        locationId: membership.locationId ?? undefined,
+      });
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
-
-      await request.db.session.create({
-        data: { userId: user.id, token, expiresAt },
-      });
-
+      await request.db.session.create({ data: { userId: user.id, token, expiresAt } });
       await request.db.activityLog.create({
-        data: {
-          userId: user.id,
-          action: 'LOGIN',
-          details: { method: 'pin' },
-          ipAddress: request.ip,
-        },
+        data: { userId: user.id, action: 'LOGIN', details: { method: 'pin' }, ipAddress: request.ip },
       });
 
       return {
@@ -132,10 +174,10 @@ export default async function authRoutes(server: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: membership.role,
           avatar: user.avatar,
           phone: user.phone,
-          locationId: user.locationId,
+          locationId: membership.locationId,
           isOnline: user.isOnline,
         },
       };
@@ -143,47 +185,42 @@ export default async function authRoutes(server: FastifyInstance) {
   );
 
   // -----------------------------------------------------------------
-  // Kurye girişi — aynı 6 haneli şifre, server tarafında role=COURIER kontrolü.
+  // Kurye girişi — PIN + rol=COURIER kontrolü (tenant-scoped)
   // -----------------------------------------------------------------
   server.post(
     '/courier-login',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { pin } = request.body as { pin?: string };
-
-      if (!pin || !/^\d{6}$/.test(pin)) {
-        return reply.status(400).send({ error: '6 haneli şifre giriniz' });
+      if (!pin || !/^\d{4,6}$/.test(pin)) {
+        return reply.status(400).send({ error: 'Geçerli bir PIN giriniz' });
+      }
+      if (!(request as any).tenant) {
+        return reply.status(400).send({ error: 'Restoran belirlenemedi (subdomain veya X-Tenant-ID gerekli)' });
       }
 
-      const user = await request.db.user.findFirst({
+      const membership = await request.db.membership.findFirst({
         where: { pin, active: true },
+        include: { user: true },
       });
-
-      if (!user || user.role !== 'COURIER') {
+      if (!membership || !membership.user.active || membership.role !== 'COURIER') {
         return reply
           .status(401)
           .send({ error: 'Geçersiz şifre veya bu hesap kurye hesabı değil' });
       }
+      const user = membership.user;
 
-      const token = jwt.sign(
-        { userId: user.id, role: user.role },
-        JWT_SECRET,
-        { expiresIn: 60 * 60 * 24 * 7 },
-      );
+      const token = signStaffToken({
+        userId: user.id,
+        tenantId: membership.tenantId,
+        role: membership.role,
+        locationId: membership.locationId ?? undefined,
+      });
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
-
-      await request.db.session.create({
-        data: { userId: user.id, token, expiresAt },
-      });
-
+      await request.db.session.create({ data: { userId: user.id, token, expiresAt } });
       await request.db.activityLog.create({
-        data: {
-          userId: user.id,
-          action: 'LOGIN',
-          details: { method: 'courier-pin' },
-          ipAddress: request.ip,
-        },
+        data: { userId: user.id, action: 'LOGIN', details: { method: 'courier-pin' }, ipAddress: request.ip },
       });
 
       return {
@@ -192,17 +229,17 @@ export default async function authRoutes(server: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: membership.role,
           avatar: user.avatar,
           phone: user.phone,
-          locationId: user.locationId,
+          locationId: membership.locationId,
           isOnline: user.isOnline,
         },
       };
     },
   );
 
-  // Logout
+  // Logout — token'lı istek: hook tenant'ı JWT'den çözer, req.db scoped'tur
   server.post(
     '/logout',
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -210,81 +247,53 @@ export default async function authRoutes(server: FastifyInstance) {
       if (!authHeader) {
         return reply.status(401).send({ error: 'Token gerekli' });
       }
-
       const token = authHeader.replace('Bearer ', '');
-
-      await request.db.session.deleteMany({
-        where: { token },
-      });
-
+      await request.db.session.deleteMany({ where: { token } });
       return { success: true };
     },
   );
 
-  // Get current user (staff token gerekli — customer token reddedilir)
-  server.get('/me', async (request: FastifyRequest, reply: FastifyReply) => {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) {
-      return reply.status(401).send({ error: 'Token gerekli' });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; customerId?: string };
-      if (!decoded.userId) {
-        return reply.status(401).send({ error: 'Bu endpoint personel/kurye token gerektirir' });
-      }
-
-      const user = await request.db.user.findUnique({
-        where: { id: decoded.userId },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          avatar: true,
-          phone: true,
-          locationId: true,
-          isOnline: true,
-          lastSeenAt: true,
-          active: true,
-        },
-      });
-
-      if (!user || !user.active) {
-        return reply.status(401).send({ error: 'Kullanıcı bulunamadı' });
-      }
-
-      return { user };
-    } catch (err) {
-      return reply.status(401).send({ error: 'Geçersiz token' });
-    }
-  });
-
-  // POST /me — alternatif (bazı mobile-shared client'lar POST yapar)
-  server.post('/me', async (request: FastifyRequest, reply: FastifyReply) => {
+  // Ortak /me handler'ı (GET + POST aynı davranış)
+  async function meHandler(request: FastifyRequest, reply: FastifyReply) {
     const authHeader = request.headers.authorization;
     if (!authHeader) return reply.status(401).send({ error: 'Token gerekli' });
     const token = authHeader.replace('Bearer ', '');
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string };
-      if (!decoded.userId) return reply.status(401).send({ error: 'Personel token gerekli' });
-      const user = await request.db.user.findUnique({
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; tenantId?: string };
+      if (!decoded.userId) {
+        return reply.status(401).send({ error: 'Bu endpoint personel/kurye token gerektirir' });
+      }
+      const user = await platformDb.user.findUnique({
         where: { id: decoded.userId },
         select: {
-          id: true, email: true, name: true, role: true, avatar: true,
-          phone: true, locationId: true, isOnline: true, lastSeenAt: true, active: true,
+          id: true, email: true, name: true, avatar: true,
+          phone: true, isOnline: true, lastSeenAt: true, active: true,
         },
       });
-      if (!user || !user.active) return reply.status(401).send({ error: 'Kullanıcı bulunamadı' });
-      return { user };
+      if (!user || !user.active) {
+        return reply.status(401).send({ error: 'Kullanıcı bulunamadı' });
+      }
+      // Rol/şube üyelikten (token'daki tenant için)
+      const membership = decoded.tenantId
+        ? await platformDb.membership.findUnique({
+            where: { userId_tenantId: { userId: user.id, tenantId: decoded.tenantId } },
+          })
+        : null;
+      return {
+        user: {
+          ...user,
+          role: membership?.role ?? null,
+          locationId: membership?.locationId ?? null,
+        },
+      };
     } catch {
       return reply.status(401).send({ error: 'Geçersiz token' });
     }
-  });
+  }
+  server.get('/me', meHandler);
+  server.post('/me', meHandler); // bazı mobile-shared client'lar POST yapar
 
-  // Change password
+  // Change password — kimlik platform-seviyesi
   server.post(
     '/change-password',
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -292,69 +301,45 @@ export default async function authRoutes(server: FastifyInstance) {
       if (!authHeader) {
         return reply.status(401).send({ error: 'Token gerekli' });
       }
-
       const token = authHeader.replace('Bearer ', '');
       const { currentPassword, newPassword } = request.body as {
         currentPassword: string;
         newPassword: string;
       };
-
       if (!currentPassword || !newPassword) {
-        return reply
-          .status(400)
-          .send({ error: 'Mevcut ve yeni şifre gerekli' });
+        return reply.status(400).send({ error: 'Mevcut ve yeni şifre gerekli' });
       }
-
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-
-        const user = await request.db.user.findUnique({
-          where: { id: decoded.userId },
-        });
-
+        const user = await platformDb.user.findUnique({ where: { id: decoded.userId } });
         if (!user) {
           return reply.status(401).send({ error: 'Kullanıcı bulunamadı' });
         }
-
-        const validPassword = await bcrypt.compare(
-          currentPassword,
-          user.password,
-        );
+        const validPassword = await bcrypt.compare(currentPassword, user.password);
         if (!validPassword) {
           return reply.status(401).send({ error: 'Mevcut şifre yanlış' });
         }
-
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        await request.db.user.update({
+        await platformDb.user.update({
           where: { id: user.id },
           data: { password: hashedPassword },
         });
-
         await request.db.activityLog.create({
-          data: {
-            userId: user.id,
-            action: 'PASSWORD_CHANGE',
-            ipAddress: request.ip,
-          },
+          data: { userId: user.id, action: 'PASSWORD_CHANGE', ipAddress: request.ip },
         });
-
         return { success: true };
-      } catch (err) {
+      } catch {
         return reply.status(401).send({ error: 'Geçersiz token' });
       }
     },
   );
 
   // -----------------------------------------------------------------
-  // Customer (loyalty member) email + OTP flow
+  // Customer (loyalty member) email + OTP flow — TENANT-SCOPED
+  // (Customer.email/phone artık [tenantId, x] benzersiz → findFirst kullanılır;
+  //  req.db tenant filtresini otomatik enjekte eder. Sipariş sitesi subdomain'i
+  //  tenant'ı çözer.)
   // -----------------------------------------------------------------
-  // Two endpoints:
-  //   POST /customer/email/request-otp   — generates a 6-digit code, stores
-  //     it on the Customer row (creating the Customer if first sight), and
-  //     mails it via the HighFive branded template.
-  //   POST /customer/email/verify-otp    — checks the code, marks isVerified,
-  //     fires a welcome email on first verification, returns a customer JWT.
 
   server.post('/customer/email/request-otp', async (request: FastifyRequest, reply: FastifyReply) => {
     const {
@@ -396,9 +381,9 @@ export default async function authRoutes(server: FastifyInstance) {
       : undefined;
     const cleanPhone = phone ? phone.replace(/\D/g, '').trim() || undefined : undefined;
 
-    // Phone uniqueness — başka customer aynı phone ile kullanmasın
+    // Phone uniqueness — aynı tenant içinde başka customer aynı phone kullanmasın
     if (cleanPhone) {
-      const phoneOwner = await request.db.customer.findUnique({ where: { phone: cleanPhone } });
+      const phoneOwner = await request.db.customer.findFirst({ where: { phone: cleanPhone } });
       if (phoneOwner && phoneOwner.email !== cleaned) {
         return reply.status(400).send({
           error: 'Bu telefon başka bir hesaba kayıtlı',
@@ -407,8 +392,8 @@ export default async function authRoutes(server: FastifyInstance) {
       }
     }
 
-    // Find or create. Email is @unique so this is safe.
-    let customer = await request.db.customer.findUnique({ where: { email: cleaned } });
+    // Find or create — [tenantId, email] benzersiz; req.db tenant'ı filtreler.
+    let customer = await request.db.customer.findFirst({ where: { email: cleaned } });
     const code = generateOtp();
     const expiresAt = new Date(Date.now() + CUSTOMER_OTP_TTL_MS);
 
@@ -490,7 +475,7 @@ export default async function authRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'E-posta ve kod gerekli' });
     }
     const cleaned = email.toLowerCase().trim();
-    const customer = await request.db.customer.findUnique({ where: { email: cleaned } });
+    const customer = await request.db.customer.findFirst({ where: { email: cleaned } });
     if (!customer || !customer.verificationCode) {
       return reply.status(400).send({ error: 'Önce kod talebinde bulun' });
     }
@@ -523,8 +508,9 @@ export default async function authRoutes(server: FastifyInstance) {
       }).catch(() => { /* don't block login on welcome email */ });
     }
 
+    // Customer token da tenant taşır (mobil app X-Tenant-ID yerine bundan da çözülebilir)
     const token = jwt.sign(
-      { customerId: updated.id, email: updated.email, aud: CUSTOMER_JWT_AUDIENCE },
+      { customerId: updated.id, email: updated.email, tenantId: updated.tenantId, aud: CUSTOMER_JWT_AUDIENCE },
       JWT_SECRET,
       { expiresIn: '90d' },
     );

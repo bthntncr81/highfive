@@ -1,7 +1,7 @@
+import type { DbLike } from './tenant-db';
 // Cart Offers — sepete uygun en avantajlı sadakat programı/kuponu hesaplar
 // Stacking yok: birden çok program uygunsa, indirim değeri en yüksek olan seçilir.
 
-import { PrismaClient } from '@prisma/client';
 
 export type CartItem = {
   menuItemId: string;
@@ -47,7 +47,7 @@ function calcDiscount(
  * Döner: { bestOffer (en avantajlı), allOffers (görsel için sıralı liste) }
  */
 export async function evaluateCartOffers(
-  prisma: PrismaClient,
+  prisma: DbLike,
   customerId: string | null,
   cart: CartItem[],
 ): Promise<{ bestOffer: CartOffer | null; allOffers: CartOffer[] }> {

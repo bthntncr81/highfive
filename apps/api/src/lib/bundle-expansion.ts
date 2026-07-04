@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Reusable bundle expansion helper — mobile-orders + guest order için ortak.
 // Body'den gelen bundles[] dizisini valide eder, orderItems satırlarını
 // üretir, subtotal'a eklenecek tutarı döner.
@@ -7,7 +8,6 @@
 //   olarak gösterilir. Mobile her slot için ayrı seçim gönderir
 //   (assignmentId + slotIndex anahtarı).
 
-import { PrismaClient } from '@prisma/client';
 
 export type BundleSlotSelection = {
   assignmentId: string;          // BundleOptionGroupAssignment.id
@@ -39,7 +39,7 @@ export type BundleExpandResult =
   | { ok: false; error: string };
 
 export async function expandBundles(
-  prisma: PrismaClient,
+  prisma: DbLike,
   bundles: BundleRequest[],
 ): Promise<BundleExpandResult> {
   let subtotalDelta = 0;

@@ -1,12 +1,12 @@
+import type { DbLike } from './tenant-db';
 // Otomatik kampanya / happy hour push duyurusu
 // POS'ta admin yeni bir kampanya/happy hour oluştururken `notifyCustomers: true`
 // göndererek tetiklenir.
 
-import type { PrismaClient } from '@prisma/client';
 import { sendCampaignPush } from './push';
 
 export async function broadcastCampaignToMobile(
-  prisma: PrismaClient,
+  prisma: DbLike,
   args: {
     campaignId: string;
     title?: string;
@@ -39,7 +39,7 @@ export async function broadcastCampaignToMobile(
 }
 
 export async function broadcastHappyHourToMobile(
-  prisma: PrismaClient,
+  prisma: DbLike,
   args: {
     happyHourId: string;
     title?: string;

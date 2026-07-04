@@ -1,9 +1,10 @@
+import type { DbLike } from './tenant-db';
 // Loyalty Engine
 // Sipariş COMPLETED olunca aktif sadakat programlarını işler.
 // Her program tipi için ayrı handler. Ödülleri Coupon modeli üzerinden veya
 // direkt Customer alanlarına yazar.
 
-import type { PrismaClient, Order, Customer } from '@prisma/client';
+import type { Order, Customer } from '@prisma/client';
 import { sendPushToTokens } from './push';
 import * as crypto from 'crypto';
 
@@ -18,7 +19,7 @@ function generateCouponCode(prefix: string): string {
 
 // Müşterinin telefon push token'larını çek
 // 'nopush-' prefixli placeholder'lar (Personal Team iOS, simulator) hariç
-async function getCustomerPushTokens(prisma: PrismaClient, customerId: string): Promise<string[]> {
+async function getCustomerPushTokens(prisma: DbLike, customerId: string): Promise<string[]> {
   const devices = await prisma.deviceToken.findMany({
     where: {
       customerId,
@@ -32,7 +33,7 @@ async function getCustomerPushTokens(prisma: PrismaClient, customerId: string): 
 
 // Müşteriye push gönder (preference kontrol)
 async function sendLoyaltyPush(
-  prisma: PrismaClient,
+  prisma: DbLike,
   customerId: string,
   title: string,
   body: string,
@@ -47,7 +48,7 @@ async function sendLoyaltyPush(
 
 // Progress kaydını upsert et
 async function getOrCreateProgress(
-  prisma: PrismaClient,
+  prisma: DbLike,
   customerId: string,
   programId: string,
   defaultData: ProgramData = {},
@@ -62,7 +63,7 @@ async function getOrCreateProgress(
 }
 
 async function updateProgress(
-  prisma: PrismaClient,
+  prisma: DbLike,
   customerId: string,
   programId: string,
   data: ProgramData,
@@ -89,7 +90,7 @@ function tierConfig(program: AnyProgram, customer: Customer & { loyaltyTier?: an
 
 // 1) STAMP_CARD — sipariş kalemleri (applicableMenuItemIds ile filter) eşleşiyorsa damga ekle
 async function handleStampCard(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer & { loyaltyTier?: any },
   order: Order & { items: any[] },
@@ -140,7 +141,7 @@ async function handleStampCard(
   }
 }
 
-async function createStampReward(prisma: PrismaClient, program: AnyProgram, customer: Customer) {
+async function createStampReward(prisma: DbLike, program: AnyProgram, customer: Customer) {
   const rewardType = program.config?.rewardType ?? 'FREE_ITEM';
   const code = generateCouponCode('STAMP');
   const validUntil = new Date(Date.now() + 30 * 86400_000); // 30 gün
@@ -198,7 +199,7 @@ async function createStampReward(prisma: PrismaClient, program: AnyProgram, cust
 
 // 2) CASHBACK — harcamanın %X'ini wallet'a ekle
 async function handleCashback(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
   order: Order,
@@ -229,7 +230,7 @@ async function handleCashback(
 
 // 3) MILESTONE — orderCount kontrol et, yeni milestone aşıldıysa kupon
 async function handleMilestone(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
 ) {
@@ -296,7 +297,7 @@ async function handleMilestone(
 
 // 4) STREAK — periyot kontrolü
 async function handleStreak(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
 ) {
@@ -365,7 +366,7 @@ async function handleStreak(
 
 // 5) WELCOME — ilk siparişte tetiklenir
 async function handleWelcome(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
 ) {
@@ -442,7 +443,7 @@ async function handleWelcome(
 
 // 6) REFERRAL — bu müşteri ilk siparişini tamamladı, davet edenine puan ver
 async function handleReferral(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
   order: Order,
@@ -488,7 +489,7 @@ async function handleReferral(
 
 // 7) HAPPY_HOUR_POINTS — sipariş saati aralıktaysa bonus puan
 async function handleHappyHourPoints(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
   order: Order,
@@ -525,7 +526,7 @@ async function handleHappyHourPoints(
 
 // 8) PRODUCT_VIP — belirli ürünleri saymak
 async function handleProductVip(
-  prisma: PrismaClient,
+  prisma: DbLike,
   program: AnyProgram,
   customer: Customer,
   order: Order & { items: any[] },
@@ -591,7 +592,7 @@ async function handleProductVip(
 // =====================================================
 
 export async function processOrderForLoyalty(
-  prisma: PrismaClient,
+  prisma: DbLike,
   orderId: string,
 ): Promise<void> {
   // Bu order için CustomerOrder bağı var mı?
@@ -654,7 +655,7 @@ export async function processOrderForLoyalty(
 // BIRTHDAY CRON — günlük (sabah 09:00 gibi) çalışır
 // =====================================================
 
-export async function processBirthdayPrograms(prisma: PrismaClient): Promise<void> {
+export async function processBirthdayPrograms(prisma: DbLike): Promise<void> {
   const programs = await prisma.loyaltyProgram.findMany({
     where: { isActive: true, type: 'BIRTHDAY' },
   });

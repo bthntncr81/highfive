@@ -1,3 +1,4 @@
+import type { DbLike } from './tenant-db';
 // Daily auto-close — her gece 00:00'da çalışır:
 //   - Bir önceki gün açılmış ve hala tamamlanmamış (PENDING, CONFIRMED,
 //     PREPARING, READY, SERVED) tüm siparişleri COMPLETED yapar.
@@ -9,7 +10,7 @@
 // unutursa veya masada saat 12'yi geçen siparişler kalırsa, ertesi gün
 // POS açıldığında masalar temiz olur.
 
-import { PrismaClient, OrderStatus, TableStatus } from '@prisma/client';
+import { OrderStatus, TableStatus } from '@prisma/client';
 
 const OPEN_STATUSES: OrderStatus[] = [
   OrderStatus.PENDING,
@@ -19,7 +20,7 @@ const OPEN_STATUSES: OrderStatus[] = [
   OrderStatus.SERVED,
 ];
 
-export async function closeOpenOrdersAtEndOfDay(prisma: PrismaClient): Promise<{
+export async function closeOpenOrdersAtEndOfDay(prisma: DbLike): Promise<{
   closedOrderIds: string[];
   freedTableIds: string[];
 }> {
@@ -82,7 +83,7 @@ export async function closeOpenOrdersAtEndOfDay(prisma: PrismaClient): Promise<{
  */
 let lastRunDay: string | null = null;
 
-export function startDailyCloseScheduler(prisma: PrismaClient): NodeJS.Timeout {
+export function startDailyCloseScheduler(prisma: DbLike): NodeJS.Timeout {
   return setInterval(async () => {
     const now = new Date();
     // Gece 00:00 — 00:04 arasıysa tetikle (5 dakikalık güvenli pencere)

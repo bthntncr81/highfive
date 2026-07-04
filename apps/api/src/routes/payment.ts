@@ -1,41 +1,51 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { broadcastNewOrder } from '../websocket';
 import { notifyNewOrder } from '../lib/order-notify';
 import { sendOrderStatusPush } from '../lib/order-push';
+import { dbFor, platformDb, type DbLike, type TenantDb } from '../lib/tenant-db';
 import * as crypto from 'crypto';
 
-// iyzico Configuration - read from settings DB, fallback to env vars
-let IYZICO_API_KEY = process.env.IYZICO_API_KEY || '';
-let IYZICO_SECRET_KEY = process.env.IYZICO_SECRET_KEY || '';
-let IYZICO_BASE_URL = process.env.IYZICO_BASE_URL || 'https://api.iyzipay.com';
+// ============================================================================
+// iyzico yapılandırması — TENANT-BAŞINA (eski module-level global'ler iki
+// tenant'ta ÇAPRAZ ÖDEME SIZINTISI yapardı; kaldırıldı). Her tenant kendi
+// iyzico anahtarını Ayarlar'a girer; 60 sn cache'lenir, env yalnız fallback.
+// ============================================================================
+interface IyzicoCfg {
+  apiKey: string;
+  secretKey: string;
+  baseUrl: string;
+  at: number;
+}
+const iyzicoCache = new Map<string, IyzicoCfg>();
+const IYZICO_CFG_TTL = 60_000;
 
-async function loadIyzicoConfig(prisma: PrismaClient) {
+async function getIyzicoConfig(db: DbLike, tenantId: string): Promise<IyzicoCfg> {
+  const hit = iyzicoCache.get(tenantId);
+  if (hit && Date.now() - hit.at < IYZICO_CFG_TTL) return hit;
+
+  let apiKey = process.env.IYZICO_API_KEY || '';
+  let secretKey = process.env.IYZICO_SECRET_KEY || '';
+  let baseUrl = process.env.IYZICO_BASE_URL || 'https://api.iyzipay.com';
   try {
-    const setting = await prisma.settings.findUnique({ where: { key: 'services' } });
+    const setting = await (db as TenantDb).settings.findFirst({ where: { key: 'services' } });
     const services = setting?.value as any;
-    if (!services) return;
-
-    // Base URL — sandbox veya production
-    if (services.iyzicoBaseUrl) IYZICO_BASE_URL = services.iyzicoBaseUrl;
-
-    // Aktif moda göre sandbox/prod key seç (her iki mod ayrı kaydedilir)
-    const isSandbox = (services.iyzicoBaseUrl || IYZICO_BASE_URL).includes('sandbox');
-
-    if (isSandbox) {
-      // Sandbox modu — önce sandbox alanı, yoksa fallback genel alan, en son env
-      const sbKey = services.iyzicoSandboxApiKey || services.iyzicoApiKey;
-      const sbSecret = services.iyzicoSandboxSecretKey || services.iyzicoSecretKey;
-      if (sbKey) IYZICO_API_KEY = sbKey;
-      if (sbSecret) IYZICO_SECRET_KEY = sbSecret;
-    } else {
-      // Production modu
-      const prodKey = services.iyzicoProdApiKey || services.iyzicoApiKey;
-      const prodSecret = services.iyzicoProdSecretKey || services.iyzicoSecretKey;
-      if (prodKey) IYZICO_API_KEY = prodKey;
-      if (prodSecret) IYZICO_SECRET_KEY = prodSecret;
+    if (services) {
+      if (services.iyzicoBaseUrl) baseUrl = services.iyzicoBaseUrl;
+      const isSandbox = baseUrl.includes('sandbox');
+      if (isSandbox) {
+        apiKey = services.iyzicoSandboxApiKey || services.iyzicoApiKey || apiKey;
+        secretKey = services.iyzicoSandboxSecretKey || services.iyzicoSecretKey || secretKey;
+      } else {
+        apiKey = services.iyzicoProdApiKey || services.iyzicoApiKey || apiKey;
+        secretKey = services.iyzicoProdSecretKey || services.iyzicoSecretKey || secretKey;
+      }
     }
-  } catch (e) { /* fallback to env */ }
+  } catch { /* fallback to env */ }
+
+  const cfg: IyzicoCfg = { apiKey, secretKey, baseUrl, at: Date.now() };
+  iyzicoCache.set(tenantId, cfg);
+  return cfg;
 }
 
 /**
@@ -47,7 +57,7 @@ async function loadIyzicoConfig(prisma: PrismaClient) {
  * authorizationString = "apiKey:" + apiKey + "&randomKey:" + randomKey + "&signature:" + encryptedData
  * base64EncodedAuthorization = base64(authorizationString)
  */
-function generateAuthorizationHeader(uriPath: string, requestBody: string): { authorization: string; randomKey: string } {
+function generateAuthorizationHeader(cfg: IyzicoCfg, uriPath: string, requestBody: string): { authorization: string; randomKey: string } {
   // Generate random key (timestamp + random string)
   const randomKey = Date.now().toString() + crypto.randomBytes(8).toString('hex');
   
@@ -56,12 +66,12 @@ function generateAuthorizationHeader(uriPath: string, requestBody: string): { au
   
   // Generate HMACSHA256 signature
   const encryptedData = crypto
-    .createHmac('sha256', IYZICO_SECRET_KEY)
+    .createHmac('sha256', cfg.secretKey)
     .update(payload, 'utf8')
     .digest('hex');
   
   // Build authorization string
-  const authorizationString = `apiKey:${IYZICO_API_KEY}&randomKey:${randomKey}&signature:${encryptedData}`;
+  const authorizationString = `apiKey:${cfg.apiKey}&randomKey:${randomKey}&signature:${encryptedData}`;
   
   // Base64 encode
   const base64EncodedAuthorization = Buffer.from(authorizationString).toString('base64');
@@ -85,8 +95,8 @@ async function awardLoyaltyPoints(prisma: any, phone: string, orderId: string, t
     // Clean phone number
     const cleanPhone = phone.replace(/\D/g, '');
     
-    // Find customer by phone
-    const customer = await prisma.customer.findUnique({
+    // Find customer by phone — [tenantId, phone] composite; db zaten tenant-scoped
+    const customer = await prisma.customer.findFirst({
       where: { phone: cleanPhone },
       include: { loyaltyTier: true },
     });
@@ -97,7 +107,7 @@ async function awardLoyaltyPoints(prisma: any, phone: string, orderId: string, t
     }
 
     // Get loyalty settings (default: 10 TL = 1 point)
-    const settings = await prisma.settings.findUnique({ where: { key: 'loyalty' } });
+    const settings = await prisma.settings.findFirst({ where: { key: 'loyalty' } });
     const pointsPerTL = (settings?.value as any)?.pointsPerTL || 10;
     
     // Calculate points (with tier multiplier)
@@ -186,11 +196,11 @@ async function checkTierUpgrade(prisma: any, customerId: string) {
   }
 }
 
-// Make iyzico API request
-async function iyzicoRequest(endpoint: string, body: any): Promise<any> {
-  const url = `${IYZICO_BASE_URL}${endpoint}`;
+// Make iyzico API request (tenant-cfg zorunlu — global anahtar YOK)
+async function iyzicoRequest(cfg: IyzicoCfg, endpoint: string, body: any): Promise<any> {
+  const url = `${cfg.baseUrl}${endpoint}`;
   const requestBody = JSON.stringify(body);
-  const { authorization, randomKey } = generateAuthorizationHeader(endpoint, requestBody);
+  const { authorization, randomKey } = generateAuthorizationHeader(cfg, endpoint, requestBody);
   
   console.log('📤 iyzico Request:', endpoint);
   console.log('📤 URL:', url);
@@ -223,13 +233,10 @@ function generateConversationId(): string {
 }
 
 export default async function paymentRoutes(server: FastifyInstance) {
-  // Load iyzico config from DB on first request
-  await loadIyzicoConfig(request.db);
-
   // Initialize 3DS Payment
   server.post('/initialize-3ds', async (request: FastifyRequest, reply: FastifyReply) => {
-    // Reload config each time (in case settings changed)
-    await loadIyzicoConfig(request.db);
+    // Tenant'ın KENDİ iyzico anahtarları (60 sn cache'li — global yok)
+    const iyzicoCfg = await getIyzicoConfig(request.db, request.tenant!.id);
     const {
       orderId,
       cardHolderName,
@@ -420,12 +427,12 @@ export default async function paymentRoutes(server: FastifyInstance) {
     };
 
     try {
-      const result = await iyzicoRequest('/payment/3dsecure/initialize', paymentRequest);
+      const result = await iyzicoRequest(iyzicoCfg, '/payment/3dsecure/initialize', paymentRequest);
 
       if (result.status === 'success') {
-        // Store conversation ID for later verification
+        // Store conversation ID for later verification (composite unique [tenantId,key])
         await request.db.settings.upsert({
-          where: { key: `payment_${conversationId}` },
+          where: { tenantId_key: { tenantId: request.tenant!.id, key: `payment_${conversationId}` } },
           update: { value: { orderId, status: 'initialized', createdAt: new Date().toISOString() } },
           create: { key: `payment_${conversationId}`, value: { orderId, status: 'initialized', createdAt: new Date().toISOString() } },
         });
@@ -456,32 +463,31 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
     const { status, paymentId, conversationId, mdStatus } = body;
 
-    // Mobile için: paymentId'yi settings'e yaz ki client polling ile alabilsin
+    // Mobile için: paymentId'yi settings'e yaz ki client polling ile alabilsin.
+    // NOT: Bu callback IYZICO'dan gelir — tenant bağlamı YOK (webhook deseni).
+    // Session kaydı initialize-3ds'te tenant'lı yaratılır; burada platformDb ile
+    // key üzerinden bulunur ve id ile güncellenir (tenant, kayıttan bellidir).
     if (conversationId && paymentId) {
       try {
-        const existing = await request.db.settings.findUnique({
+        const existing = await platformDb.settings.findFirst({
           where: { key: `payment_${conversationId}` },
         });
-        const oldValue = (existing?.value as any) || {};
-        await request.db.settings.upsert({
-          where: { key: `payment_${conversationId}` },
-          update: {
-            value: {
-              ...oldValue,
-              paymentId,
-              callbackStatus: status,
-              callbackAt: new Date().toISOString(),
+        if (existing) {
+          const oldValue = (existing.value as any) || {};
+          await platformDb.settings.update({
+            where: { id: existing.id },
+            data: {
+              value: {
+                ...oldValue,
+                paymentId,
+                callbackStatus: status,
+                callbackAt: new Date().toISOString(),
+              },
             },
-          },
-          create: {
-            key: `payment_${conversationId}`,
-            value: {
-              paymentId,
-              callbackStatus: status,
-              callbackAt: new Date().toISOString(),
-            },
-          },
-        });
+          });
+        } else {
+          console.error(`📥 3DS callback: payment session bulunamadı (${conversationId})`);
+        }
       } catch (e) {
         console.error('📥 Failed to persist callback paymentId:', e);
       }
@@ -582,6 +588,18 @@ export default async function paymentRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Payment ID gerekli' });
     }
 
+    // Tenant'ı payment-session kaydından türet (mobil/redirect akışında subdomain yok).
+    // Session initialize-3ds'te tenant'lı yaratıldı; yoksa istek tenant'ına düş.
+    const sessionRow = conversationId
+      ? await platformDb.settings.findFirst({ where: { key: `payment_${conversationId}` } })
+      : null;
+    const tenantId = sessionRow?.tenantId ?? request.tenant?.id;
+    if (!tenantId) {
+      return reply.status(400).send({ error: 'Ödeme oturumu bulunamadı' });
+    }
+    const db = dbFor(tenantId);
+    const iyzicoCfg = await getIyzicoConfig(db, tenantId);
+
     const completeRequest = {
       locale: 'tr',
       conversationId: conversationId || generateConversationId(),
@@ -589,19 +607,19 @@ export default async function paymentRoutes(server: FastifyInstance) {
     };
 
     try {
-      const result = await iyzicoRequest('/payment/3dsecure/auth', completeRequest);
+      const result = await iyzicoRequest(iyzicoCfg, '/payment/3dsecure/auth', completeRequest);
 
       if (result.status === 'success') {
         // Payment successful - update order
         if (orderId) {
-          const order = await request.db.order.findUnique({
+          const order = await db.order.findUnique({
             where: { id: orderId },
             include: { items: true, table: true },
           });
 
           if (order) {
             // Create payment record
-            await request.db.payment.create({
+            await db.payment.create({
               data: {
                 orderId,
                 amount: Number(result.paidPrice),
@@ -611,7 +629,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
             });
 
             // Update order status
-            const updatedOrder = await request.db.order.update({
+            const updatedOrder = await db.order.update({
               where: { id: orderId },
               data: {
                 paymentStatus: PaymentStatus.PAID,
@@ -626,7 +644,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
             // Mark all items as paid
             for (const item of order.items) {
-              await request.db.orderItem.update({
+              await db.orderItem.update({
                 where: { id: item.id },
                 data: { paidQuantity: item.quantity },
               });
@@ -634,17 +652,17 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
             // Award loyalty points if customer phone exists
             if (order.customerPhone) {
-              await awardLoyaltyPoints(request.db, order.customerPhone, orderId, Number(order.total));
+              await awardLoyaltyPoints(db, order.customerPhone, orderId, Number(order.total));
             }
 
             // Broadcast as NEW order (payment just completed, first time appearing)
             broadcastNewOrder(updatedOrder);
-            notifyNewOrder(request.db, updatedOrder.id).catch(() => {});
+            notifyNewOrder(db, updatedOrder.id).catch(() => {});
 
             // Clean up payment session
-            await request.db.settings.delete({
-              where: { key: `payment_${conversationId}` },
-            }).catch(() => {});
+            if (sessionRow) {
+              await platformDb.settings.delete({ where: { id: sessionRow.id } }).catch(() => {});
+            }
           }
         }
 
@@ -669,7 +687,8 @@ export default async function paymentRoutes(server: FastifyInstance) {
   server.get('/status/:conversationId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { conversationId } = request.params as { conversationId: string };
 
-    const paymentSession = await request.db.settings.findUnique({
+    // Platform-lookup: polling istekleri tenant bağlamı taşımayabilir
+    const paymentSession = await platformDb.settings.findFirst({
       where: { key: `payment_${conversationId}` },
     });
 
@@ -685,13 +704,16 @@ export default async function paymentRoutes(server: FastifyInstance) {
   server.get('/mobile-finalize/:conversationId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { conversationId } = request.params as { conversationId: string };
 
-    const session = await request.db.settings.findUnique({
+    // Platform-lookup + tenant türetme (mobil WebView'da tenant bağlamı yok)
+    const session = await platformDb.settings.findFirst({
       where: { key: `payment_${conversationId}` },
     });
     if (!session) {
       return reply.status(404).send({ error: 'Ödeme oturumu bulunamadı' });
     }
     const v = (session.value as any) || {};
+    const db = dbFor(session.tenantId);
+    const iyzicoCfg = await getIyzicoConfig(db, session.tenantId);
 
     // Henüz callback gelmemiş olabilir — client polling yapsın
     if (!v.paymentId) {
@@ -709,15 +731,15 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
     // Finalize et
     try {
-      const result = await iyzicoRequest('/payment/3dsecure/auth', {
+      const result = await iyzicoRequest(iyzicoCfg, '/payment/3dsecure/auth', {
         locale: 'tr',
         conversationId,
         paymentId: v.paymentId,
       });
 
       if (result.status !== 'success') {
-        await request.db.settings.update({
-          where: { key: `payment_${conversationId}` },
+        await platformDb.settings.update({
+          where: { id: session.id },
           data: { value: { ...v, status: 'failed', error: result.errorMessage } },
         });
         return reply.status(400).send({
@@ -728,12 +750,12 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
       const orderId = v.orderId as string | undefined;
       if (orderId) {
-        const order = await request.db.order.findUnique({
+        const order = await db.order.findUnique({
           where: { id: orderId },
           include: { items: true },
         });
         if (order) {
-          await request.db.payment.create({
+          await db.payment.create({
             data: {
               orderId,
               amount: Number(result.paidPrice),
@@ -741,7 +763,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
               reference: result.paymentId,
             },
           });
-          const updatedOrder = await request.db.order.update({
+          const updatedOrder = await db.order.update({
             where: { id: orderId },
             data: {
               paymentStatus: PaymentStatus.PAID,
@@ -752,7 +774,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
           });
 
           for (const item of order.items) {
-            await request.db.orderItem.update({
+            await db.orderItem.update({
               where: { id: item.id },
               data: { paidQuantity: item.quantity },
             });
@@ -760,11 +782,11 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
           // Mobile sipariş ise lifecycle push'ları tetikle
           broadcastNewOrder(updatedOrder);
-          notifyNewOrder(request.db, updatedOrder.id).catch(() => {});
-          sendOrderStatusPush(request.db, updatedOrder, 'CONFIRMED').catch(() => {});
+          notifyNewOrder(db, updatedOrder.id).catch(() => {});
+          sendOrderStatusPush(db, updatedOrder, 'CONFIRMED').catch(() => {});
 
-          await request.db.settings.update({
-            where: { key: `payment_${conversationId}` },
+          await platformDb.settings.update({
+            where: { id: session.id },
             data: {
               value: {
                 ...v,
@@ -798,7 +820,8 @@ export default async function paymentRoutes(server: FastifyInstance) {
     };
 
     try {
-      const result = await iyzicoRequest('/payment/bin/check', testBody);
+      const iyzicoCfg = await getIyzicoConfig(request.db, request.tenant!.id);
+      const result = await iyzicoRequest(iyzicoCfg, '/payment/bin/check', testBody);
       return { result };
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
