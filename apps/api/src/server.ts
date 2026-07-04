@@ -58,6 +58,7 @@ import mobileFavoritesRoutes from './routes/mobile-favorites';
 import mobilePrefsRoutes from './routes/mobile-prefs';
 import courierRoutes from './routes/courier';
 import platformRoutes from './routes/platform';
+import integrationRoutes from './routes/integrations';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -172,6 +173,9 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   // Platform (SaaS) — kayıt/onboarding/abonelik/süper-admin. Tenant hook ATLAR
   // (plugins/tenant.ts SKIP_PREFIXES: '/api/platform/'); kendi auth'unu kullanır.
   server.register(platformRoutes, { prefix: '/api/platform' });
+
+  // "Bağlan" akışı — WhatsApp Sipariş Modülü entegrasyonu (Pro+ feature-flag)
+  server.register(integrationRoutes, { prefix: '/api/integrations' });
 
   // WebSocket - must be registered AFTER websocket plugin is ready
   server.after(() => {
