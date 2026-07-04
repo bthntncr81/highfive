@@ -1,0 +1,16 @@
+{
+  "_comment": "Referans tenant (Akçakoca / HighFive). app.json ile aynı marka; env override edilmezse çıktı budur.",
+  "tenantId": "",
+  "subdomain": "highfive",
+  "appName": "HighFive",
+  "slug": "highfive-mobile",
+  "scheme": "highfive",
+  "bundleId": "com.highfive.mobile",
+  "androidPackage": "com.highfive.mobile",
+  "primaryColor": "#bb1e10",
+  "apiUrl": "https://api.highfivepps.com",
+  "wsUrl": "wss://api.highfivepps.com/ws",
+  "easProjectId": "fc88b473-349f-43f8-b89b-5ef219ad52cf",
+  "updatesUrl": "https://u.expo.dev/fc88b473-349f-43f8-b89b-5ef219ad52cf",
+  "owner": "bthntncr8181"
+}

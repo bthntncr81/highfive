@@ -2,12 +2,15 @@ import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const extra = Constants.expoConfig?.extra as
-  | { apiUrl?: string; wsUrl?: string }
+  | { apiUrl?: string; wsUrl?: string; tenantId?: string }
   | undefined;
 
 // Production API
 export const API_URL = extra?.apiUrl ?? "https://api.highfivepps.com";
 export const WS_URL = extra?.wsUrl ?? "wss://api.highfivepps.com/ws";
+// Markalı app tenant bağlaması — her istekte X-Tenant-ID gönderilir (çok-kiracılı
+// çözümleme: subdomain/JWT yoksa API tenant'ı bu header'dan çözer).
+export const TENANT_ID = extra?.tenantId ?? "";
 
 // Görsel URL'lerini absolute path'e çevir
 export function imageUrl(path: string | null | undefined): string | null {
@@ -63,6 +66,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...(TENANT_ID ? { "X-Tenant-ID": TENANT_ID } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init.headers ?? {}),
       },

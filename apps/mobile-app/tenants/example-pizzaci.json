@@ -1,0 +1,16 @@
+{
+  "_comment": "Örnek Kurumsal tenant (demo değerler). Yeni müşteri için kopyalanıp tenantId/easProjectId gerçekleriyle doldurulur.",
+  "tenantId": "cmrexampletenantcuid00001",
+  "subdomain": "pizzacimehmet",
+  "appName": "Pizzacı Mehmet",
+  "slug": "pizzacimehmet-mobile",
+  "scheme": "pizzacimehmet",
+  "bundleId": "com.otorder.pizzacimehmet",
+  "androidPackage": "com.otorder.pizzacimehmet",
+  "primaryColor": "#0ea5e9",
+  "apiUrl": "https://pizzacimehmet.otorder.com/api",
+  "wsUrl": "wss://pizzacimehmet.otorder.com/ws",
+  "easProjectId": "00000000-0000-0000-0000-000000000000",
+  "updatesUrl": "https://u.expo.dev/00000000-0000-0000-0000-000000000000",
+  "owner": "otorder"
+}
