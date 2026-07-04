@@ -10,12 +10,221 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== PLATFORM: TENANT / ABONELİK (OtOrder SaaS) ====================
+// Platform-global modeller — tenantId TAŞIMAZLAR: Tenant, Plan, Subscription,
+// StoredCard, BillingTransaction, User (kimlik), Membership (user↔tenant köprüsü).
+// Geri kalan TÜM modeller tenant-owned'dır ve tenantId taşır (dbFor + RLS zorlar).
+
+enum TenantStatus {
+  TRIAL // deneme süresi
+  ACTIVE // ödeme alındı, aktif
+  PAST_DUE // ödeme başarısız — grace period
+  SUSPENDED // askıya alındı (erişim 402)
+}
+
+model Tenant {
+  id                    String       @id @default(cuid())
+  name                  String // "Pizzacı Mehmet"
+  subdomain             String       @unique // mehmet.otorder.com
+  status                TenantStatus @default(TRIAL)
+  // Onboarding sihirbazı ilerlemesi (WhatsappRestourant pattern'i)
+  onboardingStep        Int          @default(0)
+  onboardingCompletedAt DateTime?
+  trialEndsAt           DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  memberships  Membership[]
+  subscription Subscription?
+  storedCards  StoredCard[]
+  transactions BillingTransaction[]
+  sessions     Session[]
+  activityLogs ActivityLog[]
+
+  locations                    Location[]
+  tables                       Table[]
+  categories                   Category[]
+  menuItems                    MenuItem[]
+  menuItemLocations            MenuItemLocation[]
+  menuItemUpsells              MenuItemUpsell[]
+  menuItemCrossSells           MenuItemCrossSell[]
+  modifiers                    Modifier[]
+  rawMaterials                 RawMaterial[]
+  menuItemIngredients          MenuItemIngredient[]
+  happyHours                   HappyHour[]
+  happyHourItems               HappyHourItem[]
+  orders                       Order[]
+  orderItems                   OrderItem[]
+  payments                     Payment[]
+  invoices                     Invoice[]
+  printers                     Printer[]
+  printJobs                    PrintJob[]
+  whatsAppMessages             WhatsAppMessage[]
+  dailyReports                 DailyReport[]
+  expenseCategories            ExpenseCategory[]
+  expenses                     Expense[]
+  settingses                   Settings[]
+  analyticsEvents              AnalyticsEvent[]
+  customers                    Customer[]
+  loyaltyTiers                 LoyaltyTier[]
+  pointsTransactions           PointsTransaction[]
+  customerOrders               CustomerOrder[]
+  campaigns                    Campaign[]
+  bundleDeals                  BundleDeal[]
+  bundleOptionGroups           BundleOptionGroup[]
+  optionGroups                 OptionGroup[]
+  optionGroupItems             OptionGroupItem[]
+  bundleOptionGroupAssignments BundleOptionGroupAssignment[]
+  bundleItems                  BundleItem[]
+  coupons                      Coupon[]
+  couponUsages                 CouponUsage[]
+  integrationPartners          IntegrationPartner[]
+  webhookLogs                  WebhookLog[]
+  deviceTokens                 DeviceToken[]
+  pushNotifications            PushNotification[]
+  loyaltyPrograms              LoyaltyProgram[]
+  loyaltyClaims                LoyaltyClaim[]
+  customerLoyaltyProgresses    CustomerLoyaltyProgress[]
+  addresses                    Address[]
+  favoriteItems                FavoriteItem[]
+  notificationPreferences      NotificationPreference[]
+  spinWheelConfigs             SpinWheelConfig[]
+  spinAttempts                 SpinAttempt[]
+  achievements                 Achievement[]
+  customerAchievements         CustomerAchievement[]
+  scratchRewards               ScratchReward[]
+  mysteryBoxConfigs            MysteryBoxConfig[]
+  mysteryBoxOpens              MysteryBoxOpen[]
+  builderBases                 BuilderBase[]
+  builderIngredients           BuilderIngredient[]
+  courierLocations             CourierLocation[]
+  savedBuilderDesigns          SavedBuilderDesign[]
+  pizzaGameScores              PizzaGameScore[]
+}
+
+// Paket tanımı — TABLO (enum değil): limitler/özellikler deploy'suz düzenlenebilir.
+model Plan {
+  id           String   @id @default(cuid())
+  key          String   @unique // "STARTER" | "PRO" | "ENTERPRISE"
+  name         String // "Başlangıç", "Pro", "Kurumsal"
+  monthlyPrice Decimal  @db.Decimal(10, 2)
+  annualPrice  Decimal  @db.Decimal(10, 2)
+  maxLocations Int      @default(1) // -1 = sınırsız
+  maxUsers     Int      @default(5) // -1 = sınırsız
+  features     Json     @default("{}") // { loyalty:true, campaigns:true, analytics:true, whatsappLink:true, brandedApp:false, customLanding:false }
+  sortOrder    Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+model Subscription {
+  id       String             @id @default(cuid())
+  tenantId String             @unique
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId   String
+  plan     Plan               @relation(fields: [planId], references: [id])
+  status   SubscriptionStatus @default(TRIAL)
+  cycle    BillingCycle       @default(MONTHLY)
+
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime?
+  autoRenew          Boolean   @default(true)
+  cancelledAt        DateTime?
+  // Başarısız ödeme takibi (grace → askıya alma)
+  failedAttempts     Int       @default(0)
+  lastFailedAt       DateTime?
+
+  // iyzico kart saklama referansları (platform hesabı)
+  iyzicoCardUserKey String? // cardUserKey — tenant'ın iyzico'daki kart cüzdanı
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model StoredCard {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  iyzicoToken String // cardToken
+  lastFour    String
+  cardBrand   String? // VISA, MASTERCARD...
+  cardHolder  String?
+  expireMonth String
+  expireYear  String
+  isDefault   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+enum BillingTransactionType {
+  SUBSCRIPTION_PAYMENT
+  SUBSCRIPTION_UPGRADE
+  REFUND
+  MANUAL_CREDIT // süper-admin hediye/manuel tanımlama
+}
+
+model BillingTransaction {
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type                 BillingTransactionType
+  amount               Decimal                @db.Decimal(10, 2)
+  currency             String                 @default("TRY")
+  success              Boolean
+  errorMessage         String?
+  iyzicoPaymentId      String?
+  iyzicoConversationId String?
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  createdAt            DateTime               @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+// User↔Tenant köprüsü: rol/PIN/şube artık üyelikte (bir kişi birden çok
+// restoranda farklı rollerle çalışabilir; PIN tenant içinde benzersizdir).
+model Membership {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role       UserRole @default(WAITER)
+  pin        String? // POS hızlı giriş — tenant içinde benzersiz
+  locationId String? // Atandığı şube (opsiyonel)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, tenantId])
+  @@unique([tenantId, pin])
+  @@index([tenantId])
+}
+
 // ==================== LOCATION / BRANCH MANAGEMENT ====================
 
 model Location {
   id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name              String // "High Five Kadıköy"
-  code              String   @unique // "kadiköy", "besiktas"
+  code              String // "kadiköy", "besiktas" — tenant içinde benzersiz (aşağıda)
   address           String?
   phone             String?
   email             String?
@@ -32,15 +241,18 @@ model Location {
 
   tables              Table[]
   orders              Order[]
-  users               User[]
   menuItems           MenuItemLocation[]
   happyHours          HappyHour[]
   integrationPartners IntegrationPartner[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
 }
 
 // ==================== USER MANAGEMENT ====================
 
 enum UserRole {
+  OWNER // Tenant sahibi — faturalama, abonelik, tenant ayarları, tema
   ADMIN
   MANAGER
   WAITER
@@ -49,27 +261,26 @@ enum UserRole {
   COURIER
 }
 
+// PLATFORM KİMLİĞİ — tenantId TAŞIMAZ. Rol/PIN/şube Membership'te;
+// bir kullanıcı birden çok tenant'ta (restoranda) üye olabilir.
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String
-  name       String
-  role       UserRole @default(WAITER)
-  pin        String? // Quick PIN login for POS
-  avatar     String?
-  phone      String? // Kurye telefonu
-  active     Boolean  @default(true)
-  locationId String? // Assigned location
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatar    String?
+  phone     String? // Kurye telefonu
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Kurye canlı durumu (yalnız COURIER rolü için anlamlı)
+  // Kurye canlı durumu (kişi-seviyesi; yalnız COURIER üyeliği için anlamlı)
   isOnline    Boolean   @default(false)
   lastSeenLat Float?
   lastSeenLng Float?
   lastSeenAt  DateTime?
 
-  location         Location?         @relation(fields: [locationId], references: [id])
+  memberships      Membership[]
   waiterOrders     Order[]           @relation("WaiterOrders")
   courierOrders    Order[]           @relation("CourierOrders")
   sessions         Session[]
@@ -80,25 +291,34 @@ model User {
   deviceTokens     DeviceToken[]
 }
 
+// Oturum tenant-damgalı (nullable: süper-admin oturumları tenant'sız olabilir)
 model Session {
   id        String   @id @default(cuid())
   userId    String
+  tenantId  String?
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model ActivityLog {
   id        String   @id @default(cuid())
   userId    String
+  tenantId  String?
   action    String
   details   Json?
   ipAddress String?
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ==================== TABLE MANAGEMENT ====================
@@ -112,6 +332,8 @@ enum TableStatus {
 
 model Table {
   id               String      @id @default(cuid())
+  tenantId         String
+  tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId       String?
   number           Int
   name             String? // "Bahçe 1", "VIP 2" etc.
@@ -134,13 +356,16 @@ model Table {
   mergedWith   Table?    @relation("TableMerge", fields: [mergedWithId], references: [id])
   mergedTables Table[]   @relation("TableMerge")
 
-  @@unique([locationId, number])
+  @@unique([tenantId, locationId, number])
+  @@index([tenantId])
 }
 
 // ==================== MENU MANAGEMENT ====================
 
 model Category {
   id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name           String
   icon           String?
   image          String?
@@ -152,6 +377,8 @@ model Category {
 
   items   MenuItem[]
   bundles BundleDeal[]
+
+  @@index([tenantId])
 }
 
 // Alerjen Enum
@@ -174,6 +401,8 @@ enum Allergen {
 
 model MenuItem {
   id          String     @id @default(cuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   categoryId  String
   name        String
   description String?
@@ -214,11 +443,15 @@ model MenuItem {
   happyHourItems   HappyHourItem[]
   bundleItems      BundleItem[]
   optionGroupItems OptionGroupItem[]
+
+  @@index([tenantId])
 }
 
 // Location-specific menu item settings
 model MenuItemLocation {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId String
   locationId String
   available  Boolean  @default(true)
@@ -229,11 +462,14 @@ model MenuItemLocation {
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([menuItemId, locationId])
+  @@index([tenantId])
 }
 
 // Upselling - "Bununla birlikte X de ister misiniz?"
 model MenuItemUpsell {
   id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fromItemId     String
   toItemId       String
   message        String? // "Yanında patates ister misiniz?"
@@ -246,11 +482,14 @@ model MenuItemUpsell {
   toItem   MenuItem @relation("UpsellTo", fields: [toItemId], references: [id], onDelete: Cascade)
 
   @@unique([fromItemId, toItemId])
+  @@index([tenantId])
 }
 
 // Cross-selling - Sepette X varken Y öner
 model MenuItemCrossSell {
   id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fromItemId     String
   toItemId       String
   message        String? // "Bunu da beğenebilirsiniz"
@@ -263,10 +502,13 @@ model MenuItemCrossSell {
   toItem   MenuItem @relation("CrossSellTo", fields: [toItemId], references: [id], onDelete: Cascade)
 
   @@unique([fromItemId, toItemId])
+  @@index([tenantId])
 }
 
 model Modifier {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId String
   name       String // "Ekstra Peynir", "Acısız" etc.
   price      Decimal  @default(0) @db.Decimal(10, 2)
@@ -274,6 +516,8 @@ model Modifier {
   createdAt  DateTime @default(now())
 
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ==================== RAW MATERIALS (HAM MADDE) ====================
@@ -289,7 +533,9 @@ enum RawMaterialUnit {
 
 model RawMaterial {
   id           String          @id @default(cuid())
-  name         String          @unique
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String // tenant içinde benzersiz (model sonunda @@unique)
   unit         RawMaterialUnit @default(GRAM)
   currentStock Decimal         @default(0) @db.Decimal(10, 2) // Mevcut stok miktarı
   minStock     Decimal         @default(0) @db.Decimal(10, 2) // Min stok uyarı seviyesi
@@ -300,11 +546,16 @@ model RawMaterial {
   updatedAt    DateTime        @updatedAt
 
   ingredients MenuItemIngredient[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
 }
 
 // Menü ürünü - Ham madde ilişkisi (gramajlı)
 model MenuItemIngredient {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId    String
   rawMaterialId String
   amount        Decimal  @db.Decimal(10, 2) // Miktar (gramaj)
@@ -315,11 +566,14 @@ model MenuItemIngredient {
   rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
 
   @@unique([menuItemId, rawMaterialId])
+  @@index([tenantId])
 }
 
 // Happy Hours - Zamanlı indirimler/menü değişiklikleri
 model HappyHour {
   id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId  String?
   name        String // "Happy Hour", "Öğle Menüsü"
   description String?
@@ -342,10 +596,14 @@ model HappyHour {
   location Location?       @relation(fields: [locationId], references: [id])
   campaign Campaign?       @relation(fields: [campaignId], references: [id])
   items    HappyHourItem[]
+
+  @@index([tenantId])
 }
 
 model HappyHourItem {
   id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   happyHourId     String
   menuItemId      String
   specialPrice    Decimal? @db.Decimal(10, 2) // Özel fiyat
@@ -356,6 +614,7 @@ model HappyHourItem {
   menuItem  MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([happyHourId, menuItemId])
+  @@index([tenantId])
 }
 
 // ==================== ORDER MANAGEMENT ====================
@@ -402,7 +661,9 @@ enum PaymentStatus {
 
 model Order {
   id                String         @id @default(cuid())
-  orderNumber       Int            @unique @default(autoincrement())
+  tenantId          String
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderNumber       Int            @default(autoincrement()) // global sequence; tenant içinde benzersiz (model sonunda) — Faz 4'te per-tenant sayaç güzelleştirmesi
   locationId        String?
   tableId           String?
   userId            String? // Waiter who created the order
@@ -459,10 +720,15 @@ model Order {
   items    OrderItem[]
   invoice  Invoice?
   payments Payment[]
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId])
 }
 
 model OrderItem {
   id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId      String
   menuItemId   String?
   menuItemName String? // Preserved name when menu item is deleted
@@ -480,12 +746,16 @@ model OrderItem {
 
   order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 // ==================== PAYMENT & INVOICING ====================
 
 model Payment {
   id         String        @id @default(cuid())
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId    String
   amount     Decimal       @db.Decimal(10, 2)
   tipAmount  Decimal       @default(0) @db.Decimal(10, 2) // Bahşiş miktarı
@@ -498,12 +768,16 @@ model Payment {
   createdAt  DateTime      @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model Invoice {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId       String   @unique
-  invoiceNumber String   @unique
+  invoiceNumber String // tenant içinde benzersiz (model sonunda @@unique)
   customerName  String?
   customerTaxId String?
   subtotal      Decimal  @db.Decimal(10, 2)
@@ -514,6 +788,9 @@ model Invoice {
   createdAt     DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
 }
 
 // ==================== PRINTER MANAGEMENT ====================
@@ -527,6 +804,8 @@ enum PrinterType {
 
 model Printer {
   id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name         String // "Mutfak Yazıcı 1"
   type         PrinterType @default(RECEIPT)
   ipAddress    String? // Network printer
@@ -539,10 +818,14 @@ model Printer {
   categories   String[] // Hangi kategorileri basar
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+
+  @@index([tenantId])
 }
 
 model PrintJob {
   id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   printerId String
   orderId   String?
   content   String // Print content (ESC/POS commands or text)
@@ -550,12 +833,16 @@ model PrintJob {
   error     String?
   createdAt DateTime  @default(now())
   printedAt DateTime?
+
+  @@index([tenantId])
 }
 
 // ==================== WHATSAPP INTEGRATION ====================
 
 model WhatsAppMessage {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messageId String   @unique // WhatsApp message ID
   from      String // Phone number
   body      String
@@ -563,12 +850,16 @@ model WhatsAppMessage {
   processed Boolean  @default(false)
   orderId   String? // If converted to order
   createdAt DateTime @default(now())
+
+  @@index([tenantId])
 }
 
 // ==================== REPORTING ====================
 
 model DailyReport {
   id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId          String?
   date                DateTime @db.Date
   totalOrders         Int      @default(0)
@@ -587,7 +878,8 @@ model DailyReport {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  @@unique([locationId, date])
+  @@unique([tenantId, locationId, date])
+  @@index([tenantId])
 }
 
 // ==================== EXPENSES (GİDERLER) ====================
@@ -600,7 +892,9 @@ enum ExpenseStatus {
 
 model ExpenseCategory {
   id        String   @id @default(cuid())
-  name      String   @unique
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String // tenant içinde benzersiz (model sonunda @@unique)
   icon      String? // emoji veya icon adı
   color     String? // #hex (UI badge)
   isSystem  Boolean  @default(false) // seed'den geldiyse silinemez
@@ -610,10 +904,15 @@ model ExpenseCategory {
   updatedAt DateTime @updatedAt
 
   expenses Expense[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
 }
 
 model Expense {
   id            String        @id @default(cuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   amount        Decimal       @db.Decimal(10, 2)
   categoryId    String
   description   String?
@@ -643,21 +942,29 @@ model Expense {
   @@index([createdById])
   @@index([status])
   @@index([locationId, expenseDate])
+  @@index([tenantId])
 }
 
 // ==================== SETTINGS ====================
 
 model Settings {
   id        String   @id @default(cuid())
-  key       String   @unique
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String // tenant içinde benzersiz (model sonunda @@unique)
   value     Json
   updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
 }
 
 // ==================== ANALYTICS ====================
 
 model AnalyticsEvent {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId String?
   eventType  String // "page_view", "add_to_cart", "order_completed", "upsell_accepted"
   eventData  Json?
@@ -666,6 +973,8 @@ model AnalyticsEvent {
   userAgent  String?
   ipAddress  String?
   createdAt  DateTime @default(now())
+
+  @@index([tenantId])
 }
 
 // ==================== LOYALTY PROGRAM ====================
@@ -673,8 +982,10 @@ model AnalyticsEvent {
 // Sadakat Programı Müşterisi
 model Customer {
   id        String    @id @default(cuid())
-  phone     String?   @unique // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel
-  email     String?   @unique // Email-OTP login için ana identifier
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  phone     String? // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel; tenant içinde benzersiz
+  email     String? // Email-OTP login için ana identifier; tenant içinde benzersiz
   name      String?
   birthDate DateTime?
   gender    String? // "MALE" | "FEMALE" | "OTHER" — kayıtta opsiyonel
@@ -715,7 +1026,7 @@ model Customer {
   // Cashback bakiyesi (TL cinsinden — 1 cashback unit = 1 TL)
   cashbackBalance Decimal      @default(0) @db.Decimal(10, 2)
   // Davet (referral) sistemi
-  referralCode    String?      @unique // Kişiye özel davet kodu
+  referralCode    String? // Kişiye özel davet kodu; tenant içinde benzersiz
   referredByCode  String? // Bu müşteri hangi koddan geldi
   referralCount   Int          @default(0) // Bu müşteri kaç kişi davet etti
   // Streak takibi
@@ -723,32 +1034,38 @@ model Customer {
   longestStreak   Int          @default(0)
   lastStreakDate  DateTime?
 
-  orders            CustomerOrder[]
-  pointsHistory     PointsTransaction[]
-  usedCoupons       CouponUsage[]
-  devices           DeviceToken[]
-  addresses         Address[]
-  favorites         FavoriteItem[]
-  notificationPrefs NotificationPreference?
-  loyaltyProgress   CustomerLoyaltyProgress[]
+  orders              CustomerOrder[]
+  pointsHistory       PointsTransaction[]
+  usedCoupons         CouponUsage[]
+  devices             DeviceToken[]
+  addresses           Address[]
+  favorites           FavoriteItem[]
+  notificationPrefs   NotificationPreference?
+  loyaltyProgress     CustomerLoyaltyProgress[]
   // Gamification
-  spinAttempts      SpinAttempt[]
-  achievements      CustomerAchievement[]
-  scratchRewards    ScratchReward[]
-  mysteryBoxOpens   MysteryBoxOpen[]
+  spinAttempts        SpinAttempt[]
+  achievements        CustomerAchievement[]
+  scratchRewards      ScratchReward[]
+  mysteryBoxOpens     MysteryBoxOpen[]
   // "Kendin Tasarla" — kaydedilmiş özel pizza/sandviç tasarımları (üye-özel)
   savedBuilderDesigns SavedBuilderDesign[]
   // Google review / Instagram story gibi screenshot-onaylı ödül talepleri
   loyaltyClaims       LoyaltyClaim[]
 
+  @@unique([tenantId, phone])
+  @@unique([tenantId, email])
+  @@unique([tenantId, referralCode])
   @@index([phone])
   @@index([email])
   @@index([referralCode])
+  @@index([tenantId])
 }
 
 // Sadakat Seviyesi (Bronze, Silver, Gold vb.)
 model LoyaltyTier {
   id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name             String // "Bronze", "Silver", "Gold", "Platinum"
   minPoints        Int // Bu seviyeye ulaşmak için gereken min puan
   pointsMultiplier Decimal  @default(1) @db.Decimal(3, 2) // Puan çarpanı (1.5x = %50 daha fazla puan)
@@ -762,11 +1079,15 @@ model LoyaltyTier {
   updatedAt        DateTime @updatedAt
 
   customers Customer[]
+
+  @@index([tenantId])
 }
 
 // Puan İşlemleri
 model PointsTransaction {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   orderId     String?
   points      Int // + kazanım, - harcama
@@ -775,11 +1096,15 @@ model PointsTransaction {
   createdAt   DateTime @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // Müşteri Siparişleri (Order'a referans)
 model CustomerOrder {
   id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId   String
   orderId      String   @unique
   pointsEarned Int      @default(0)
@@ -787,6 +1112,8 @@ model CustomerOrder {
   createdAt    DateTime @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ==================== CAMPAIGNS & PROMOTIONS ====================
@@ -794,6 +1121,8 @@ model CustomerOrder {
 // İndirim Kampanyaları
 model Campaign {
   id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   description String?
   image       String? // Kapak fotoğrafı URL — landing/mobile kampanya kartlarında gösterilir
@@ -834,11 +1163,15 @@ model Campaign {
 
   happyHours        HappyHour[] // Bu kampanyayı kullanan happy hour'lar
   pushNotifications PushNotification[]
+
+  @@index([tenantId])
 }
 
 // Paket Menüler / Combo'lar
 model BundleDeal {
   id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Aile Paketi", "Öğle Menüsü"
   description String?
   image       String?
@@ -875,6 +1208,8 @@ model BundleDeal {
   items                  BundleItem[]
   optionGroups           BundleOptionGroup[]
   optionGroupAssignments BundleOptionGroupAssignment[]
+
+  @@index([tenantId])
 }
 
 // Müşterinin paket içinde seçim yapacağı gruplar.
@@ -882,6 +1217,8 @@ model BundleDeal {
 //      "Yan Ürün"   — pickCount=1, eligibleItemIds=[..], priceMode=ADD_PRICE
 model BundleOptionGroup {
   id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId        String
   name            String // "Pizza Seçimi"
   pickCount       Int      @default(1) // Müşteri kaç tane seçecek
@@ -897,6 +1234,8 @@ model BundleOptionGroup {
   createdAt       DateTime @default(now())
 
   bundle BundleDeal @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ==================== REUSABLE OPTION GROUPS ====================
@@ -904,6 +1243,8 @@ model BundleOptionGroup {
 // Her grup içindeki ürünlerin kendi ek fiyatı (extraPrice) olabilir.
 model OptionGroup {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Pizza Seçimi", "İçecek Seçimi", "Yan Ürün"
   description String?
   minSelect   Int      @default(1) // En az kaç ürün seçilmeli
@@ -915,11 +1256,15 @@ model OptionGroup {
 
   items       OptionGroupItem[]
   assignments BundleOptionGroupAssignment[]
+
+  @@index([tenantId])
 }
 
 // Grup içindeki ürünler — her birinin ek fiyatı olabilir
 model OptionGroupItem {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   optionGroupId String
   menuItemId    String
   extraPrice    Decimal  @default(0) @db.Decimal(10, 2) // 0 = pakete dahil, >0 = ek ücret
@@ -931,11 +1276,14 @@ model OptionGroupItem {
   menuItem    MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([optionGroupId, menuItemId])
+  @@index([tenantId])
 }
 
 // Bundle ↔ OptionGroup ilişki tablosu (many-to-many)
 model BundleOptionGroupAssignment {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId      String
   optionGroupId String
   // Aynı grup bir bundle'a kaç defa eklendi (kaç slot oluşacak).
@@ -948,11 +1296,14 @@ model BundleOptionGroupAssignment {
   optionGroup OptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
 
   @@unique([bundleId, optionGroupId])
+  @@index([tenantId])
 }
 
 // Paket İçindeki Ürünler
 model BundleItem {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId    String
   menuItemId  String
   quantity    Int      @default(1)
@@ -964,12 +1315,15 @@ model BundleItem {
   menuItem MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([bundleId, menuItemId])
+  @@index([tenantId])
 }
 
 // Kuponlar
 model Coupon {
   id          String  @id @default(cuid())
-  code        String  @unique // "HOSGELDIN20", "DOGUMGUNU50"
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String // "HOSGELDIN20", "DOGUMGUNU50" — tenant içinde benzersiz
   name        String
   description String?
 
@@ -1003,11 +1357,16 @@ model Coupon {
   spinAttempts    SpinAttempt[]
   scratchRewards  ScratchReward[]  @relation("ScratchCoupon")
   mysteryBoxOpens MysteryBoxOpen[] @relation("MysteryBoxCoupon")
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
 }
 
 // Kupon Kullanımları
 model CouponUsage {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   couponId   String
   customerId String?
   orderId    String
@@ -1016,12 +1375,16 @@ model CouponUsage {
 
   coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([tenantId])
 }
 
 // ==================== EXTERNAL INTEGRATION ====================
 
 model IntegrationPartner {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String // "WhatRes - Tenant XYZ"
   apiKey        String   @unique // crypto.randomBytes(32).hex
   isActive      Boolean  @default(true)
@@ -1034,10 +1397,14 @@ model IntegrationPartner {
 
   location    Location?    @relation(fields: [locationId], references: [id])
   webhookLogs WebhookLog[]
+
+  @@index([tenantId])
 }
 
 model WebhookLog {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   partnerId  String
   event      String // order.status_changed, menu.updated
   payload    Json
@@ -1047,12 +1414,16 @@ model WebhookLog {
   createdAt  DateTime @default(now())
 
   partner IntegrationPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ==================== MOBILE PUSH NOTIFICATIONS ====================
 
 model DeviceToken {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   token      String   @unique // ExponentPushToken[xxx]
   platform   String // ios | android
   customerId String? // Customer app cihazları
@@ -1074,10 +1445,13 @@ model DeviceToken {
   @@index([appType])
   @@index([token])
   @@index([isActive])
+  @@index([tenantId])
 }
 
 model PushNotification {
   id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title           String
   body            String
   data            Json? // { campaignId, productId, route, ... }
@@ -1115,6 +1489,7 @@ model PushNotification {
   @@index([status])
   @@index([campaignId])
   @@index([scheduledAt])
+  @@index([tenantId])
 }
 
 // ==================== LOYALTY PROGRAMS (genişletilmiş sadakat) ====================
@@ -1136,6 +1511,8 @@ model PushNotification {
 
 model LoyaltyProgram {
   id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type        String // Yukarıdaki türlerden biri
   name        String // "Pizza Damga Kartı", "Doğum Günü Sürprizi"
   description String?
@@ -1178,6 +1555,7 @@ model LoyaltyProgram {
 
   @@index([type])
   @@index([isActive])
+  @@index([tenantId])
 }
 
 // Müşterinin sadakat programı için yaptığı manuel doğrulamalı talep:
@@ -1186,6 +1564,8 @@ model LoyaltyProgram {
 // Bir customer + program çifti için aynı anda en fazla 1 PENDING/APPROVED kayıt.
 model LoyaltyClaim {
   id            String         @id @default(cuid())
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   programId     String
   proofImageUrl String // /uploads/... — yüklenen screenshot
@@ -1201,11 +1581,14 @@ model LoyaltyClaim {
 
   @@index([customerId, programId])
   @@index([status, createdAt(sort: Desc)])
+  @@index([tenantId])
 }
 
 // Müşterinin her programdaki ilerlemesi
 model CustomerLoyaltyProgress {
   id         String @id @default(cuid())
+  tenantId   String
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   programId  String
 
@@ -1227,12 +1610,15 @@ model CustomerLoyaltyProgress {
   @@unique([customerId, programId])
   @@index([customerId])
   @@index([programId])
+  @@index([tenantId])
 }
 
 // ==================== MOBILE: ADDRESSES, FAVORITES, PREFERENCES ====================
 
 model Address {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   label       String // "Ev", "İş", "Yazlık"
   fullAddress String // Tam adres metni
@@ -1249,10 +1635,13 @@ model Address {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
+  @@index([tenantId])
 }
 
 model FavoriteItem {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   menuItemId String
   createdAt  DateTime @default(now())
@@ -1264,10 +1653,13 @@ model FavoriteItem {
   @@unique([customerId, menuItemId])
   @@index([customerId])
   @@index([menuItemId])
+  @@index([tenantId])
 }
 
 model NotificationPreference {
   id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId      String   @unique
   pushEnabled     Boolean  @default(true)
   orderStatus     Boolean  @default(true) // Sipariş durumu push'ları
@@ -1280,6 +1672,8 @@ model NotificationPreference {
   updatedAt       DateTime @updatedAt
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // ============================================================================
@@ -1291,6 +1685,8 @@ model NotificationPreference {
 // outcome üretir (client'a SADECE prize index döner; tüm güvenlik server-side).
 model SpinWheelConfig {
   id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String   @default("Şans Çarkı")
   description   String?
   // Günlük cooldown saati (24 = günde 1 kere)
@@ -1306,11 +1702,15 @@ model SpinWheelConfig {
   updatedAt     DateTime @updatedAt
 
   attempts SpinAttempt[]
+
+  @@index([tenantId])
 }
 
 // Kullanıcı her çark çevirme denemesi audit kaydı. Cooldown ve kötüye kullanım takibi.
 model SpinAttempt {
   id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   configId   String
   // Hangi dilim seçildi (0-indexed slice array index'i)
@@ -1330,13 +1730,16 @@ model SpinAttempt {
   coupon   Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
 
   @@index([customerId, createdAt])
+  @@index([tenantId])
 }
 
 // Achievement (rozet) tanımı — admin tarafından oluşturulur.
 // type: ORDER_COUNT | TOTAL_SPENT | STREAK | CATEGORY_MASTER | TIME_BASED
 model Achievement {
   id               String   @id @default(cuid())
-  key              String   @unique // "first_order", "pizza_kralı_10", "morning_bird"
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key              String // "first_order", "pizza_kralı_10", "morning_bird" — tenant içinde benzersiz
   name             String // "İlk Sipariş"
   description      String // "Hesap açtıktan sonra ilk siparişini ver"
   icon             String // emoji
@@ -1357,11 +1760,16 @@ model Achievement {
   updatedAt        DateTime @updatedAt
 
   customerAchievements CustomerAchievement[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
 }
 
 // Kullanıcının kazandığı rozetler
 model CustomerAchievement {
   id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   achievementId String
   unlockedAt    DateTime  @default(now())
@@ -1372,11 +1780,14 @@ model CustomerAchievement {
 
   @@unique([customerId, achievementId])
   @@index([customerId])
+  @@index([tenantId])
 }
 
 // Scratch card — kullanıcı sipariş sonrası kazıyıp ödül alır
 model ScratchReward {
   id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   orderId     String? // Bağlı sipariş (opsiyonel)
   // Prize snapshot
@@ -1392,6 +1803,7 @@ model ScratchReward {
   coupon   Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "ScratchCoupon")
 
   @@index([customerId, scratchedAt])
+  @@index([tenantId])
 }
 
 // ============================================================================
@@ -1401,6 +1813,8 @@ model ScratchReward {
 // Her kutu kendi prize tablosuyla server outcome'lu açılır.
 model MysteryBoxConfig {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Bronze Kutu"
   description String?
   emoji       String   @default("📦")
@@ -1414,10 +1828,14 @@ model MysteryBoxConfig {
   updatedAt   DateTime @updatedAt
 
   opens MysteryBoxOpen[]
+
+  @@index([tenantId])
 }
 
 model MysteryBoxOpen {
   id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   configId    String
   pointsSpent Int
@@ -1433,6 +1851,7 @@ model MysteryBoxOpen {
   coupon   Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull, name: "MysteryBoxCoupon")
 
   @@index([customerId, createdAt])
+  @@index([tenantId])
 }
 
 // ============================================================================
@@ -1460,6 +1879,8 @@ enum IngredientCategory {
 // Taban / kabuk: ince hamur pizza, kalın hamur, beyaz ekmek sandviç vs.
 model BuilderBase {
   id          String      @id @default(cuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type        BuilderType
   name        String // "İnce Hamur Pizza", "Beyaz Ekmek Sandviç"
   description String?
@@ -1470,11 +1891,15 @@ model BuilderBase {
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([tenantId])
 }
 
 // Malzemeler — her biri layerImage ile pizza/sandviç üzerine binebilir.
 model BuilderIngredient {
   id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   // Hangi tip ürünlere uygulanabilir? (PIZZA, SANDWICH; BOTH için 2 ayrı kayıt önerilir)
   type        BuilderType
   category    IngredientCategory
@@ -1494,6 +1919,7 @@ model BuilderIngredient {
   updatedAt   DateTime           @updatedAt
 
   @@index([type, category, isActive])
+  @@index([tenantId])
 }
 
 // ==================== COURIER LOCATION TRACKING ====================
@@ -1503,6 +1929,8 @@ model BuilderIngredient {
 
 model CourierLocation {
   id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   courierId    String
   latitude     Float
   longitude    Float
@@ -1519,6 +1947,7 @@ model CourierLocation {
 
   @@index([courierId, createdAt(sort: Desc)])
   @@index([createdAt]) // TTL cleanup
+  @@index([tenantId])
 }
 
 // Müşterinin "Kendin Tasarla" ile oluşturduğu pizza/sandviç tasarımını kaydet,
@@ -1527,6 +1956,8 @@ model CourierLocation {
 // kalsın (UI "bu malzeme artık aktif değil" gösterir).
 model SavedBuilderDesign {
   id            String      @id @default(cuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   name          String // Kullanıcının verdiği isim: "Acılı Karışık Pizza"
   builderType   BuilderType
@@ -1537,14 +1968,18 @@ model SavedBuilderDesign {
   customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt(sort: Desc)])
+  @@index([tenantId])
 }
 
 // Pizza Şefi mini-oyunu — herkese açık global skor tablosu
 model PizzaGameScore {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name      String
   score     Int
   createdAt DateTime @default(now())
 
   @@index([score])
+  @@index([tenantId])
 }
