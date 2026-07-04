@@ -6,16 +6,13 @@
 // POST   /api/mobile/addresses/:id/default
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 
 export default async function mobileAddressesRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // LIST
   server.get('/', { preHandler: verifyCustomerAuth }, async (request: FastifyRequest) => {
     const customerId = (request as any).customerId as string;
-    const addresses = await prisma.address.findMany({
+    const addresses = await request.db.address.findMany({
       where: { customerId },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     });
@@ -45,17 +42,17 @@ export default async function mobileAddressesRoutes(server: FastifyInstance) {
 
     // Eğer isDefault=true ise eski default'u kapat
     if (body.isDefault) {
-      await prisma.address.updateMany({
+      await request.db.address.updateMany({
         where: { customerId, isDefault: true },
         data: { isDefault: false },
       });
     } else {
       // İlk adres ise otomatik default
-      const count = await prisma.address.count({ where: { customerId } });
+      const count = await request.db.address.count({ where: { customerId } });
       if (count === 0) body.isDefault = true;
     }
 
-    const address = await prisma.address.create({
+    const address = await request.db.address.create({
       data: {
         customerId,
         label: body.label,
@@ -79,7 +76,7 @@ export default async function mobileAddressesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (request as any).customerId as string;
     const { id } = request.params as { id: string };
-    const existing = await prisma.address.findFirst({ where: { id, customerId } });
+    const existing = await request.db.address.findFirst({ where: { id, customerId } });
     if (!existing) return reply.status(404).send({ error: 'Adres bulunamadı' });
 
     const body = (request.body ?? {}) as Record<string, any>;
@@ -92,14 +89,14 @@ export default async function mobileAddressesRoutes(server: FastifyInstance) {
     }
 
     if (body.isDefault === true && !existing.isDefault) {
-      await prisma.address.updateMany({
+      await request.db.address.updateMany({
         where: { customerId, isDefault: true },
         data: { isDefault: false },
       });
       data.isDefault = true;
     }
 
-    const updated = await prisma.address.update({ where: { id }, data });
+    const updated = await request.db.address.update({ where: { id }, data });
     return { address: updated };
   });
 
@@ -110,19 +107,19 @@ export default async function mobileAddressesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (request as any).customerId as string;
     const { id } = request.params as { id: string };
-    const existing = await prisma.address.findFirst({ where: { id, customerId } });
+    const existing = await request.db.address.findFirst({ where: { id, customerId } });
     if (!existing) return reply.status(404).send({ error: 'Adres bulunamadı' });
 
-    await prisma.address.delete({ where: { id } });
+    await request.db.address.delete({ where: { id } });
 
     // Default silindiyse en eskiyi default yap
     if (existing.isDefault) {
-      const next = await prisma.address.findFirst({
+      const next = await request.db.address.findFirst({
         where: { customerId },
         orderBy: { createdAt: 'asc' },
       });
       if (next) {
-        await prisma.address.update({
+        await request.db.address.update({
           where: { id: next.id },
           data: { isDefault: true },
         });
@@ -139,15 +136,15 @@ export default async function mobileAddressesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (request as any).customerId as string;
     const { id } = request.params as { id: string };
-    const existing = await prisma.address.findFirst({ where: { id, customerId } });
+    const existing = await request.db.address.findFirst({ where: { id, customerId } });
     if (!existing) return reply.status(404).send({ error: 'Adres bulunamadı' });
 
-    await prisma.$transaction([
-      prisma.address.updateMany({
+    await request.db.$transaction([
+      request.db.address.updateMany({
         where: { customerId, isDefault: true },
         data: { isDefault: false },
       }),
-      prisma.address.update({
+      request.db.address.update({
         where: { id },
         data: { isDefault: true },
       }),

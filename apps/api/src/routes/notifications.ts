@@ -30,14 +30,12 @@ type SegmentCriteria = {
 };
 
 export default async function notificationRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== LIST ====================
   server.get('/notifications', { preHandler: verifyAdmin }, async (request: any) => {
     const { status, limit } = request.query as { status?: string; limit?: string };
     const where: any = {};
     if (status) where.status = status;
-    const notifications = await prisma.pushNotification.findMany({
+    const notifications = await request.db.pushNotification.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: Math.min(parseInt(limit || '100', 10), 500),
@@ -51,29 +49,29 @@ export default async function notificationRoutes(server: FastifyInstance) {
   // ==================== STATS ====================
   server.get('/notifications/stats', { preHandler: verifyAdmin }, async () => {
     // Tüm aktif cihazlar (push'lu + push'suz placeholder'lar dahil — POS aktif cihazlar listesi için)
-    const totalDevices = await prisma.deviceToken.count({ where: { isActive: true } });
+    const totalDevices = await request.db.deviceToken.count({ where: { isActive: true } });
     // Push gönderilebilir cihazlar (nopush-* placeholder'lar hariç)
-    const pushableDevices = await prisma.deviceToken.count({
+    const pushableDevices = await request.db.deviceToken.count({
       where: { isActive: true, NOT: { token: { startsWith: 'nopush-' } } },
     });
-    const verifiedDevices = await prisma.deviceToken.count({
+    const verifiedDevices = await request.db.deviceToken.count({
       where: {
         isActive: true,
         NOT: { token: { startsWith: 'nopush-' } },
         customer: { isVerified: true },
       },
     });
-    const iosDevices = await prisma.deviceToken.count({
+    const iosDevices = await request.db.deviceToken.count({
       where: { isActive: true, platform: 'ios' },
     });
-    const androidDevices = await prisma.deviceToken.count({
+    const androidDevices = await request.db.deviceToken.count({
       where: { isActive: true, platform: 'android' },
     });
-    const totalSent = await prisma.pushNotification.count({ where: { status: 'SENT' } });
-    const totalScheduled = await prisma.pushNotification.count({
+    const totalSent = await request.db.pushNotification.count({ where: { status: 'SENT' } });
+    const totalScheduled = await request.db.pushNotification.count({
       where: { status: 'SCHEDULED' },
     });
-    const lastNotification = await prisma.pushNotification.findFirst({
+    const lastNotification = await request.db.pushNotification.findFirst({
       orderBy: { createdAt: 'desc' },
     });
     return {
@@ -96,7 +94,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
     if (onlyPushable === 'true' || onlyPushable === '1') {
       where.NOT = { token: { startsWith: 'nopush-' } };
     }
-    const devices = await prisma.deviceToken.findMany({
+    const devices = await request.db.deviceToken.findMany({
       where,
       select: {
         id: true,
@@ -136,7 +134,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
     reply: any,
   ) => {
     const { id } = request.params as { id: string };
-    const notification = await prisma.pushNotification.findUnique({
+    const notification = await request.db.pushNotification.findUnique({
       where: { id },
       include: { campaign: true },
     });
@@ -173,12 +171,12 @@ export default async function notificationRoutes(server: FastifyInstance) {
     let targetType: TargetType = body.targetType ?? 'ALL';
     let targetIds: string[] = body.targetIds ?? [];
     if (sendNow && targetType === 'SEGMENT' && body.segmentCriteria) {
-      targetIds = await findCustomersBySegment(prisma, body.segmentCriteria);
+      targetIds = await findCustomersBySegment(request.db, body.segmentCriteria);
       targetType = 'CUSTOMER';
     }
 
     if (sendNow) {
-      const result = await sendCampaignPush(prisma, {
+      const result = await sendCampaignPush(request.db, {
         title: body.title,
         body: body.body,
         imageUrl: body.imageUrl,
@@ -192,7 +190,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
 
     // RECURRING
     if (body.recurrence) {
-      const notification = await prisma.pushNotification.create({
+      const notification = await request.db.pushNotification.create({
         data: {
           title: body.title,
           body: body.body,
@@ -218,7 +216,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Zamanlanan tarih en az 30 sn sonra olmalı' });
     }
 
-    const notification = await prisma.pushNotification.create({
+    const notification = await request.db.pushNotification.create({
       data: {
         title: body.title,
         body: body.body,
@@ -241,7 +239,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
     reply: any,
   ) => {
     const { id } = request.params as { id: string };
-    const existing = await prisma.pushNotification.findUnique({
+    const existing = await request.db.pushNotification.findUnique({
       where: { id },
     });
     if (!existing) return reply.status(404).send({ error: 'Bulunamadı' });
@@ -260,7 +258,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
       data.scheduledAt = d;
     }
 
-    const updated = await prisma.pushNotification.update({
+    const updated = await request.db.pushNotification.update({
       where: { id },
       data,
     });
@@ -273,14 +271,14 @@ export default async function notificationRoutes(server: FastifyInstance) {
     reply: any,
   ) => {
     const { id } = request.params as { id: string };
-    const existing = await prisma.pushNotification.findUnique({
+    const existing = await request.db.pushNotification.findUnique({
       where: { id },
     });
     if (!existing) return reply.status(404).send({ error: 'Bulunamadı' });
     if (existing.status !== 'SCHEDULED' && existing.status !== 'RECURRING') {
       return reply.status(400).send({ error: 'Sadece zamanlanmış veya tekrarlayan bildirim iptal edilebilir' });
     }
-    const updated = await prisma.pushNotification.update({
+    const updated = await request.db.pushNotification.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
@@ -291,7 +289,7 @@ export default async function notificationRoutes(server: FastifyInstance) {
   server.get('/notifications/customers/search', { preHandler: verifyAdmin }, async (request: any) => {
     const { q, limit } = request.query as { q?: string; limit?: string };
     const take = Math.min(parseInt(limit || '20', 10), 100);
-    const customers = await prisma.customer.findMany({
+    const customers = await request.db.customer.findMany({
       where: q
         ? {
             OR: [
@@ -323,8 +321,8 @@ export default async function notificationRoutes(server: FastifyInstance) {
     request: any,
   ) => {
     const criteria = (request.body ?? {}) as SegmentCriteria;
-    const ids = await findCustomersBySegment(prisma, criteria);
-    const sample = await prisma.customer.findMany({
+    const ids = await findCustomersBySegment(request.db, criteria);
+    const sample = await request.db.customer.findMany({
       where: { id: { in: ids.slice(0, 5) } },
       select: { id: true, name: true, phone: true, email: true },
     });

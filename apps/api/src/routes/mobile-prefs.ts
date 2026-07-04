@@ -2,8 +2,7 @@
 // GET   /api/mobile/prefs/notifications
 // PATCH /api/mobile/prefs/notifications
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 
 const DEFAULT_PREFS = {
@@ -17,19 +16,17 @@ const DEFAULT_PREFS = {
 };
 
 export default async function mobilePrefsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // GET
   server.get('/notifications', { preHandler: verifyCustomerAuth }, async (
     request: FastifyRequest,
   ) => {
     const customerId = (request as any).customerId as string;
-    let prefs = await prisma.notificationPreference.findUnique({
+    let prefs = await request.db.notificationPreference.findUnique({
       where: { customerId },
     });
     if (!prefs) {
       // Lazy create
-      prefs = await prisma.notificationPreference.create({
+      prefs = await request.db.notificationPreference.create({
         data: { customerId, ...DEFAULT_PREFS },
       });
     }
@@ -39,7 +36,6 @@ export default async function mobilePrefsRoutes(server: FastifyInstance) {
   // PATCH
   server.patch('/notifications', { preHandler: verifyCustomerAuth }, async (
     request: FastifyRequest,
-    reply: FastifyReply,
   ) => {
     const customerId = (request as any).customerId as string;
     const body = (request.body ?? {}) as Partial<typeof DEFAULT_PREFS>;
@@ -52,7 +48,7 @@ export default async function mobilePrefsRoutes(server: FastifyInstance) {
       if (body[k] !== undefined) data[k] = body[k];
     }
 
-    const prefs = await prisma.notificationPreference.upsert({
+    const prefs = await request.db.notificationPreference.upsert({
       where: { customerId },
       update: data,
       create: { customerId, ...DEFAULT_PREFS, ...data },
@@ -60,13 +56,13 @@ export default async function mobilePrefsRoutes(server: FastifyInstance) {
 
     // pushEnabled=false olduysa device'ları pasifleştir
     if (data.pushEnabled === false) {
-      await prisma.deviceToken.updateMany({
+      await request.db.deviceToken.updateMany({
         where: { customerId },
         data: { isActive: false },
       });
     } else if (data.pushEnabled === true) {
       // Tekrar aç (sadece silinmemiş olanlar)
-      await prisma.deviceToken.updateMany({
+      await request.db.deviceToken.updateMany({
         where: { customerId },
         data: { isActive: true },
       });

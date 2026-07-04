@@ -4,7 +4,7 @@
 // custom item olarak işlenir, client manipule edemez).
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, BuilderType } from '@prisma/client';
+import { BuilderType } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 
@@ -113,8 +113,6 @@ const SANDWICH_STEPS = [
 ];
 
 export default async function builderRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== PUBLIC LIST ====================
   // Mobile builder ekranı için: type=PIZZA veya SANDWICH
   server.get('/config', async (req: FastifyRequest) => {
@@ -122,11 +120,11 @@ export default async function builderRoutes(server: FastifyInstance) {
     const t = (type === 'SANDWICH' ? 'SANDWICH' : 'PIZZA') as BuilderType;
 
     const [bases, ingredients] = await Promise.all([
-      prisma.builderBase.findMany({
+      req.db.builderBase.findMany({
         where: { type: t, isActive: true },
         orderBy: { sortOrder: 'asc' },
       }),
-      prisma.builderIngredient.findMany({
+      req.db.builderIngredient.findMany({
         where: { type: t, isActive: true },
         orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
       }),
@@ -159,8 +157,8 @@ export default async function builderRoutes(server: FastifyInstance) {
   // ==================== ADMIN LIST ====================
   server.get('/admin/list', { preHandler: verifyAdmin }, async () => {
     const [bases, ingredients] = await Promise.all([
-      prisma.builderBase.findMany({ orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] }),
-      prisma.builderIngredient.findMany({
+      request.db.builderBase.findMany({ orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] }),
+      request.db.builderIngredient.findMany({
         orderBy: [{ type: 'asc' }, { category: 'asc' }, { sortOrder: 'asc' }],
       }),
     ]);
@@ -183,16 +181,16 @@ export default async function builderRoutes(server: FastifyInstance) {
       isActive: body.isActive ?? true,
     };
     if (body.id) {
-      const b = await prisma.builderBase.update({ where: { id: body.id }, data });
+      const b = await req.db.builderBase.update({ where: { id: body.id }, data });
       return { base: b };
     }
-    const b = await prisma.builderBase.create({ data });
+    const b = await req.db.builderBase.create({ data });
     return { base: b };
   });
 
   server.delete('/bases/:id', { preHandler: verifyAdmin }, async (req) => {
     const { id } = req.params as { id: string };
-    await prisma.builderBase.delete({ where: { id } });
+    await req.db.builderBase.delete({ where: { id } });
     return { ok: true };
   });
 
@@ -217,19 +215,19 @@ export default async function builderRoutes(server: FastifyInstance) {
       calories: body.calories ?? null,
     };
     if (body.id) {
-      const i = await prisma.builderIngredient.update({
+      const i = await req.db.builderIngredient.update({
         where: { id: body.id },
         data,
       });
       return { ingredient: i };
     }
-    const i = await prisma.builderIngredient.create({ data });
+    const i = await req.db.builderIngredient.create({ data });
     return { ingredient: i };
   });
 
   server.delete('/ingredients/:id', { preHandler: verifyAdmin }, async (req) => {
     const { id } = req.params as { id: string };
-    await prisma.builderIngredient.delete({ where: { id } });
+    await req.db.builderIngredient.delete({ where: { id } });
     return { ok: true };
   });
 
@@ -245,12 +243,12 @@ export default async function builderRoutes(server: FastifyInstance) {
     };
     if (!body.baseId) return reply.status(400).send({ error: 'baseId gerekli' });
 
-    const base = await prisma.builderBase.findUnique({ where: { id: body.baseId } });
+    const base = await req.db.builderBase.findUnique({ where: { id: body.baseId } });
     if (!base || !base.isActive) {
       return reply.status(404).send({ error: 'Taban bulunamadı' });
     }
 
-    const ingredients = await prisma.builderIngredient.findMany({
+    const ingredients = await req.db.builderIngredient.findMany({
       where: {
         id: { in: body.ingredientIds ?? [] },
         isActive: true,
@@ -300,13 +298,13 @@ export default async function builderRoutes(server: FastifyInstance) {
     const ingredientIds = Array.isArray(body.ingredientIds) ? body.ingredientIds : [];
 
     // Server-side fiyat doğrula (client manipüle edemez)
-    const base = await prisma.builderBase.findUnique({ where: { id: body.baseId } });
+    const base = await req.db.builderBase.findUnique({ where: { id: body.baseId } });
     if (!base || !base.isActive || base.type !== builderType) {
       return reply.status(400).send({ error: 'Taban bulunamadı veya aktif değil' });
     }
     const ingredients =
       ingredientIds.length > 0
-        ? await prisma.builderIngredient.findMany({
+        ? await req.db.builderIngredient.findMany({
             where: { id: { in: ingredientIds }, isActive: true, type: builderType },
           })
         : [];
@@ -314,11 +312,11 @@ export default async function builderRoutes(server: FastifyInstance) {
       Number(base.basePrice) + ingredients.reduce((s, i) => s + Number(i.extraPrice), 0);
 
     // Aynı isimle tasarım varsa üzerine yaz (UX iyileştirmesi)
-    const existing = await prisma.savedBuilderDesign.findFirst({
+    const existing = await req.db.savedBuilderDesign.findFirst({
       where: { customerId, name, builderType },
     });
     if (existing) {
-      const updated = await prisma.savedBuilderDesign.update({
+      const updated = await req.db.savedBuilderDesign.update({
         where: { id: existing.id },
         data: { baseId: body.baseId, ingredientIds, totalPrice },
       });
@@ -326,14 +324,14 @@ export default async function builderRoutes(server: FastifyInstance) {
     }
 
     // Çok sayıda kayıt önlensin diye limit (max 20)
-    const count = await prisma.savedBuilderDesign.count({ where: { customerId } });
+    const count = await req.db.savedBuilderDesign.count({ where: { customerId } });
     if (count >= 20) {
       return reply.status(400).send({
         error: 'Maksimum 20 tasarım kaydedebilirsin. Önce birini sil.',
       });
     }
 
-    const design = await prisma.savedBuilderDesign.create({
+    const design = await req.db.savedBuilderDesign.create({
       data: { customerId, name, builderType, baseId: body.baseId, ingredientIds, totalPrice },
     });
     return { design, replaced: false };
@@ -345,7 +343,7 @@ export default async function builderRoutes(server: FastifyInstance) {
     const { type } = (req.query ?? {}) as { type?: 'PIZZA' | 'SANDWICH' };
     const builderTypeFilter =
       type === 'SANDWICH' ? BuilderType.SANDWICH : type === 'PIZZA' ? BuilderType.PIZZA : undefined;
-    const designs = await prisma.savedBuilderDesign.findMany({
+    const designs = await req.db.savedBuilderDesign.findMany({
       where: { customerId, ...(builderTypeFilter ? { builderType: builderTypeFilter } : {}) },
       orderBy: { createdAt: 'desc' },
     });
@@ -369,11 +367,11 @@ export default async function builderRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (req as any).customerId as string;
     const { id } = req.params as { id: string };
-    const design = await prisma.savedBuilderDesign.findUnique({ where: { id } });
+    const design = await req.db.savedBuilderDesign.findUnique({ where: { id } });
     if (!design || design.customerId !== customerId) {
       return reply.status(404).send({ error: 'Tasarım bulunamadı' });
     }
-    await prisma.savedBuilderDesign.delete({ where: { id } });
+    await req.db.savedBuilderDesign.delete({ where: { id } });
     return { ok: true };
   });
 }

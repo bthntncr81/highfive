@@ -4,7 +4,6 @@
 //         SOCIAL, TIER_DISCOUNT
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 export const PROGRAM_TYPES = [
@@ -122,8 +121,6 @@ export const PROGRAM_TEMPLATES: Record<string, any> = {
 };
 
 export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== TEMPLATES ====================
   server.get('/templates', { preHandler: verifyAdmin }, async () => {
     return {
@@ -134,7 +131,7 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
 
   // ==================== LIST ====================
   server.get('/', { preHandler: verifyAdmin }, async () => {
-    const programs = await prisma.loyaltyProgram.findMany({
+    const programs = await request.db.loyaltyProgram.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
     return { programs };
@@ -146,7 +143,7 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
     reply: FastifyReply,
   ) => {
     const { id } = request.params as { id: string };
-    const program = await prisma.loyaltyProgram.findUnique({ where: { id } });
+    const program = await request.db.loyaltyProgram.findUnique({ where: { id } });
     if (!program) return reply.status(404).send({ error: 'Program bulunamadı' });
     return { program };
   });
@@ -162,7 +159,7 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
     }
     if (!body.name) return reply.status(400).send({ error: 'name gerekli' });
 
-    const program = await prisma.loyaltyProgram.create({
+    const program = await request.db.loyaltyProgram.create({
       data: {
         type: body.type,
         name: body.name,
@@ -185,7 +182,6 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
   // ==================== UPDATE ====================
   server.patch('/:id', { preHandler: verifyAdmin }, async (
     request: FastifyRequest,
-    reply: FastifyReply,
   ) => {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as any;
@@ -198,17 +194,16 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
     ]) {
       if (body[k] !== undefined) data[k] = body[k];
     }
-    const program = await prisma.loyaltyProgram.update({ where: { id }, data });
+    const program = await request.db.loyaltyProgram.update({ where: { id }, data });
     return { program };
   });
 
   // ==================== DELETE ====================
   server.delete('/:id', { preHandler: verifyAdmin }, async (
     request: FastifyRequest,
-    reply: FastifyReply,
   ) => {
     const { id } = request.params as { id: string };
-    await prisma.loyaltyProgram.delete({ where: { id } });
+    await request.db.loyaltyProgram.delete({ where: { id } });
     return { ok: true };
   });
 
@@ -218,9 +213,9 @@ export default async function loyaltyProgramsRoutes(server: FastifyInstance) {
     reply: FastifyReply,
   ) => {
     const { id } = request.params as { id: string };
-    const existing = await prisma.loyaltyProgram.findUnique({ where: { id } });
+    const existing = await request.db.loyaltyProgram.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Program bulunamadı' });
-    const program = await prisma.loyaltyProgram.update({
+    const program = await request.db.loyaltyProgram.update({
       where: { id },
       data: { isActive: !existing.isActive },
     });

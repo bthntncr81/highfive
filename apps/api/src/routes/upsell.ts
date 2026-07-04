@@ -1,20 +1,17 @@
 // Upselling & Cross-selling Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 
 export default async function upsellRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== UPSELLING ====================
 
   // Get upsell suggestions for an item
   server.get(
     '/menu/:id/upsells',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
-      const upsells = await prisma.menuItemUpsell.findMany({
+      const upsells = await request.db.menuItemUpsell.findMany({
         where: { fromItemId: id, active: true },
         include: {
           toItem: {
@@ -53,15 +50,15 @@ export default async function upsellRoutes(server: FastifyInstance) {
 
       // Check if items exist
       const [fromItem, toItem] = await Promise.all([
-        prisma.menuItem.findUnique({ where: { id: fromItemId } }),
-        prisma.menuItem.findUnique({ where: { id: toItemId } }),
+        request.db.menuItem.findUnique({ where: { id: fromItemId } }),
+        request.db.menuItem.findUnique({ where: { id: toItemId } }),
       ]);
 
       if (!fromItem || !toItem) {
         return reply.status(404).send({ error: 'Ürün bulunamadı' });
       }
 
-      const upsell = await prisma.menuItemUpsell.upsert({
+      const upsell = await request.db.menuItemUpsell.upsert({
         where: {
           fromItemId_toItemId: { fromItemId, toItemId },
         },
@@ -82,10 +79,10 @@ export default async function upsellRoutes(server: FastifyInstance) {
   server.delete(
     '/upsells/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
-      await prisma.menuItemUpsell.delete({ where: { id } });
+      await request.db.menuItemUpsell.delete({ where: { id } });
 
       return { success: true };
     }
@@ -95,8 +92,8 @@ export default async function upsellRoutes(server: FastifyInstance) {
   server.get(
     '/upsells',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const upsells = await prisma.menuItemUpsell.findMany({
+    async (request: FastifyRequest) => {
+      const upsells = await request.db.menuItemUpsell.findMany({
         include: {
           fromItem: true,
           toItem: true,
@@ -113,14 +110,14 @@ export default async function upsellRoutes(server: FastifyInstance) {
   // Get cross-sell suggestions for cart items
   server.post(
     '/crosssells/suggestions',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { cartItemIds } = request.body as { cartItemIds: string[] };
 
       if (!cartItemIds || cartItemIds.length === 0) {
         return { suggestions: [] };
       }
 
-      const crossSells = await prisma.menuItemCrossSell.findMany({
+      const crossSells = await request.db.menuItemCrossSell.findMany({
         where: {
           fromItemId: { in: cartItemIds },
           active: true,
@@ -170,15 +167,15 @@ export default async function upsellRoutes(server: FastifyInstance) {
       }
 
       const [fromItem, toItem] = await Promise.all([
-        prisma.menuItem.findUnique({ where: { id: fromItemId } }),
-        prisma.menuItem.findUnique({ where: { id: toItemId } }),
+        request.db.menuItem.findUnique({ where: { id: fromItemId } }),
+        request.db.menuItem.findUnique({ where: { id: toItemId } }),
       ]);
 
       if (!fromItem || !toItem) {
         return reply.status(404).send({ error: 'Ürün bulunamadı' });
       }
 
-      const crossSell = await prisma.menuItemCrossSell.upsert({
+      const crossSell = await request.db.menuItemCrossSell.upsert({
         where: {
           fromItemId_toItemId: { fromItemId, toItemId },
         },
@@ -199,10 +196,10 @@ export default async function upsellRoutes(server: FastifyInstance) {
   server.delete(
     '/crosssells/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
-      await prisma.menuItemCrossSell.delete({ where: { id } });
+      await request.db.menuItemCrossSell.delete({ where: { id } });
 
       return { success: true };
     }
@@ -212,8 +209,8 @@ export default async function upsellRoutes(server: FastifyInstance) {
   server.get(
     '/crosssells',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const crossSells = await prisma.menuItemCrossSell.findMany({
+    async (request: FastifyRequest) => {
+      const crossSells = await request.db.menuItemCrossSell.findMany({
         include: {
           fromItem: true,
           toItem: true,
@@ -230,11 +227,11 @@ export default async function upsellRoutes(server: FastifyInstance) {
   // Track upsell acceptance
   server.post(
     '/upsells/:id/accepted',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const { orderId } = request.body as { orderId?: string };
 
-      await prisma.analyticsEvent.create({
+      await request.db.analyticsEvent.create({
         data: {
           eventType: 'upsell_accepted',
           eventData: { upsellId: id, orderId },
@@ -248,11 +245,11 @@ export default async function upsellRoutes(server: FastifyInstance) {
   // Track cross-sell acceptance
   server.post(
     '/crosssells/:id/accepted',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const { orderId } = request.body as { orderId?: string };
 
-      await prisma.analyticsEvent.create({
+      await request.db.analyticsEvent.create({
         data: {
           eventType: 'crosssell_accepted',
           eventData: { crossSellId: id, orderId },
@@ -267,31 +264,31 @@ export default async function upsellRoutes(server: FastifyInstance) {
   server.get(
     '/sales-suggestions/stats',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const [upsellAccepted, crossSellAccepted, totalUpsellItems, totalCrossSellItems] =
         await Promise.all([
-          prisma.analyticsEvent.count({
+          request.db.analyticsEvent.count({
             where: {
               eventType: 'upsell_accepted',
               createdAt: { gte: thirtyDaysAgo },
             },
           }),
-          prisma.analyticsEvent.count({
+          request.db.analyticsEvent.count({
             where: {
               eventType: 'crosssell_accepted',
               createdAt: { gte: thirtyDaysAgo },
             },
           }),
-          prisma.orderItem.count({
+          request.db.orderItem.count({
             where: {
               isUpsell: true,
               createdAt: { gte: thirtyDaysAgo },
             },
           }),
-          prisma.orderItem.count({
+          request.db.orderItem.count({
             where: {
               isCrossSell: true,
               createdAt: { gte: thirtyDaysAgo },

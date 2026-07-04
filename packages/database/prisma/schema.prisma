@@ -158,7 +158,7 @@ model Subscription {
 
 model StoredCard {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   iyzicoToken String // cardToken
   lastFour    String
@@ -181,7 +181,7 @@ enum BillingTransactionType {
 
 model BillingTransaction {
   id                   String                 @id @default(cuid())
-  tenantId             String
+  tenantId             String                 @default("")
   tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type                 BillingTransactionType
   amount               Decimal                @db.Decimal(10, 2)
@@ -203,7 +203,7 @@ model Membership {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   role       UserRole @default(WAITER)
   pin        String? // POS hızlı giriş — tenant içinde benzersiz
@@ -221,7 +221,7 @@ model Membership {
 
 model Location {
   id                String   @id @default(cuid())
-  tenantId          String
+  tenantId          String   @default("")
   tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name              String // "High Five Kadıköy"
   code              String // "kadiköy", "besiktas" — tenant içinde benzersiz (aşağıda)
@@ -332,7 +332,7 @@ enum TableStatus {
 
 model Table {
   id               String      @id @default(cuid())
-  tenantId         String
+  tenantId         String      @default("")
   tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId       String?
   number           Int
@@ -364,7 +364,7 @@ model Table {
 
 model Category {
   id             String   @id @default(cuid())
-  tenantId       String
+  tenantId       String   @default("")
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name           String
   icon           String?
@@ -401,7 +401,7 @@ enum Allergen {
 
 model MenuItem {
   id          String     @id @default(cuid())
-  tenantId    String
+  tenantId    String     @default("")
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   categoryId  String
   name        String
@@ -450,7 +450,7 @@ model MenuItem {
 // Location-specific menu item settings
 model MenuItemLocation {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId String
   locationId String
@@ -468,7 +468,7 @@ model MenuItemLocation {
 // Upselling - "Bununla birlikte X de ister misiniz?"
 model MenuItemUpsell {
   id             String   @id @default(cuid())
-  tenantId       String
+  tenantId       String   @default("")
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fromItemId     String
   toItemId       String
@@ -488,7 +488,7 @@ model MenuItemUpsell {
 // Cross-selling - Sepette X varken Y öner
 model MenuItemCrossSell {
   id             String   @id @default(cuid())
-  tenantId       String
+  tenantId       String   @default("")
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fromItemId     String
   toItemId       String
@@ -507,7 +507,7 @@ model MenuItemCrossSell {
 
 model Modifier {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId String
   name       String // "Ekstra Peynir", "Acısız" etc.
@@ -533,7 +533,7 @@ enum RawMaterialUnit {
 
 model RawMaterial {
   id           String          @id @default(cuid())
-  tenantId     String
+  tenantId     String          @default("")
   tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name         String // tenant içinde benzersiz (model sonunda @@unique)
   unit         RawMaterialUnit @default(GRAM)
@@ -554,7 +554,7 @@ model RawMaterial {
 // Menü ürünü - Ham madde ilişkisi (gramajlı)
 model MenuItemIngredient {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemId    String
   rawMaterialId String
@@ -572,7 +572,7 @@ model MenuItemIngredient {
 // Happy Hours - Zamanlı indirimler/menü değişiklikleri
 model HappyHour {
   id          String  @id @default(cuid())
-  tenantId    String
+  tenantId    String  @default("")
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId  String?
   name        String // "Happy Hour", "Öğle Menüsü"
@@ -602,7 +602,7 @@ model HappyHour {
 
 model HappyHourItem {
   id              String   @id @default(cuid())
-  tenantId        String
+  tenantId        String   @default("")
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   happyHourId     String
   menuItemId      String
@@ -661,7 +661,7 @@ enum PaymentStatus {
 
 model Order {
   id                String         @id @default(cuid())
-  tenantId          String
+  tenantId          String         @default("")
   tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderNumber       Int            @default(autoincrement()) // global sequence; tenant içinde benzersiz (model sonunda) — Faz 4'te per-tenant sayaç güzelleştirmesi
   locationId        String?
@@ -727,7 +727,7 @@ model Order {
 
 model OrderItem {
   id           String      @id @default(cuid())
-  tenantId     String
+  tenantId     String      @default("")
   tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId      String
   menuItemId   String?
@@ -754,7 +754,7 @@ model OrderItem {
 
 model Payment {
   id         String        @id @default(cuid())
-  tenantId   String
+  tenantId   String        @default("")
   tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId    String
   amount     Decimal       @db.Decimal(10, 2)
@@ -774,7 +774,7 @@ model Payment {
 
 model Invoice {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orderId       String   @unique
   invoiceNumber String // tenant içinde benzersiz (model sonunda @@unique)
@@ -804,7 +804,7 @@ enum PrinterType {
 
 model Printer {
   id           String      @id @default(cuid())
-  tenantId     String
+  tenantId     String      @default("")
   tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name         String // "Mutfak Yazıcı 1"
   type         PrinterType @default(RECEIPT)
@@ -824,7 +824,7 @@ model Printer {
 
 model PrintJob {
   id        String    @id @default(cuid())
-  tenantId  String
+  tenantId  String    @default("")
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   printerId String
   orderId   String?
@@ -841,7 +841,7 @@ model PrintJob {
 
 model WhatsAppMessage {
   id        String   @id @default(cuid())
-  tenantId  String
+  tenantId  String   @default("")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messageId String   @unique // WhatsApp message ID
   from      String // Phone number
@@ -858,7 +858,7 @@ model WhatsAppMessage {
 
 model DailyReport {
   id                  String   @id @default(cuid())
-  tenantId            String
+  tenantId            String   @default("")
   tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId          String?
   date                DateTime @db.Date
@@ -892,7 +892,7 @@ enum ExpenseStatus {
 
 model ExpenseCategory {
   id        String   @id @default(cuid())
-  tenantId  String
+  tenantId  String   @default("")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name      String // tenant içinde benzersiz (model sonunda @@unique)
   icon      String? // emoji veya icon adı
@@ -911,7 +911,7 @@ model ExpenseCategory {
 
 model Expense {
   id            String        @id @default(cuid())
-  tenantId      String
+  tenantId      String        @default("")
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   amount        Decimal       @db.Decimal(10, 2)
   categoryId    String
@@ -949,7 +949,7 @@ model Expense {
 
 model Settings {
   id        String   @id @default(cuid())
-  tenantId  String
+  tenantId  String   @default("")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   key       String // tenant içinde benzersiz (model sonunda @@unique)
   value     Json
@@ -963,7 +963,7 @@ model Settings {
 
 model AnalyticsEvent {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   locationId String?
   eventType  String // "page_view", "add_to_cart", "order_completed", "upsell_accepted"
@@ -982,7 +982,7 @@ model AnalyticsEvent {
 // Sadakat Programı Müşterisi
 model Customer {
   id        String    @id @default(cuid())
-  tenantId  String
+  tenantId  String    @default("")
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   phone     String? // Eskiden zorunluydu — email-OTP geçişiyle opsiyonel; tenant içinde benzersiz
   email     String? // Email-OTP login için ana identifier; tenant içinde benzersiz
@@ -1064,7 +1064,7 @@ model Customer {
 // Sadakat Seviyesi (Bronze, Silver, Gold vb.)
 model LoyaltyTier {
   id               String   @id @default(cuid())
-  tenantId         String
+  tenantId         String   @default("")
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name             String // "Bronze", "Silver", "Gold", "Platinum"
   minPoints        Int // Bu seviyeye ulaşmak için gereken min puan
@@ -1086,7 +1086,7 @@ model LoyaltyTier {
 // Puan İşlemleri
 model PointsTransaction {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   orderId     String?
@@ -1103,7 +1103,7 @@ model PointsTransaction {
 // Müşteri Siparişleri (Order'a referans)
 model CustomerOrder {
   id           String   @id @default(cuid())
-  tenantId     String
+  tenantId     String   @default("")
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId   String
   orderId      String   @unique
@@ -1121,7 +1121,7 @@ model CustomerOrder {
 // İndirim Kampanyaları
 model Campaign {
   id          String  @id @default(cuid())
-  tenantId    String
+  tenantId    String  @default("")
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   description String?
@@ -1170,7 +1170,7 @@ model Campaign {
 // Paket Menüler / Combo'lar
 model BundleDeal {
   id          String  @id @default(cuid())
-  tenantId    String
+  tenantId    String  @default("")
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Aile Paketi", "Öğle Menüsü"
   description String?
@@ -1217,7 +1217,7 @@ model BundleDeal {
 //      "Yan Ürün"   — pickCount=1, eligibleItemIds=[..], priceMode=ADD_PRICE
 model BundleOptionGroup {
   id              String   @id @default(cuid())
-  tenantId        String
+  tenantId        String   @default("")
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId        String
   name            String // "Pizza Seçimi"
@@ -1243,7 +1243,7 @@ model BundleOptionGroup {
 // Her grup içindeki ürünlerin kendi ek fiyatı (extraPrice) olabilir.
 model OptionGroup {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Pizza Seçimi", "İçecek Seçimi", "Yan Ürün"
   description String?
@@ -1263,7 +1263,7 @@ model OptionGroup {
 // Grup içindeki ürünler — her birinin ek fiyatı olabilir
 model OptionGroupItem {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   optionGroupId String
   menuItemId    String
@@ -1282,7 +1282,7 @@ model OptionGroupItem {
 // Bundle ↔ OptionGroup ilişki tablosu (many-to-many)
 model BundleOptionGroupAssignment {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId      String
   optionGroupId String
@@ -1302,7 +1302,7 @@ model BundleOptionGroupAssignment {
 // Paket İçindeki Ürünler
 model BundleItem {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundleId    String
   menuItemId  String
@@ -1321,7 +1321,7 @@ model BundleItem {
 // Kuponlar
 model Coupon {
   id          String  @id @default(cuid())
-  tenantId    String
+  tenantId    String  @default("")
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   code        String // "HOSGELDIN20", "DOGUMGUNU50" — tenant içinde benzersiz
   name        String
@@ -1365,7 +1365,7 @@ model Coupon {
 // Kupon Kullanımları
 model CouponUsage {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   couponId   String
   customerId String?
@@ -1383,7 +1383,7 @@ model CouponUsage {
 
 model IntegrationPartner {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String // "WhatRes - Tenant XYZ"
   apiKey        String   @unique // crypto.randomBytes(32).hex
@@ -1403,7 +1403,7 @@ model IntegrationPartner {
 
 model WebhookLog {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   partnerId  String
   event      String // order.status_changed, menu.updated
@@ -1422,7 +1422,7 @@ model WebhookLog {
 
 model DeviceToken {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   token      String   @unique // ExponentPushToken[xxx]
   platform   String // ios | android
@@ -1450,7 +1450,7 @@ model DeviceToken {
 
 model PushNotification {
   id              String   @id @default(cuid())
-  tenantId        String
+  tenantId        String   @default("")
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title           String
   body            String
@@ -1511,7 +1511,7 @@ model PushNotification {
 
 model LoyaltyProgram {
   id          String  @id @default(cuid())
-  tenantId    String
+  tenantId    String  @default("")
   tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type        String // Yukarıdaki türlerden biri
   name        String // "Pizza Damga Kartı", "Doğum Günü Sürprizi"
@@ -1564,7 +1564,7 @@ model LoyaltyProgram {
 // Bir customer + program çifti için aynı anda en fazla 1 PENDING/APPROVED kayıt.
 model LoyaltyClaim {
   id            String         @id @default(cuid())
-  tenantId      String
+  tenantId      String         @default("")
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   programId     String
@@ -1587,7 +1587,7 @@ model LoyaltyClaim {
 // Müşterinin her programdaki ilerlemesi
 model CustomerLoyaltyProgress {
   id         String @id @default(cuid())
-  tenantId   String
+  tenantId   String @default("")
   tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   programId  String
@@ -1617,7 +1617,7 @@ model CustomerLoyaltyProgress {
 
 model Address {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   label       String // "Ev", "İş", "Yazlık"
@@ -1640,7 +1640,7 @@ model Address {
 
 model FavoriteItem {
   id         String   @id @default(cuid())
-  tenantId   String
+  tenantId   String   @default("")
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   menuItemId String
@@ -1658,7 +1658,7 @@ model FavoriteItem {
 
 model NotificationPreference {
   id              String   @id @default(cuid())
-  tenantId        String
+  tenantId        String   @default("")
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId      String   @unique
   pushEnabled     Boolean  @default(true)
@@ -1685,7 +1685,7 @@ model NotificationPreference {
 // outcome üretir (client'a SADECE prize index döner; tüm güvenlik server-side).
 model SpinWheelConfig {
   id            String   @id @default(cuid())
-  tenantId      String
+  tenantId      String   @default("")
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String   @default("Şans Çarkı")
   description   String?
@@ -1709,7 +1709,7 @@ model SpinWheelConfig {
 // Kullanıcı her çark çevirme denemesi audit kaydı. Cooldown ve kötüye kullanım takibi.
 model SpinAttempt {
   id         String    @id @default(cuid())
-  tenantId   String
+  tenantId   String    @default("")
   tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId String
   configId   String
@@ -1737,7 +1737,7 @@ model SpinAttempt {
 // type: ORDER_COUNT | TOTAL_SPENT | STREAK | CATEGORY_MASTER | TIME_BASED
 model Achievement {
   id               String   @id @default(cuid())
-  tenantId         String
+  tenantId         String   @default("")
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   key              String // "first_order", "pizza_kralı_10", "morning_bird" — tenant içinde benzersiz
   name             String // "İlk Sipariş"
@@ -1768,7 +1768,7 @@ model Achievement {
 // Kullanıcının kazandığı rozetler
 model CustomerAchievement {
   id            String    @id @default(cuid())
-  tenantId      String
+  tenantId      String    @default("")
   tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   achievementId String
@@ -1786,7 +1786,7 @@ model CustomerAchievement {
 // Scratch card — kullanıcı sipariş sonrası kazıyıp ödül alır
 model ScratchReward {
   id          String    @id @default(cuid())
-  tenantId    String
+  tenantId    String    @default("")
   tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   orderId     String? // Bağlı sipariş (opsiyonel)
@@ -1813,7 +1813,7 @@ model ScratchReward {
 // Her kutu kendi prize tablosuyla server outcome'lu açılır.
 model MysteryBoxConfig {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String // "Bronze Kutu"
   description String?
@@ -1834,7 +1834,7 @@ model MysteryBoxConfig {
 
 model MysteryBoxOpen {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String   @default("")
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId  String
   configId    String
@@ -1879,7 +1879,7 @@ enum IngredientCategory {
 // Taban / kabuk: ince hamur pizza, kalın hamur, beyaz ekmek sandviç vs.
 model BuilderBase {
   id          String      @id @default(cuid())
-  tenantId    String
+  tenantId    String      @default("")
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type        BuilderType
   name        String // "İnce Hamur Pizza", "Beyaz Ekmek Sandviç"
@@ -1898,7 +1898,7 @@ model BuilderBase {
 // Malzemeler — her biri layerImage ile pizza/sandviç üzerine binebilir.
 model BuilderIngredient {
   id          String             @id @default(cuid())
-  tenantId    String
+  tenantId    String             @default("")
   tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   // Hangi tip ürünlere uygulanabilir? (PIZZA, SANDWICH; BOTH için 2 ayrı kayıt önerilir)
   type        BuilderType
@@ -1929,7 +1929,7 @@ model BuilderIngredient {
 
 model CourierLocation {
   id           String   @id @default(cuid())
-  tenantId     String
+  tenantId     String   @default("")
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   courierId    String
   latitude     Float
@@ -1956,7 +1956,7 @@ model CourierLocation {
 // kalsın (UI "bu malzeme artık aktif değil" gösterir).
 model SavedBuilderDesign {
   id            String      @id @default(cuid())
-  tenantId      String
+  tenantId      String      @default("")
   tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId    String
   name          String // Kullanıcının verdiği isim: "Acılı Karışık Pizza"
@@ -1974,7 +1974,7 @@ model SavedBuilderDesign {
 // Pizza Şefi mini-oyunu — herkese açık global skor tablosu
 model PizzaGameScore {
   id        String   @id @default(cuid())
-  tenantId  String
+  tenantId  String   @default("")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name      String
   score     Int

@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
-import { PrismaClient, OrderStatus, PaymentMethod } from '@prisma/client';
+import { OrderStatus, PaymentMethod } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function reportRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get daily summary
   server.get('/daily', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { date } = request.query as { date?: string };
@@ -16,7 +14,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     endOfDay.setHours(23, 59, 59, 999);
 
     // Get orders for the day
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         createdAt: {
           gte: startOfDay,
@@ -50,7 +48,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     const otherAmount = totalRevenue - cashAmount - cardAmount;
 
     // Cancelled orders
-    const cancelledOrders = await prisma.order.count({
+    const cancelledOrders = await request.db.order.count({
       where: {
         createdAt: {
           gte: startOfDay,
@@ -105,7 +103,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     }
 
     // ===== Günlük giderler =====
-    const dayExpenses = await prisma.expense.findMany({
+    const dayExpenses = await request.db.expense.findMany({
       where: {
         expenseDate: { gte: startOfDay, lte: endOfDay },
         status: 'APPROVED',
@@ -156,7 +154,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     end.setDate(end.getDate() + 7);
     end.setHours(23, 59, 59, 999);
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         createdAt: {
           gte: start,
@@ -213,7 +211,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     const start = new Date(targetYear, targetMonth, 1);
     const end = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         createdAt: { gte: start, lte: end },
         status: OrderStatus.COMPLETED,
@@ -253,7 +251,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     const avgDailyRevenue = Math.round(totalRevenue / daysInMonth);
 
     // ===== Aylık giderler =====
-    const monthExpenses = await prisma.expense.findMany({
+    const monthExpenses = await request.db.expense.findMany({
       where: { expenseDate: { gte: start, lte: end }, status: 'APPROVED' },
       include: { category: true },
     });
@@ -321,7 +319,7 @@ export default async function reportRoutes(server: FastifyInstance) {
       }
 
       // Also pull cancelled orders for the cancellation column
-      const cancelled = await prisma.order.findMany({
+      const cancelled = await request.db.order.findMany({
         where: { createdAt: { gte: start, lte: end }, status: OrderStatus.CANCELLED },
         select: { createdAt: true },
       });
@@ -393,7 +391,7 @@ export default async function reportRoutes(server: FastifyInstance) {
     const end = endDate ? new Date(endDate) : new Date();
     end.setHours(23, 59, 59, 999);
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         createdAt: {
           gte: start,

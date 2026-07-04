@@ -1,12 +1,10 @@
 // Tipping & Service Charge Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import { broadcastOrderUpdate } from '../websocket';
 
 export default async function tipRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Predefined tip percentages
   const TIP_PERCENTAGES = [10, 15, 20, 25];
 
@@ -14,7 +12,7 @@ export default async function tipRoutes(server: FastifyInstance) {
   server.get('/orders/:id/tip-suggestions', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       select: { subtotal: true, total: true },
     });
@@ -42,7 +40,7 @@ export default async function tipRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const { amount, percent } = request.body as { amount?: number; percent?: number };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       select: { subtotal: true, total: true, tip: true },
     });
@@ -65,7 +63,7 @@ export default async function tipRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Bahşiş negatif olamaz' });
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: { tip: tipAmount },
       include: { items: { include: { menuItem: true } }, table: true },
@@ -92,7 +90,7 @@ export default async function tipRoutes(server: FastifyInstance) {
         method: PaymentMethod;
       };
 
-      const order = await prisma.order.findUnique({
+      const order = await request.db.order.findUnique({
         where: { id: orderId },
       });
 
@@ -101,7 +99,7 @@ export default async function tipRoutes(server: FastifyInstance) {
       }
 
       // Create payment with tip
-      const payment = await prisma.payment.create({
+      const payment = await request.db.payment.create({
         data: {
           orderId,
           amount,
@@ -112,7 +110,7 @@ export default async function tipRoutes(server: FastifyInstance) {
 
       // Update order tip total
       const currentTip = Number(order.tip) || 0;
-      await prisma.order.update({
+      await request.db.order.update({
         where: { id: orderId },
         data: { tip: currentTip + tipAmount },
       });
@@ -122,11 +120,11 @@ export default async function tipRoutes(server: FastifyInstance) {
   );
 
   // Get service charge settings
-  server.get('/settings/service-charge', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/settings/service-charge', async (request: FastifyRequest) => {
     const { locationId } = request.query as { locationId?: string };
 
     if (locationId) {
-      const location = await prisma.location.findUnique({
+      const location = await request.db.location.findUnique({
         where: { id: locationId },
         select: { serviceCharge: true, serviceChargeType: true },
       });
@@ -140,7 +138,7 @@ export default async function tipRoutes(server: FastifyInstance) {
     }
 
     // Return default from settings
-    const settings = await prisma.settings.findUnique({
+    const settings = await request.db.settings.findUnique({
       where: { key: 'serviceCharge' },
     });
 
@@ -151,7 +149,7 @@ export default async function tipRoutes(server: FastifyInstance) {
   server.put(
     '/settings/service-charge',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { rate, type, enabled, locationId } = request.body as {
         rate: number;
         type: 'PERCENTAGE' | 'FIXED';
@@ -160,7 +158,7 @@ export default async function tipRoutes(server: FastifyInstance) {
       };
 
       if (locationId) {
-        await prisma.location.update({
+        await request.db.location.update({
           where: { id: locationId },
           data: {
             serviceCharge: rate,
@@ -168,7 +166,7 @@ export default async function tipRoutes(server: FastifyInstance) {
           },
         });
       } else {
-        await prisma.settings.upsert({
+        await request.db.settings.upsert({
           where: { key: 'serviceCharge' },
           update: { value: { rate, type, enabled } },
           create: { key: 'serviceCharge', value: { rate, type, enabled } },
@@ -180,7 +178,7 @@ export default async function tipRoutes(server: FastifyInstance) {
   );
 
   // Calculate order with service charge
-  server.post('/orders/calculate-service-charge', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/orders/calculate-service-charge', async (request: FastifyRequest) => {
     const { subtotal, locationId, orderType } = request.body as {
       subtotal: number;
       locationId?: string;
@@ -192,7 +190,7 @@ export default async function tipRoutes(server: FastifyInstance) {
 
     // Get service charge from location or settings
     if (locationId) {
-      const location = await prisma.location.findUnique({
+      const location = await request.db.location.findUnique({
         where: { id: locationId },
         select: { serviceCharge: true, serviceChargeType: true },
       });
@@ -201,7 +199,7 @@ export default async function tipRoutes(server: FastifyInstance) {
         serviceChargeType = location.serviceChargeType;
       }
     } else {
-      const settings = await prisma.settings.findUnique({
+      const settings = await request.db.settings.findUnique({
         where: { key: 'serviceCharge' },
       });
       if (settings?.value) {
@@ -238,7 +236,7 @@ export default async function tipRoutes(server: FastifyInstance) {
   server.get(
     '/reports/tips',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { startDate, endDate, locationId } = request.query as {
         startDate?: string;
         endDate?: string;
@@ -248,7 +246,7 @@ export default async function tipRoutes(server: FastifyInstance) {
       const start = startDate ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate() - 30));
       const end = endDate ? new Date(endDate) : new Date();
 
-      const orderTips = await prisma.order.aggregate({
+      const orderTips = await request.db.order.aggregate({
         where: {
           createdAt: { gte: start, lte: end },
           tip: { gt: 0 },
@@ -260,7 +258,7 @@ export default async function tipRoutes(server: FastifyInstance) {
       });
 
       // Daily breakdown
-      const dailyTips = await prisma.$queryRaw`
+      const dailyTips = await request.db.$queryRaw`
         SELECT 
           DATE(created_at) as date,
           SUM(tip) as total_tip,
@@ -270,7 +268,7 @@ export default async function tipRoutes(server: FastifyInstance) {
         WHERE tip > 0 
           AND created_at >= ${start}
           AND created_at <= ${end}
-          ${locationId ? prisma.$queryRaw`AND location_id = ${locationId}` : prisma.$queryRaw``}
+          ${locationId ? request.db.$queryRaw`AND location_id = ${locationId}` : request.db.$queryRaw``}
         GROUP BY DATE(created_at)
         ORDER BY date DESC
         LIMIT 30

@@ -1,13 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function settingsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all settings
   server.get('/', { preHandler: verifyAdmin }, async () => {
-    const settings = await prisma.settings.findMany();
+    const settings = await request.db.settings.findMany();
     
     const result: Record<string, any> = {};
     for (const setting of settings) {
@@ -21,7 +18,7 @@ export default async function settingsRoutes(server: FastifyInstance) {
   server.get('/:key', async (request: FastifyRequest, reply: FastifyReply) => {
     const { key } = request.params as { key: string };
     
-    const setting = await prisma.settings.findUnique({
+    const setting = await request.db.settings.findUnique({
       where: { key },
     });
 
@@ -37,7 +34,7 @@ export default async function settingsRoutes(server: FastifyInstance) {
     const { key } = request.params as { key: string };
     const { value } = request.body as { value: any };
 
-    const setting = await prisma.settings.upsert({
+    const setting = await request.db.settings.upsert({
       where: { key },
       update: { value },
       create: { key, value },
@@ -48,11 +45,11 @@ export default async function settingsRoutes(server: FastifyInstance) {
 
   // Get public settings (for frontend)
   server.get('/public/restaurant', async () => {
-    const restaurantSetting = await prisma.settings.findUnique({
+    const restaurantSetting = await request.db.settings.findUnique({
       where: { key: 'restaurant' },
     });
 
-    const whatsappSetting = await prisma.settings.findUnique({
+    const whatsappSetting = await request.db.settings.findUnique({
       where: { key: 'whatsapp' },
     });
 
@@ -64,7 +61,7 @@ export default async function settingsRoutes(server: FastifyInstance) {
 
   // Get public service settings (takeaway, delivery, online payment)
   server.get('/public/services', async () => {
-    const servicesSetting = await prisma.settings.findUnique({
+    const servicesSetting = await request.db.settings.findUnique({
       where: { key: 'services' },
     });
 
@@ -79,12 +76,12 @@ export default async function settingsRoutes(server: FastifyInstance) {
 
   // Backup all settings
   server.get('/backup', { preHandler: verifyAdmin }, async () => {
-    const settings = await prisma.settings.findMany();
-    const categories = await prisma.category.findMany({
+    const settings = await request.db.settings.findMany();
+    const categories = await request.db.category.findMany({
       include: { items: { include: { modifiers: true } } },
     });
-    const tables = await prisma.table.findMany();
-    const users = await prisma.user.findMany({
+    const tables = await request.db.table.findMany();
+    const users = await request.db.user.findMany({
       select: {
         id: true,
         email: true,
@@ -115,7 +112,7 @@ export default async function settingsRoutes(server: FastifyInstance) {
     try {
       // Restore settings
       for (const setting of backup.settings) {
-        await prisma.settings.upsert({
+        await request.db.settings.upsert({
           where: { key: setting.key },
           update: { value: setting.value },
           create: { key: setting.key, value: setting.value },

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 /**
@@ -10,8 +9,6 @@ import { verifyAdmin } from '../middleware/auth';
  * burada JWT auth ile normal POS kullanıcıları (ADMIN/MANAGER) partner yönetimi yapabilir.
  */
 export default async function integrationPartnerRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   /**
    * GET /api/integration-partners
    * Tüm entegrasyon ortaklarını listele
@@ -19,8 +16,8 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
   server.get(
     '/',
     { preHandler: verifyAdmin },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const partners = await prisma.integrationPartner.findMany({
+    async (request: FastifyRequest) => {
+      const partners = await request.db.integrationPartner.findMany({
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -75,7 +72,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
       const apiKey = crypto.randomBytes(32).toString('hex');
       const webhookSecret = crypto.randomBytes(16).toString('hex');
 
-      const partner = await prisma.integrationPartner.create({
+      const partner = await request.db.integrationPartner.create({
         data: {
           name: name.trim(),
           apiKey,
@@ -121,7 +118,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
       };
 
       // Check if partner exists
-      const existing = await prisma.integrationPartner.findUnique({
+      const existing = await request.db.integrationPartner.findUnique({
         where: { id },
       });
 
@@ -136,7 +133,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
       if (permissions !== undefined) updateData.permissions = permissions;
       if (locationId !== undefined) updateData.locationId = locationId;
 
-      const updated = await prisma.integrationPartner.update({
+      const updated = await request.db.integrationPartner.update({
         where: { id },
         data: updateData,
         select: {
@@ -166,7 +163,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const existing = await prisma.integrationPartner.findUnique({
+      const existing = await request.db.integrationPartner.findUnique({
         where: { id },
       });
 
@@ -178,7 +175,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
       const newApiKey = crypto.randomBytes(32).toString('hex');
       const newWebhookSecret = crypto.randomBytes(16).toString('hex');
 
-      await prisma.integrationPartner.update({
+      await request.db.integrationPartner.update({
         where: { id },
         data: {
           apiKey: newApiKey,
@@ -206,7 +203,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const partner = await prisma.integrationPartner.findUnique({
+      const partner = await request.db.integrationPartner.findUnique({
         where: { id },
         select: {
           id: true,
@@ -237,7 +234,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const existing = await prisma.integrationPartner.findUnique({
+      const existing = await request.db.integrationPartner.findUnique({
         where: { id },
       });
 
@@ -245,7 +242,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
         return reply.status(404).send({ error: 'Partner bulunamadi' });
       }
 
-      await prisma.integrationPartner.delete({
+      await request.db.integrationPartner.delete({
         where: { id },
       });
 
@@ -262,11 +259,11 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
   server.get(
     '/:id/logs',
     { preHandler: verifyAdmin },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const { limit = '20', offset = '0' } = request.query as { limit?: string; offset?: string };
 
-      const logs = await prisma.webhookLog.findMany({
+      const logs = await request.db.webhookLog.findMany({
         where: { partnerId: id },
         orderBy: { createdAt: 'desc' },
         take: parseInt(limit, 10),
@@ -281,7 +278,7 @@ export default async function integrationPartnerRoutes(server: FastifyInstance) 
         },
       });
 
-      const total = await prisma.webhookLog.count({
+      const total = await request.db.webhookLog.count({
         where: { partnerId: id },
       });
 

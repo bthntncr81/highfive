@@ -10,12 +10,9 @@
 //   GET    /claims/:id             — tek talep detayı
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 
 export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Liste — admin/staff erişimi
   server.get('/claims', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const { status, limit } = (request.query ?? {}) as {
@@ -24,7 +21,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
     };
     const take = Math.min(parseInt(limit || '50', 10) || 50, 200);
     const where = status ? { status } : {};
-    const claims = await prisma.loyaltyClaim.findMany({
+    const claims = await request.db.loyaltyClaim.findMany({
       where,
       include: {
         customer: { select: { id: true, name: true, phone: true, email: true } },
@@ -42,7 +39,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
     reply: FastifyReply,
   ) => {
     const { id } = request.params as { id: string };
-    const claim = await prisma.loyaltyClaim.findUnique({
+    const claim = await request.db.loyaltyClaim.findUnique({
       where: { id },
       include: {
         customer: { select: { id: true, name: true, phone: true, email: true, totalPoints: true } },
@@ -61,7 +58,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const user = (request as any).user;
 
-    const claim = await prisma.loyaltyClaim.findUnique({
+    const claim = await request.db.loyaltyClaim.findUnique({
       where: { id },
       include: { program: true, customer: true },
     });
@@ -73,7 +70,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
     }
 
     // Transaction: claim güncelle + puan ekle + tx history + progress kaydı
-    await prisma.$transaction(async (tx) => {
+    await request.db.$transaction(async (tx) => {
       await tx.loyaltyClaim.update({
         where: { id },
         data: {
@@ -131,7 +128,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
     const { reason } = (request.body ?? {}) as { reason?: string };
     const user = (request as any).user;
 
-    const claim = await prisma.loyaltyClaim.findUnique({ where: { id } });
+    const claim = await request.db.loyaltyClaim.findUnique({ where: { id } });
     if (!claim) return reply.status(404).send({ error: 'Talep bulunamadı' });
     if (claim.status !== 'PENDING') {
       return reply
@@ -139,7 +136,7 @@ export default async function loyaltyClaimsRoutes(server: FastifyInstance) {
         .send({ error: 'Talep zaten işlenmiş', currentStatus: claim.status });
     }
 
-    await prisma.loyaltyClaim.update({
+    await request.db.loyaltyClaim.update({
       where: { id },
       data: {
         status: 'REJECTED',

@@ -1,16 +1,13 @@
 // Loyalty Program Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 
 export default async function loyaltyRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== TIERS ====================
 
   // Get all loyalty tiers
   server.get('/tiers', { preHandler: verifyAuth }, async () => {
-    const tiers = await prisma.loyaltyTier.findMany({
+    const tiers = await request.db.loyaltyTier.findMany({
       where: { isActive: true },
       orderBy: { minPoints: 'asc' },
       include: {
@@ -43,7 +40,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Ad ve minimum puan gerekli' });
     }
 
-    const tier = await prisma.loyaltyTier.create({
+    const tier = await request.db.loyaltyTier.create({
       data: {
         name,
         minPoints,
@@ -59,11 +56,11 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   });
 
   // Update tier
-  server.put('/tiers/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.put('/tiers/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
 
-    const tier = await prisma.loyaltyTier.update({
+    const tier = await request.db.loyaltyTier.update({
       where: { id },
       data,
     });
@@ -89,7 +86,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
       where.loyaltyTierId = tierId;
     }
 
-    const customers = await prisma.customer.findMany({
+    const customers = await request.db.customer.findMany({
       where,
       include: { loyaltyTier: true },
       orderBy: { createdAt: 'desc' },
@@ -103,7 +100,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   server.get('/customers/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { id },
       include: {
         loyaltyTier: true,
@@ -120,10 +117,10 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   });
 
   // Customer lookup by phone (public - for order flow)
-  server.get('/customers/phone/:phone', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/customers/phone/:phone', async (request: FastifyRequest) => {
     const { phone } = request.params as { phone: string };
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { phone },
       include: { loyaltyTier: true },
     });
@@ -159,18 +156,18 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
     }
 
     // Check if already exists
-    const existing = await prisma.customer.findUnique({ where: { phone } });
+    const existing = await request.db.customer.findUnique({ where: { phone } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu telefon numarası zaten kayıtlı' });
     }
 
     // Get bronze tier (lowest)
-    const bronzeTier = await prisma.loyaltyTier.findFirst({
+    const bronzeTier = await request.db.loyaltyTier.findFirst({
       where: { isActive: true },
       orderBy: { minPoints: 'asc' },
     });
 
-    const customer = await prisma.customer.create({
+    const customer = await request.db.customer.create({
       data: {
         phone,
         name,
@@ -185,7 +182,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
 
     // Give welcome bonus points
     if (customer) {
-      await prisma.pointsTransaction.create({
+      await request.db.pointsTransaction.create({
         data: {
           customerId: customer.id,
           points: 50,
@@ -194,7 +191,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
         },
       });
 
-      await prisma.customer.update({
+      await request.db.customer.update({
         where: { id: customer.id },
         data: { totalPoints: 50, lifetimePoints: 50 },
       });
@@ -213,13 +210,13 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
       orderId?: string;
     };
 
-    const customer = await prisma.customer.findUnique({ where: { id } });
+    const customer = await request.db.customer.findUnique({ where: { id } });
     if (!customer) {
       return reply.status(404).send({ error: 'Müşteri bulunamadı' });
     }
 
     // Create transaction
-    await prisma.pointsTransaction.create({
+    await request.db.pointsTransaction.create({
       data: {
         customerId: id,
         points,
@@ -236,7 +233,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
       : customer.lifetimePoints;
 
     // Check for tier upgrade
-    const newTier = await prisma.loyaltyTier.findFirst({
+    const newTier = await request.db.loyaltyTier.findFirst({
       where: {
         isActive: true,
         minPoints: { lte: newLifetimePoints },
@@ -244,7 +241,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
       orderBy: { minPoints: 'desc' },
     });
 
-    await prisma.customer.update({
+    await request.db.customer.update({
       where: { id },
       data: {
         totalPoints: Math.max(0, newTotalPoints),
@@ -268,7 +265,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
 
     let multiplier = 1;
     if (customerId) {
-      const customer = await prisma.customer.findUnique({
+      const customer = await request.db.customer.findUnique({
         where: { id: customerId },
         include: { loyaltyTier: true },
       });
@@ -292,7 +289,7 @@ export default async function loyaltyRoutes(server: FastifyInstance) {
   server.post('/redeem-points', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { customerId, points } = request.body as { customerId: string; points: number };
 
-    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    const customer = await request.db.customer.findUnique({ where: { id: customerId } });
     if (!customer) {
       return reply.status(404).send({ error: 'Müşteri bulunamadı' });
     }

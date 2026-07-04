@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, TableStatus } from '@prisma/client';
+import { TableStatus } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import { broadcastTableUpdate } from '../websocket';
 import crypto from 'crypto';
@@ -8,13 +8,11 @@ import crypto from 'crypto';
 const generateSessionToken = () => crypto.randomBytes(16).toString('hex');
 
 export default async function tableRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all tables.
   // We also surface tables that were soft-deleted (active:false) but still carry open orders,
   // so staff never loses visibility on a table with live work on it.
   server.get('/', { preHandler: verifyAuth }, async () => {
-    const tables = await prisma.table.findMany({
+    const tables = await request.db.table.findMany({
       where: {
         OR: [
           { active: true },
@@ -65,7 +63,7 @@ export default async function tableRoutes(server: FastifyInstance) {
 
   // Get all tables (public - for QR code generator)
   server.get('/public', async () => {
-    const tables = await prisma.table.findMany({
+    const tables = await request.db.table.findMany({
       where: { active: true },
       select: {
         id: true,
@@ -82,7 +80,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.get('/:id/public', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const table = await prisma.table.findUnique({
+    const table = await request.db.table.findUnique({
       where: { id, active: true },
     });
 
@@ -94,7 +92,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     let sessionToken = table.sessionToken;
     if (!sessionToken || table.status === 'FREE') {
       sessionToken = generateSessionToken();
-      await prisma.table.update({
+      await request.db.table.update({
         where: { id },
         data: { 
           sessionToken,
@@ -119,7 +117,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.get('/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const table = await prisma.table.findUnique({
+    const table = await request.db.table.findUnique({
       where: { id },
       include: {
         orders: {
@@ -162,12 +160,12 @@ export default async function tableRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Masa numarası gerekli' });
     }
 
-    const existing = await prisma.table.findFirst({ where: { number } });
+    const existing = await request.db.table.findFirst({ where: { number } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu masa numarası zaten kullanılıyor' });
     }
 
-    const table = await prisma.table.create({
+    const table = await request.db.table.create({
       data: {
         number,
         name: name || `Masa ${number}`,
@@ -196,20 +194,20 @@ export default async function tableRoutes(server: FastifyInstance) {
       active?: boolean;
     };
 
-    const table = await prisma.table.findUnique({ where: { id } });
+    const table = await request.db.table.findUnique({ where: { id } });
     if (!table) {
       return reply.status(404).send({ error: 'Masa bulunamadı' });
     }
 
     // Check number uniqueness
     if (number && number !== table.number) {
-      const existing = await prisma.table.findFirst({ where: { number } });
+      const existing = await request.db.table.findFirst({ where: { number } });
       if (existing) {
         return reply.status(400).send({ error: 'Bu masa numarası zaten kullanılıyor' });
       }
     }
 
-    const updatedTable = await prisma.table.update({
+    const updatedTable = await request.db.table.update({
       where: { id },
       data: {
         number,
@@ -237,7 +235,7 @@ export default async function tableRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Durum gerekli' });
     }
 
-    const table = await prisma.table.findUnique({ where: { id } });
+    const table = await request.db.table.findUnique({ where: { id } });
     if (!table) {
       return reply.status(404).send({ error: 'Masa bulunamadı' });
     }
@@ -247,7 +245,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     // paymentStatus on the order, since that flag occasionally falls out
     // of sync after a payment is recorded.
     if (status === 'FREE' || status === 'CLEANING') {
-      const openOrders = await prisma.order.findMany({
+      const openOrders = await request.db.order.findMany({
         where: {
           tableId: id,
           status: { notIn: ['COMPLETED', 'CANCELLED'] },
@@ -281,7 +279,7 @@ export default async function tableRoutes(server: FastifyInstance) {
       for (const o of openOrders) {
         const paid = o.payments.reduce((s, p) => s + Number(p.amount), 0);
         if (paid >= Number(o.total) && o.status !== 'COMPLETED') {
-          await prisma.order.update({
+          await request.db.order.update({
             where: { id: o.id },
             data: {
               status: 'COMPLETED',
@@ -299,7 +297,7 @@ export default async function tableRoutes(server: FastifyInstance) {
       updateData.sessionStartedAt = null;
     }
 
-    const updatedTable = await prisma.table.update({
+    const updatedTable = await request.db.table.update({
       where: { id },
       data: updateData,
     });
@@ -312,13 +310,13 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.delete('/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const table = await prisma.table.findUnique({ where: { id } });
+    const table = await request.db.table.findUnique({ where: { id } });
     if (!table) {
       return reply.status(404).send({ error: 'Masa bulunamadı' });
     }
 
     // Check for active orders
-    const activeOrders = await prisma.order.count({
+    const activeOrders = await request.db.order.count({
       where: {
         tableId: id,
         status: { notIn: ['COMPLETED', 'CANCELLED'] },
@@ -329,7 +327,7 @@ export default async function tableRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Bu masada aktif sipariş var' });
     }
 
-    await prisma.table.update({
+    await request.db.table.update({
       where: { id },
       data: { active: false },
     });
@@ -341,7 +339,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.get('/floor/:floor', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const { floor } = request.params as { floor: string };
 
-    const tables = await prisma.table.findMany({
+    const tables = await request.db.table.findMany({
       where: {
         floor: parseInt(floor, 10),
         active: true,
@@ -375,7 +373,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     }
 
     // Ana masa
-    const mainTable = await prisma.table.findUnique({ 
+    const mainTable = await request.db.table.findUnique({ 
       where: { id },
       include: { mergedTables: true }
     });
@@ -385,7 +383,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     }
 
     // Birleştirilecek masaları kontrol et
-    const tablesToMerge = await prisma.table.findMany({
+    const tablesToMerge = await request.db.table.findMany({
       where: { 
         id: { in: tableIds },
         mergedWithId: null, // Zaten birleştirilmemiş olmalı
@@ -397,7 +395,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     }
 
     // Masaları birleştir
-    await prisma.table.updateMany({
+    await request.db.table.updateMany({
       where: { id: { in: tableIds } },
       data: { 
         mergedWithId: id,
@@ -407,7 +405,7 @@ export default async function tableRoutes(server: FastifyInstance) {
 
     // Toplam kapasiteyi güncelle
     const totalCapacity = mainTable.capacity + tablesToMerge.reduce((sum, t) => sum + t.capacity, 0);
-    const updatedMainTable = await prisma.table.update({
+    const updatedMainTable = await request.db.table.update({
       where: { id },
       data: { capacity: totalCapacity },
       include: { 
@@ -426,7 +424,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.post('/:id/unmerge', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const mainTable = await prisma.table.findUnique({ 
+    const mainTable = await request.db.table.findUnique({ 
       where: { id },
       include: { mergedTables: true }
     });
@@ -443,7 +441,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     const originalCapacity = mainTable.capacity - mainTable.mergedTables.reduce((sum, t) => sum + t.capacity, 0);
 
     // Birleştirilmiş masaları ayır
-    await prisma.table.updateMany({
+    await request.db.table.updateMany({
       where: { mergedWithId: id },
       data: { 
         mergedWithId: null,
@@ -452,7 +450,7 @@ export default async function tableRoutes(server: FastifyInstance) {
     });
 
     // Ana masanın kapasitesini geri al
-    const updatedMainTable = await prisma.table.update({
+    const updatedMainTable = await request.db.table.update({
       where: { id },
       data: { capacity: Math.max(originalCapacity, 2) }, // Minimum 2 kapasite
       include: { mergedTables: true },
@@ -466,7 +464,7 @@ export default async function tableRoutes(server: FastifyInstance) {
   server.get('/:id/merged', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const table = await prisma.table.findUnique({
+    const table = await request.db.table.findUnique({
       where: { id },
       include: { 
         mergedTables: true,

@@ -5,7 +5,7 @@
 // POST  /api/mobile/orders/:id/cancel - PENDING durumundakileri iptal et
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, OrderStatus, OrderType, PaymentStatus, PaymentMethod } from '@prisma/client';
+import { OrderStatus, OrderType, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { verifyCustomerAuth, signCustomerToken } from '../lib/customer-auth';
 import { sendOrderCreatedPush, sendOrderStatusPush } from '../lib/order-push';
 import { broadcastNewOrder, broadcastOrderUpdate } from '../websocket';
@@ -27,8 +27,6 @@ function normalizePhone(input: string): string | null {
 }
 
 export default async function mobileOrdersRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== CREATE ORDER ====================
   server.post('/', { preHandler: verifyCustomerAuth }, async (
     request: FastifyRequest,
@@ -73,7 +71,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Customer'ı çek
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { id: customerId },
       include: { loyaltyTier: true },
     });
@@ -85,7 +83,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Service availability kontrolü
-    const servicesSetting = await prisma.settings.findUnique({ where: { key: 'services' } });
+    const servicesSetting = await request.db.settings.findUnique({ where: { key: 'services' } });
     const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
     if (body.type === 'TAKEAWAY' && services.takeawayEnabled === false) {
       return reply.status(403).send({ error: 'Gel Al siparişi şu anda kapalıdır' });
@@ -100,7 +98,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     let deliveryLng: number | null = null;
     if (body.type === 'DELIVERY') {
       if (body.addressId) {
-        const addr = await prisma.address.findFirst({
+        const addr = await request.db.address.findFirst({
           where: { id: body.addressId, customerId },
         });
         if (!addr) return reply.status(404).send({ error: 'Adres bulunamadı' });
@@ -124,7 +122,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     let subtotal = 0;
     const orderItems: any[] = [];
     for (const item of body.items || []) {
-      const menuItem = await prisma.menuItem.findUnique({
+      const menuItem = await request.db.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
       if (!menuItem || !menuItem.available) {
@@ -149,7 +147,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Bundle expansion: paket fiyatı + reusable opsiyon grupları seçimleri
     if (body.bundles && body.bundles.length > 0) {
-      const res = await expandBundles(prisma, body.bundles);
+      const res = await expandBundles(request.db, body.bundles);
       if (!res.ok) return reply.status(400).send({ error: res.error });
       subtotal += res.subtotalDelta;
       for (const oi of res.orderItems) orderItems.push(oi);
@@ -158,7 +156,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Builder expansion: özel pizza/sandviç — server-side fiyat re-validation
     if (body.builders && body.builders.length > 0) {
       for (const builderReq of body.builders) {
-        const res = await expandBuilderItem(prisma, {
+        const res = await expandBuilderItem(request.db, {
           id: builderReq.cartId,
           price: Number(builderReq.price),
           quantity: builderReq.quantity ?? 1,
@@ -170,7 +168,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Tax
-    const restaurantSettings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const restaurantSettings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (restaurantSettings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
 
@@ -190,7 +188,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     let couponDiscount = 0;
     let couponId: string | null = null;
     if (body.couponCode) {
-      const coupon = await prisma.coupon.findUnique({
+      const coupon = await request.db.coupon.findUnique({
         where: { code: body.couponCode.trim().toUpperCase() },
       });
       if (coupon && coupon.isActive && coupon.startDate <= new Date() && coupon.endDate >= new Date()) {
@@ -231,7 +229,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         });
       }
       try {
-        const offerRes = await evaluateCartOffers(prisma, customerId, cartItemsForOffer);
+        const offerRes = await evaluateCartOffers(request.db, customerId, cartItemsForOffer);
         if (offerRes.bestOffer && offerRes.bestOffer.calculatedDiscount > 0) {
           autoOfferDiscount = offerRes.bestOffer.calculatedDiscount;
           autoOfferLabel = offerRes.bestOffer.name;
@@ -256,7 +254,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         ? PaymentMethod.CREDIT_CARD
         : PaymentMethod.CASH;
 
-    const order = await prisma.order.create({
+    const order = await request.db.order.create({
       data: {
         customerName: body.customerName ?? customer.name ?? null,
         customerPhone: body.customerPhone ?? customer.phone,
@@ -290,7 +288,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       : 1;
     const pointsEarnedAtComplete = Math.floor(basePoints * multiplier);
 
-    await prisma.customerOrder.create({
+    await request.db.customerOrder.create({
       data: {
         customerId,
         orderId: order.id,
@@ -301,12 +299,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Puan harcaması anında kaydet (kullanım anında düşer)
     if (pointsSpent > 0) {
-      await prisma.$transaction([
-        prisma.customer.update({
+      await request.db.$transaction([
+        request.db.customer.update({
           where: { id: customerId },
           data: { totalPoints: { decrement: pointsSpent } },
         }),
-        prisma.pointsTransaction.create({
+        request.db.pointsTransaction.create({
           data: {
             customerId,
             orderId: order.id,
@@ -320,7 +318,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Coupon usage kaydı
     if (couponId) {
-      await prisma.couponUsage.create({
+      await request.db.couponUsage.create({
         data: { couponId, customerId, orderId: order.id, discount: couponDiscount },
       }).catch(() => {});
     }
@@ -328,8 +326,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Push (sadece ONLINE değilse hemen — ONLINE'da ödeme tamamlanınca tetiklenir)
     if (body.paymentMethod !== 'ONLINE') {
       broadcastNewOrder(order);
-      notifyNewOrder(prisma, order.id).catch(() => {});
-      sendOrderCreatedPush(prisma, order).catch(() => {});
+      notifyNewOrder(request.db, order.id).catch(() => {});
+      sendOrderCreatedPush(request.db, order).catch(() => {});
     }
 
     return {
@@ -362,7 +360,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     const take = Math.min(parseInt(limit || '20', 10), 50);
     const statusFilter = status?.split(',').filter(Boolean) as OrderStatus[] | undefined;
 
-    const customerOrders = await prisma.customerOrder.findMany({
+    const customerOrders = await request.db.customerOrder.findMany({
       where: { customerId },
       orderBy: { createdAt: 'desc' },
       take,
@@ -374,7 +372,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Order detaylarını topla
     const orderIds = customerOrders.map((co) => co.orderId);
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         id: { in: orderIds },
         ...(statusFilter ? { status: { in: statusFilter } } : {}),
@@ -391,7 +389,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Müşterinin TÜM sipariş listesi (asc) — "5. siparişin" kişisel sayacı için.
     // orderNumber global POS serial; müşteri için anlamsız. customerOrderIndex
     // ise bu müşterinin kaçıncı siparişi olduğunu söyler (1, 2, 3...).
-    const allCo = await prisma.customerOrder.findMany({
+    const allCo = await request.db.customerOrder.findMany({
       where: { customerId },
       orderBy: { createdAt: 'asc' },
       select: { orderId: true },
@@ -422,14 +420,14 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
 
     // Sahiplik kontrolü
-    const co = await prisma.customerOrder.findUnique({
+    const co = await request.db.customerOrder.findUnique({
       where: { orderId: id },
     });
     if (!co || co.customerId !== customerId) {
       return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     }
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: {
         items: { include: { menuItem: { select: { id: true, name: true, image: true } } } },
@@ -441,7 +439,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
 
     // Kişisel sıra: müşterinin TÜM sipariş listesi içinde bu order'ın 1-bazlı sırası
-    const allCo = await prisma.customerOrder.findMany({
+    const allCo = await request.db.customerOrder.findMany({
       where: { customerId },
       orderBy: { createdAt: 'asc' },
       select: { orderId: true },
@@ -466,12 +464,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     const customerId = (request as any).customerId as string;
     const { id } = request.params as { id: string };
 
-    const co = await prisma.customerOrder.findUnique({ where: { orderId: id } });
+    const co = await request.db.customerOrder.findUnique({ where: { orderId: id } });
     if (!co || co.customerId !== customerId) {
       return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     }
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
 
     if (order.status !== OrderStatus.PENDING) {
@@ -481,7 +479,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       });
     }
 
-    const updated = await prisma.order.update({
+    const updated = await request.db.order.update({
       where: { id },
       data: { status: OrderStatus.CANCELLED },
       include: {
@@ -493,12 +491,12 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     // Harcanan puanları geri yükle
     if (co.pointsSpent > 0) {
-      await prisma.$transaction([
-        prisma.customer.update({
+      await request.db.$transaction([
+        request.db.customer.update({
           where: { id: customerId },
           data: { totalPoints: { increment: co.pointsSpent } },
         }),
-        prisma.pointsTransaction.create({
+        request.db.pointsTransaction.create({
           data: {
             customerId,
             orderId: id,
@@ -511,7 +509,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     broadcastOrderUpdate(updated);
-    sendOrderStatusPush(prisma, updated, 'CANCELLED').catch(() => {});
+    sendOrderStatusPush(request.db, updated, 'CANCELLED').catch(() => {});
 
     return { order: updated };
   });
@@ -561,7 +559,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Service availability
-    const servicesSetting = await prisma.settings.findUnique({ where: { key: 'services' } });
+    const servicesSetting = await request.db.settings.findUnique({ where: { key: 'services' } });
     const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
     if (body.type === 'TAKEAWAY' && services.takeawayEnabled === false) {
       return reply.status(403).send({ error: 'Gel Al siparişi şu anda kapalıdır' });
@@ -574,7 +572,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
 
     // Customer upsert (isVerified=false — guest)
-    const customer = await prisma.customer.upsert({
+    const customer = await request.db.customer.upsert({
       where: { phone: phoneNorm },
       update: {
         // Ad/email yoksa doldur, varsa dokunma
@@ -594,7 +592,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     let subtotal = 0;
     const orderItems: any[] = [];
     for (const item of body.items || []) {
-      const menuItem = await prisma.menuItem.findUnique({ where: { id: item.menuItemId } });
+      const menuItem = await request.db.menuItem.findUnique({ where: { id: item.menuItemId } });
       if (!menuItem || !menuItem.available) {
         return reply.status(400).send({ error: `Ürün mevcut değil: ${item.menuItemId}` });
       }
@@ -615,7 +613,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     }
     // Bundle expansion (guest)
     if (body.bundles && body.bundles.length > 0) {
-      const res = await expandBundles(prisma, body.bundles);
+      const res = await expandBundles(request.db, body.bundles);
       if (!res.ok) return reply.status(400).send({ error: res.error });
       subtotal += res.subtotalDelta;
       for (const oi of res.orderItems) orderItems.push(oi);
@@ -624,7 +622,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
     // Builder expansion (guest) — özel pizza/sandviç
     if (body.builders && body.builders.length > 0) {
       for (const builderReq of body.builders) {
-        const res = await expandBuilderItem(prisma, {
+        const res = await expandBuilderItem(request.db, {
           id: builderReq.cartId,
           price: Number(builderReq.price),
           quantity: builderReq.quantity ?? 1,
@@ -635,7 +633,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       }
     }
 
-    const restaurantSettings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const restaurantSettings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (restaurantSettings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
 
@@ -650,7 +648,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
         ? PaymentMethod.CREDIT_CARD
         : PaymentMethod.CASH;
 
-    const order = await prisma.order.create({
+    const order = await request.db.order.create({
       data: {
         customerName: body.customerName.trim(),
         customerPhone: phoneNorm,
@@ -676,7 +674,7 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
       },
     });
 
-    await prisma.customerOrder.create({
+    await request.db.customerOrder.create({
       data: {
         customerId: customer.id,
         orderId: order.id,
@@ -691,8 +689,8 @@ export default async function mobileOrdersRoutes(server: FastifyInstance) {
 
     if (body.paymentMethod !== 'ONLINE') {
       broadcastNewOrder(order);
-      notifyNewOrder(prisma, order.id).catch(() => {});
-      sendOrderCreatedPush(prisma, order).catch(() => {});
+      notifyNewOrder(request.db, order.id).catch(() => {});
+      sendOrderCreatedPush(request.db, order).catch(() => {});
     }
 
     return {

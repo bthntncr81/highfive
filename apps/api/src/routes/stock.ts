@@ -1,12 +1,9 @@
 // Stock Management Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import { broadcastMenuUpdate } from '../websocket';
 
 export default async function stockRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Toggle item availability (quick out of stock)
   server.patch(
     '/menu/:id/availability',
@@ -19,12 +16,12 @@ export default async function stockRoutes(server: FastifyInstance) {
         until?: string; // ISO date string
       };
 
-      const menuItem = await prisma.menuItem.findUnique({ where: { id } });
+      const menuItem = await request.db.menuItem.findUnique({ where: { id } });
       if (!menuItem) {
         return reply.status(404).send({ error: 'Ürün bulunamadı' });
       }
 
-      const updated = await prisma.menuItem.update({
+      const updated = await request.db.menuItem.update({
         where: { id },
         data: {
           available,
@@ -59,7 +56,7 @@ export default async function stockRoutes(server: FastifyInstance) {
         return reply.status(400).send({ error: 'Ürün ID listesi gerekli' });
       }
 
-      await prisma.menuItem.updateMany({
+      await request.db.menuItem.updateMany({
         where: { id: { in: itemIds } },
         data: {
           available,
@@ -87,7 +84,7 @@ export default async function stockRoutes(server: FastifyInstance) {
         lowStockAlert?: number;
       };
 
-      const menuItem = await prisma.menuItem.findUnique({ where: { id } });
+      const menuItem = await request.db.menuItem.findUnique({ where: { id } });
       if (!menuItem) {
         return reply.status(404).send({ error: 'Ürün bulunamadı' });
       }
@@ -102,7 +99,7 @@ export default async function stockRoutes(server: FastifyInstance) {
         updateData.outOfStockReason = 'Stok tükendi';
       }
 
-      const updated = await prisma.menuItem.update({
+      const updated = await request.db.menuItem.update({
         where: { id },
         data: updateData,
       });
@@ -117,7 +114,7 @@ export default async function stockRoutes(server: FastifyInstance) {
   server.post(
     '/stock/decrease',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { items } = request.body as {
         items: { menuItemId: string; quantity: number }[];
       };
@@ -125,14 +122,14 @@ export default async function stockRoutes(server: FastifyInstance) {
       const results = [];
 
       for (const item of items) {
-        const menuItem = await prisma.menuItem.findUnique({
+        const menuItem = await request.db.menuItem.findUnique({
           where: { id: item.menuItemId },
         });
 
         if (menuItem && menuItem.stockQuantity !== null) {
           const newQuantity = Math.max(0, menuItem.stockQuantity - item.quantity);
           
-          const updated = await prisma.menuItem.update({
+          const updated = await request.db.menuItem.update({
             where: { id: item.menuItemId },
             data: {
               stockQuantity: newQuantity,
@@ -167,8 +164,8 @@ export default async function stockRoutes(server: FastifyInstance) {
   server.get(
     '/stock/low',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const items = await prisma.menuItem.findMany({
+    async (request: FastifyRequest) => {
+      const items = await request.db.menuItem.findMany({
         where: {
           stockQuantity: { not: null },
           lowStockAlert: { not: null },
@@ -191,8 +188,8 @@ export default async function stockRoutes(server: FastifyInstance) {
   server.get(
     '/stock/out',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const items = await prisma.menuItem.findMany({
+    async (request: FastifyRequest) => {
+      const items = await request.db.menuItem.findMany({
         where: { available: false },
         include: { category: true },
       });
@@ -204,11 +201,11 @@ export default async function stockRoutes(server: FastifyInstance) {
   // Auto-restock check (for scheduled items)
   server.post(
     '/stock/auto-restock',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const now = new Date();
 
       // Find items that should be restocked
-      const itemsToRestock = await prisma.menuItem.findMany({
+      const itemsToRestock = await request.db.menuItem.findMany({
         where: {
           available: false,
           outOfStockUntil: { lte: now },
@@ -216,7 +213,7 @@ export default async function stockRoutes(server: FastifyInstance) {
       });
 
       if (itemsToRestock.length > 0) {
-        await prisma.menuItem.updateMany({
+        await request.db.menuItem.updateMany({
           where: {
             id: { in: itemsToRestock.map((i) => i.id) },
           },

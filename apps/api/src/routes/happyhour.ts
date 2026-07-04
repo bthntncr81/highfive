@@ -1,12 +1,9 @@
 // Happy Hours & Scheduled Promotions Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import { broadcastHappyHourToMobile } from '../lib/auto-broadcast';
 
 export default async function happyHourRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Check if happy hour is active now
   const isHappyHourActive = (happyHour: any): boolean => {
     const now = new Date();
@@ -27,10 +24,10 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   };
 
   // Get current active happy hours
-  server.get('/happyhours/active', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/happyhours/active', async (request: FastifyRequest) => {
     const { locationId } = request.query as { locationId?: string };
 
-    const happyHours = await prisma.happyHour.findMany({
+    const happyHours = await request.db.happyHour.findMany({
       where: {
         active: true,
         ...(locationId ? { locationId } : {}),
@@ -68,8 +65,8 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   server.get(
     '/happyhours',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const happyHours = await prisma.happyHour.findMany({
+    async (request: FastifyRequest) => {
+      const happyHours = await request.db.happyHour.findMany({
         include: {
           items: {
             include: { menuItem: true },
@@ -128,7 +125,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
         return reply.status(400).send({ error: 'Zorunlu alanlar eksik' });
       }
 
-      const happyHour = await prisma.happyHour.create({
+      const happyHour = await request.db.happyHour.create({
         data: {
           name,
           description,
@@ -161,7 +158,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
       // Otomatik mobil duyuru — body'de `notifyCustomers: true` varsa
       const reqBody = request.body as any;
       if (reqBody?.notifyCustomers === true) {
-        broadcastHappyHourToMobile(prisma, {
+        broadcastHappyHourToMobile(request.db, {
           happyHourId: happyHour.id,
           title: reqBody.notifyTitle,
           body: reqBody.notifyBody,
@@ -176,7 +173,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   server.put(
     '/happyhours/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const {
         name,
@@ -206,7 +203,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
         endDate?: string;
       };
 
-      const happyHour = await prisma.happyHour.update({
+      const happyHour = await request.db.happyHour.update({
         where: { id },
         data: {
           ...(name && { name }),
@@ -236,10 +233,10 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   server.delete(
     '/happyhours/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
-      await prisma.happyHour.delete({ where: { id } });
+      await request.db.happyHour.delete({ where: { id } });
 
       return { success: true };
     }
@@ -249,7 +246,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   server.post(
     '/happyhours/:id/items',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const { menuItemId, specialPrice, discountPercent } = request.body as {
         menuItemId: string;
@@ -257,7 +254,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
         discountPercent?: number;
       };
 
-      const item = await prisma.happyHourItem.upsert({
+      const item = await request.db.happyHourItem.upsert({
         where: {
           happyHourId_menuItemId: { happyHourId: id, menuItemId },
         },
@@ -279,13 +276,13 @@ export default async function happyHourRoutes(server: FastifyInstance) {
   server.delete(
     '/happyhours/:happyHourId/items/:menuItemId',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { happyHourId, menuItemId } = request.params as {
         happyHourId: string;
         menuItemId: string;
       };
 
-      await prisma.happyHourItem.delete({
+      await request.db.happyHourItem.delete({
         where: {
           happyHourId_menuItemId: { happyHourId, menuItemId },
         },
@@ -302,7 +299,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
       locationId?: string;
     };
 
-    const menuItem = await prisma.menuItem.findUnique({
+    const menuItem = await request.db.menuItem.findUnique({
       where: { id: menuItemId },
     });
 
@@ -313,7 +310,7 @@ export default async function happyHourRoutes(server: FastifyInstance) {
     const originalPrice = Number(menuItem.price);
 
     // Check for active happy hours
-    const happyHours = await prisma.happyHour.findMany({
+    const happyHours = await request.db.happyHour.findMany({
       where: {
         active: true,
         ...(locationId ? { OR: [{ locationId }, { locationId: null }] } : {}),

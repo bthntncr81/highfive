@@ -1,6 +1,5 @@
 // Device token registration + push history (mobile)
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -25,8 +24,6 @@ function getCustomerId(request: any): string | null {
 }
 
 export default async function devicesRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Register / refresh device token
   // Auth opsiyonel — anonim cihazlar da kayıt olabilir, login olunca customerId bind edilir
   server.post('/register', async (request: any, reply: any) => {
@@ -44,13 +41,13 @@ export default async function devicesRoutes(server: FastifyInstance) {
 
     const customerId = getCustomerId(request);
 
-    const existing = await prisma.deviceToken.findUnique({
+    const existing = await request.db.deviceToken.findUnique({
       where: { token: body.token },
     });
 
     let device;
     if (existing) {
-      device = await prisma.deviceToken.update({
+      device = await request.db.deviceToken.update({
         where: { id: existing.id },
         data: {
           platform: body.platform,
@@ -63,7 +60,7 @@ export default async function devicesRoutes(server: FastifyInstance) {
         },
       });
     } else {
-      device = await prisma.deviceToken.create({
+      device = await request.db.deviceToken.create({
         data: {
           token: body.token,
           platform: body.platform,
@@ -83,7 +80,7 @@ export default async function devicesRoutes(server: FastifyInstance) {
   server.post('/unregister', async (request: any, reply: any) => {
     const { token } = (request.body ?? {}) as { token?: string };
     if (!token) return reply.status(400).send({ error: 'token gerekli' });
-    await prisma.deviceToken.updateMany({
+    await request.db.deviceToken.updateMany({
       where: { token },
       data: { isActive: false },
     });

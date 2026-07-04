@@ -64,15 +64,13 @@ async function ensureReferralCode(prisma: PrismaClient, customerId: string): Pro
 }
 
 export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== ACTIVE PROGRAMS (public) ====================
   server.get('/programs', async () => {
-    const programs = await prisma.loyaltyProgram.findMany({
+    const programs = await request.db.loyaltyProgram.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
-    return { programs: await decorateProgramsWithMenuItems(prisma, programs) };
+    return { programs: await decorateProgramsWithMenuItems(request.db, programs) };
   });
 
   // ==================== ME PROGRESS — kullanıcının her programdaki durumu ====================
@@ -80,7 +78,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     request: FastifyRequest,
   ) => {
     const customerId = (request as any).customerId as string;
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { id: customerId },
       include: { loyaltyTier: true },
     });
@@ -88,19 +86,19 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
 
     // Referral code yoksa üret (lazy)
     if (!customer.referralCode) {
-      await ensureReferralCode(prisma, customerId);
+      await ensureReferralCode(request.db, customerId);
     }
-    const fresh = await prisma.customer.findUnique({
+    const fresh = await request.db.customer.findUnique({
       where: { id: customerId },
       include: { loyaltyTier: true },
     });
 
-    const programs = await prisma.loyaltyProgram.findMany({
+    const programs = await request.db.loyaltyProgram.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
 
-    const progress = await prisma.customerLoyaltyProgress.findMany({
+    const progress = await request.db.customerLoyaltyProgress.findMany({
       where: { customerId },
     });
 
@@ -121,7 +119,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
         loyaltyTier: fresh!.loyaltyTier,
         birthDate: fresh!.birthDate,
       },
-      programs: await decorateProgramsWithMenuItems(prisma, programs),
+      programs: await decorateProgramsWithMenuItems(request.db, programs),
       progress,
     };
   });
@@ -130,7 +128,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
   // Auth opsiyonel: giriş yapmamış kullanıcı sadece public offer'lar görür
   // POST body: { items: [{ menuItemId, quantity, unitPrice }] }
   // Yanıt: { bestOffer, allOffers, subtotal }
-  server.post('/cart/evaluate', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/cart/evaluate', async (request: FastifyRequest) => {
     const { items } = (request.body ?? {}) as { items?: CartItem[] };
     if (!Array.isArray(items) || items.length === 0) {
       return { bestOffer: null, allOffers: [], subtotal: 0 };
@@ -153,7 +151,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     }
 
     const subtotal = items.reduce((s, it) => s + Number(it.unitPrice) * Number(it.quantity), 0);
-    const { bestOffer, allOffers } = await evaluateCartOffers(prisma, customerId, items);
+    const { bestOffer, allOffers } = await evaluateCartOffers(request.db, customerId, items);
     return { bestOffer, allOffers, subtotal };
   });
 
@@ -166,7 +164,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     const { code } = (request.body ?? {}) as { code?: string };
     if (!code) return reply.status(400).send({ error: 'Kod gerekli' });
 
-    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    const customer = await request.db.customer.findUnique({ where: { id: customerId } });
     if (!customer) return reply.status(404).send({ error: 'Müşteri bulunamadı' });
     if (customer.referredByCode) {
       return reply.status(400).send({ error: 'Zaten bir davet kodu kullandın' });
@@ -175,14 +173,14 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş geçmişin var, davet kodu kullanılamaz' });
     }
 
-    const referrer = await prisma.customer.findUnique({
+    const referrer = await request.db.customer.findUnique({
       where: { referralCode: code.toUpperCase() },
     });
     if (!referrer || referrer.id === customerId) {
       return reply.status(400).send({ error: 'Geçersiz kod' });
     }
 
-    await prisma.customer.update({
+    await request.db.customer.update({
       where: { id: customerId },
       data: { referredByCode: code.toUpperCase() },
     });
@@ -193,21 +191,21 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
   // ==================== ME ====================
   server.get('/me', { preHandler: verifyCustomerAuth }, async (request: FastifyRequest) => {
     const customerId = (request as any).customerId as string;
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { id: customerId },
       include: { loyaltyTier: true },
     });
     if (!customer) return { customer: null };
 
     // Bir sonraki tier hedefi
-    const tiers = await prisma.loyaltyTier.findMany({
+    const tiers = await request.db.loyaltyTier.findMany({
       where: { isActive: true },
       orderBy: { minPoints: 'asc' },
     });
     const nextTier = tiers.find((t) => t.minPoints > customer.lifetimePoints) ?? null;
 
     // Son 5 puan tx
-    const recentTx = await prisma.pointsTransaction.findMany({
+    const recentTx = await request.db.pointsTransaction.findMany({
       where: { customerId },
       orderBy: { createdAt: 'desc' },
       take: 5,
@@ -249,7 +247,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     };
     const take = Math.min(parseInt(limit || '30', 10), 100);
 
-    const tx = await prisma.pointsTransaction.findMany({
+    const tx = await request.db.pointsTransaction.findMany({
       where: {
         customerId,
         ...(before ? { createdAt: { lt: new Date(before) } } : {}),
@@ -277,7 +275,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: '100 puan katlarında kullanılmalı' });
     }
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await request.db.customer.findUnique({
       where: { id: customerId },
       select: { totalPoints: true },
     });
@@ -313,7 +311,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     const customerId = (request as any).customerId as string;
 
     // Aktif GOOGLE_REVIEW programı var mı?
-    const program = await prisma.loyaltyProgram.findFirst({
+    const program = await request.db.loyaltyProgram.findFirst({
       where: { type: 'GOOGLE_REVIEW', isActive: true },
     });
     if (!program) {
@@ -321,7 +319,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     }
 
     // Aynı program için PENDING veya APPROVED talep zaten var mı?
-    const existing = await prisma.loyaltyClaim.findFirst({
+    const existing = await request.db.loyaltyClaim.findFirst({
       where: { customerId, programId: program.id },
       orderBy: { createdAt: 'desc' },
     });
@@ -375,7 +373,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     // REJECTED varsa update, yoksa yeni kayıt
     let claim;
     if (existing && existing.status === 'REJECTED') {
-      claim = await prisma.loyaltyClaim.update({
+      claim = await request.db.loyaltyClaim.update({
         where: { id: existing.id },
         data: {
           proofImageUrl,
@@ -387,7 +385,7 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
         },
       });
     } else {
-      claim = await prisma.loyaltyClaim.create({
+      claim = await request.db.loyaltyClaim.create({
         data: {
           customerId,
           programId: program.id,
@@ -416,13 +414,13 @@ export default async function mobileLoyaltyRoutes(server: FastifyInstance) {
     request: FastifyRequest,
   ) => {
     const customerId = (request as any).customerId as string;
-    const program = await prisma.loyaltyProgram.findFirst({
+    const program = await request.db.loyaltyProgram.findFirst({
       where: { type: 'GOOGLE_REVIEW', isActive: true },
     });
     if (!program) {
       return { program: null, claim: null };
     }
-    const claim = await prisma.loyaltyClaim.findFirst({
+    const claim = await request.db.loyaltyClaim.findFirst({
       where: { customerId, programId: program.id },
       orderBy: { createdAt: 'desc' },
     });

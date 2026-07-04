@@ -223,15 +223,13 @@ function generateConversationId(): string {
 }
 
 export default async function paymentRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Load iyzico config from DB on first request
-  await loadIyzicoConfig(prisma);
+  await loadIyzicoConfig(request.db);
 
   // Initialize 3DS Payment
   server.post('/initialize-3ds', async (request: FastifyRequest, reply: FastifyReply) => {
     // Reload config each time (in case settings changed)
-    await loadIyzicoConfig(prisma);
+    await loadIyzicoConfig(request.db);
     const {
       orderId,
       cardHolderName,
@@ -274,7 +272,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
     // If orderId provided, get order from database
     if (orderId) {
-      order = await prisma.order.findUnique({
+      order = await request.db.order.findUnique({
         where: { id: orderId },
         include: {
           items: {
@@ -426,7 +424,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
       if (result.status === 'success') {
         // Store conversation ID for later verification
-        await prisma.settings.upsert({
+        await request.db.settings.upsert({
           where: { key: `payment_${conversationId}` },
           update: { value: { orderId, status: 'initialized', createdAt: new Date().toISOString() } },
           create: { key: `payment_${conversationId}`, value: { orderId, status: 'initialized', createdAt: new Date().toISOString() } },
@@ -461,11 +459,11 @@ export default async function paymentRoutes(server: FastifyInstance) {
     // Mobile için: paymentId'yi settings'e yaz ki client polling ile alabilsin
     if (conversationId && paymentId) {
       try {
-        const existing = await prisma.settings.findUnique({
+        const existing = await request.db.settings.findUnique({
           where: { key: `payment_${conversationId}` },
         });
         const oldValue = (existing?.value as any) || {};
-        await prisma.settings.upsert({
+        await request.db.settings.upsert({
           where: { key: `payment_${conversationId}` },
           update: {
             value: {
@@ -596,14 +594,14 @@ export default async function paymentRoutes(server: FastifyInstance) {
       if (result.status === 'success') {
         // Payment successful - update order
         if (orderId) {
-          const order = await prisma.order.findUnique({
+          const order = await request.db.order.findUnique({
             where: { id: orderId },
             include: { items: true, table: true },
           });
 
           if (order) {
             // Create payment record
-            await prisma.payment.create({
+            await request.db.payment.create({
               data: {
                 orderId,
                 amount: Number(result.paidPrice),
@@ -613,7 +611,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
             });
 
             // Update order status
-            const updatedOrder = await prisma.order.update({
+            const updatedOrder = await request.db.order.update({
               where: { id: orderId },
               data: {
                 paymentStatus: PaymentStatus.PAID,
@@ -628,7 +626,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
             // Mark all items as paid
             for (const item of order.items) {
-              await prisma.orderItem.update({
+              await request.db.orderItem.update({
                 where: { id: item.id },
                 data: { paidQuantity: item.quantity },
               });
@@ -636,15 +634,15 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
             // Award loyalty points if customer phone exists
             if (order.customerPhone) {
-              await awardLoyaltyPoints(prisma, order.customerPhone, orderId, Number(order.total));
+              await awardLoyaltyPoints(request.db, order.customerPhone, orderId, Number(order.total));
             }
 
             // Broadcast as NEW order (payment just completed, first time appearing)
             broadcastNewOrder(updatedOrder);
-            notifyNewOrder(prisma, updatedOrder.id).catch(() => {});
+            notifyNewOrder(request.db, updatedOrder.id).catch(() => {});
 
             // Clean up payment session
-            await prisma.settings.delete({
+            await request.db.settings.delete({
               where: { key: `payment_${conversationId}` },
             }).catch(() => {});
           }
@@ -671,7 +669,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
   server.get('/status/:conversationId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { conversationId } = request.params as { conversationId: string };
 
-    const paymentSession = await prisma.settings.findUnique({
+    const paymentSession = await request.db.settings.findUnique({
       where: { key: `payment_${conversationId}` },
     });
 
@@ -687,7 +685,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
   server.get('/mobile-finalize/:conversationId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { conversationId } = request.params as { conversationId: string };
 
-    const session = await prisma.settings.findUnique({
+    const session = await request.db.settings.findUnique({
       where: { key: `payment_${conversationId}` },
     });
     if (!session) {
@@ -718,7 +716,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
       });
 
       if (result.status !== 'success') {
-        await prisma.settings.update({
+        await request.db.settings.update({
           where: { key: `payment_${conversationId}` },
           data: { value: { ...v, status: 'failed', error: result.errorMessage } },
         });
@@ -730,12 +728,12 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
       const orderId = v.orderId as string | undefined;
       if (orderId) {
-        const order = await prisma.order.findUnique({
+        const order = await request.db.order.findUnique({
           where: { id: orderId },
           include: { items: true },
         });
         if (order) {
-          await prisma.payment.create({
+          await request.db.payment.create({
             data: {
               orderId,
               amount: Number(result.paidPrice),
@@ -743,7 +741,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
               reference: result.paymentId,
             },
           });
-          const updatedOrder = await prisma.order.update({
+          const updatedOrder = await request.db.order.update({
             where: { id: orderId },
             data: {
               paymentStatus: PaymentStatus.PAID,
@@ -754,7 +752,7 @@ export default async function paymentRoutes(server: FastifyInstance) {
           });
 
           for (const item of order.items) {
-            await prisma.orderItem.update({
+            await request.db.orderItem.update({
               where: { id: item.id },
               data: { paidQuantity: item.quantity },
             });
@@ -762,10 +760,10 @@ export default async function paymentRoutes(server: FastifyInstance) {
 
           // Mobile sipariş ise lifecycle push'ları tetikle
           broadcastNewOrder(updatedOrder);
-          notifyNewOrder(prisma, updatedOrder.id).catch(() => {});
-          sendOrderStatusPush(prisma, updatedOrder, 'CONFIRMED').catch(() => {});
+          notifyNewOrder(request.db, updatedOrder.id).catch(() => {});
+          sendOrderStatusPush(request.db, updatedOrder, 'CONFIRMED').catch(() => {});
 
-          await prisma.settings.update({
+          await request.db.settings.update({
             where: { key: `payment_${conversationId}` },
             data: {
               value: {

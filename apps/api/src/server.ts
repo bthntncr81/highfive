@@ -61,6 +61,9 @@ import courierRoutes from './routes/courier';
 // WebSocket handler
 import { setupWebSocket } from './websocket';
 
+// Tenant çözümleme (req.tenant + req.db)
+import tenantPlugin from './plugins/tenant';
+
 export interface RouteInfo {
   method: string;
   url: string;
@@ -114,8 +117,10 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
     decorateReply: false,
   });
 
-  // Decorate with prisma (Faz 2'de kaldırılacak — bkz. üst not)
-  server.decorate('prisma', opts.prisma);
+  // FAZ 2: server.prisma decorate'i KALDIRILDI. Route'lar artık request-scoped
+  // req.db (dbFor — tenant-zorlamalı) kullanır; platform işleri platformDb.
+  // Tenant çözümleme hook'u: JWT → X-Tenant-ID → subdomain.
+  await server.register(tenantPlugin);
 
   // Health check
   server.get('/health', async () => {

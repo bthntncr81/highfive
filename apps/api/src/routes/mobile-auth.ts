@@ -2,7 +2,6 @@
 // Mevcut Customer modelini kullanır (phone, verificationCode, isVerified)
 
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -30,7 +29,6 @@ function generateOtp(): string {
 }
 
 export default async function mobileAuthRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
   // Dev OTP: NODE_ENV !== production veya açık bayrak ile dönülür.
   // Production'a çıkmadan önce EXPOSE_DEV_OTP=false bırakılmalı.
   const isDev =
@@ -48,7 +46,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     }
 
     // Mevcut customer
-    let customer = await prisma.customer.findUnique({ where: { phone: normalized } });
+    let customer = await request.db.customer.findUnique({ where: { phone: normalized } });
 
     // Rate limit: son OTP isteği 60 saniyeden yeni mi?
     if (customer?.verificationCode && customer.updatedAt) {
@@ -64,12 +62,12 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     const code = generateOtp();
 
     if (customer) {
-      customer = await prisma.customer.update({
+      customer = await request.db.customer.update({
         where: { id: customer.id },
         data: { verificationCode: code },
       });
     } else {
-      customer = await prisma.customer.create({
+      customer = await request.db.customer.create({
         data: {
           phone: normalized,
           verificationCode: code,
@@ -111,7 +109,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     // Email çakışma kontrolü — başka bir customer aynı email ile kullanmasın
     if (email && email.trim()) {
       const emailTrim = email.trim().toLowerCase();
-      const existingEmail = await prisma.customer.findUnique({
+      const existingEmail = await request.db.customer.findUnique({
         where: { email: emailTrim },
       });
       if (existingEmail && existingEmail.phone !== normalized) {
@@ -122,7 +120,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       }
     }
 
-    let customer = await prisma.customer.findUnique({ where: { phone: normalized } });
+    let customer = await request.db.customer.findUnique({ where: { phone: normalized } });
 
     // YENİ kayıt mı? Eğer Customer yok VE master OTP değilse, name zorunlu.
     // (Signup ekranı verifyOtp'a name gönderir; Login ekranı göndermez.)
@@ -138,7 +136,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
             code: 'NAME_REQUIRED',
           });
         }
-        customer = await prisma.customer.create({
+        customer = await request.db.customer.create({
           data: {
             phone: normalized,
             name: name.trim(),
@@ -178,7 +176,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       updateData.email = email.trim().toLowerCase();
     }
 
-    const updated = await prisma.customer.update({
+    const updated = await request.db.customer.update({
       where: { id: customer!.id },
       data: updateData,
     });
@@ -215,7 +213,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       if (!isCustomer || !decoded.customerId) {
         return reply.status(401).send({ error: 'Geçersiz token' });
       }
-      const customer = await prisma.customer.findUnique({
+      const customer = await request.db.customer.findUnique({
         where: { id: decoded.customerId },
         select: {
           id: true,
@@ -261,7 +259,7 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
       const now = new Date();
       // marketingConsentAt — herhangi biri true'ya geçince güncelle
       const marketingChange = emailConsent === true || smsConsent === true;
-      const customer = await prisma.customer.update({
+      const customer = await request.db.customer.update({
         where: { id: decoded.customerId },
         data: {
           ...(name !== undefined ? { name } : {}),
@@ -306,11 +304,11 @@ export default async function mobileAuthRoutes(server: FastifyInstance) {
     }
 
     try {
-      const existing = await prisma.customer.findUnique({ where: { id: customerId } });
+      const existing = await request.db.customer.findUnique({ where: { id: customerId } });
       if (!existing) {
         return reply.status(404).send({ error: 'Hesap bulunamadı' });
       }
-      await prisma.customer.delete({ where: { id: customerId } });
+      await request.db.customer.delete({ where: { id: customerId } });
       server.log.info({ customerId }, '[MOBILE-AUTH] Hesap kalıcı olarak silindi');
       return { ok: true, message: 'Hesabın ve tüm verilerin kalıcı olarak silindi.' };
     } catch (e: any) {

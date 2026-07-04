@@ -1,14 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function userRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all users (admin only)
   server.get('/', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
-    const users = await prisma.user.findMany({
+    const users = await request.db.user.findMany({
       select: {
         id: true,
         email: true,
@@ -27,7 +25,7 @@ export default async function userRoutes(server: FastifyInstance) {
   server.get('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     
-    const user = await prisma.user.findUnique({
+    const user = await request.db.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -63,7 +61,7 @@ export default async function userRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
     }
 
-    const existingPin = await prisma.user.findFirst({ where: { pin } });
+    const existingPin = await request.db.user.findFirst({ where: { pin } });
     if (existingPin) {
       return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor, başka bir şifre seç' });
     }
@@ -72,7 +70,7 @@ export default async function userRoutes(server: FastifyInstance) {
     const syntheticEmail = `personel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@highfive.local`;
     const hashedPassword = await bcrypt.hash(pin, 10);
 
-    const user = await prisma.user.create({
+    const user = await request.db.user.create({
       data: {
         email: syntheticEmail,
         password: hashedPassword,
@@ -102,7 +100,7 @@ export default async function userRoutes(server: FastifyInstance) {
       active?: boolean;
     };
 
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await request.db.user.findUnique({ where: { id } });
     if (!user) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
@@ -112,7 +110,7 @@ export default async function userRoutes(server: FastifyInstance) {
       if (!/^\d{6}$/.test(pin)) {
         return reply.status(400).send({ error: 'Şifre 6 haneli sayı olmalı' });
       }
-      const existingPin = await prisma.user.findFirst({ where: { pin } });
+      const existingPin = await request.db.user.findFirst({ where: { pin } });
       if (existingPin) {
         return reply.status(400).send({ error: 'Bu şifre zaten kullanılıyor' });
       }
@@ -128,7 +126,7 @@ export default async function userRoutes(server: FastifyInstance) {
       updateData.password = await bcrypt.hash(pin, 10);
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await request.db.user.update({
       where: { id },
       data: updateData,
       select: {
@@ -147,13 +145,13 @@ export default async function userRoutes(server: FastifyInstance) {
   server.delete('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await request.db.user.findUnique({ where: { id } });
     if (!user) {
       return reply.status(404).send({ error: 'Kullanıcı bulunamadı' });
     }
 
     // Soft delete - just deactivate
-    await prisma.user.update({
+    await request.db.user.update({
       where: { id },
       data: { active: false },
     });
@@ -165,7 +163,7 @@ export default async function userRoutes(server: FastifyInstance) {
   server.get('/:id/activity', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
 
-    const logs = await prisma.activityLog.findMany({
+    const logs = await request.db.activityLog.findMany({
       where: { userId: id },
       orderBy: { createdAt: 'desc' },
       take: 100,

@@ -4,13 +4,10 @@
 // Auth yok (public arcade). Skor sunucuda clamp'lenir; isim 16 karaktere kırpılır.
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 
 export default async function pizzaGameRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   server.get('/leaderboard', async () => {
-    const leaderboard = await prisma.pizzaGameScore.findMany({
+    const leaderboard = await request.db.pizzaGameScore.findMany({
       orderBy: { score: 'desc' },
       take: 20,
       select: { name: true, score: true, createdAt: true },
@@ -27,9 +24,9 @@ export default async function pizzaGameRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Geçersiz skor' });
     }
 
-    const row = await prisma.pizzaGameScore.create({ data: { name, score } });
-    const higher = await prisma.pizzaGameScore.count({ where: { score: { gt: score } } });
-    const leaderboard = await prisma.pizzaGameScore.findMany({
+    const row = await request.db.pizzaGameScore.create({ data: { name, score } });
+    const higher = await request.db.pizzaGameScore.count({ where: { score: { gt: score } } });
+    const leaderboard = await request.db.pizzaGameScore.findMany({
       orderBy: { score: 'desc' },
       take: 20,
       select: { name: true, score: true, createdAt: true },

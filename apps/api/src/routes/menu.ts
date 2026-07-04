@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, Allergen } from '@prisma/client';
+import { Allergen } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 
 export default async function menuRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all menu items (optionally filtered)
   server.get('/', async (request: FastifyRequest) => {
     const { category, available, search } = request.query as {
@@ -33,10 +31,10 @@ export default async function menuRoutes(server: FastifyInstance) {
     // Kategorileri ve menü öğelerini + aktif bundle'ları birlikte getir
     const now = new Date();
     const [categories, items, bundles] = await Promise.all([
-      prisma.category.findMany({
+      request.db.category.findMany({
         orderBy: { sortOrder: 'asc' },
       }),
-      prisma.menuItem.findMany({
+      request.db.menuItem.findMany({
         where,
         include: {
           category: true,
@@ -52,7 +50,7 @@ export default async function menuRoutes(server: FastifyInstance) {
         ],
       }),
       // Aktif paket menüler
-      prisma.bundleDeal.findMany({
+      request.db.bundleDeal.findMany({
         where: {
           isActive: true,
           OR: [{ startDate: null }, { startDate: { lte: now } }],
@@ -93,7 +91,7 @@ export default async function menuRoutes(server: FastifyInstance) {
   server.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const item = await prisma.menuItem.findUnique({
+    const item = await request.db.menuItem.findUnique({
       where: { id },
       include: {
         category: true,
@@ -144,7 +142,7 @@ export default async function menuRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Kategori, ad ve fiyat gerekli' });
     }
 
-    const item = await prisma.menuItem.create({
+    const item = await request.db.menuItem.create({
       data: {
         categoryId,
         name,
@@ -209,12 +207,12 @@ export default async function menuRoutes(server: FastifyInstance) {
       sortOrder?: number;
     };
 
-    const item = await prisma.menuItem.findUnique({ where: { id } });
+    const item = await request.db.menuItem.findUnique({ where: { id } });
     if (!item) {
       return reply.status(404).send({ error: 'Ürün bulunamadı' });
     }
 
-    const updatedItem = await prisma.menuItem.update({
+    const updatedItem = await request.db.menuItem.update({
       where: { id },
       data: {
         categoryId,
@@ -246,12 +244,12 @@ export default async function menuRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const { available } = request.body as { available: boolean };
 
-    const item = await prisma.menuItem.findUnique({ where: { id } });
+    const item = await request.db.menuItem.findUnique({ where: { id } });
     if (!item) {
       return reply.status(404).send({ error: 'Ürün bulunamadı' });
     }
 
-    const updatedItem = await prisma.menuItem.update({
+    const updatedItem = await request.db.menuItem.update({
       where: { id },
       data: { available },
     });
@@ -263,14 +261,14 @@ export default async function menuRoutes(server: FastifyInstance) {
   server.delete('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const item = await prisma.menuItem.findUnique({ where: { id } });
+    const item = await request.db.menuItem.findUnique({ where: { id } });
     if (!item) {
       return reply.status(404).send({ error: 'Ürün bulunamadı' });
     }
 
     // Force delete - remove all related records including order references
     try {
-      await prisma.$transaction(async (tx) => {
+      await request.db.$transaction(async (tx) => {
         // Save item name to order items before disconnecting
         await tx.orderItem.updateMany({
           where: { menuItemId: id },
@@ -303,7 +301,7 @@ export default async function menuRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Seçenek adı gerekli' });
     }
 
-    const modifier = await prisma.modifier.create({
+    const modifier = await request.db.modifier.create({
       data: {
         menuItemId: id,
         name,
@@ -314,10 +312,10 @@ export default async function menuRoutes(server: FastifyInstance) {
     return { modifier };
   });
 
-  server.delete('/:id/modifiers/:modifierId', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.delete('/:id/modifiers/:modifierId', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { modifierId } = request.params as { id: string; modifierId: string };
 
-    await prisma.modifier.delete({
+    await request.db.modifier.delete({
       where: { id: modifierId },
     });
 

@@ -1,14 +1,11 @@
 // Multi-Location / Branch Management Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 
 export default async function locationRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all locations
-  server.get('/locations', async (request: FastifyRequest, reply: FastifyReply) => {
-    const locations = await prisma.location.findMany({
+  server.get('/locations', async (request: FastifyRequest) => {
+    const locations = await request.db.location.findMany({
       where: { active: true },
       orderBy: { name: 'asc' },
     });
@@ -20,7 +17,7 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.get('/locations/:idOrCode', async (request: FastifyRequest, reply: FastifyReply) => {
     const { idOrCode } = request.params as { idOrCode: string };
 
-    const location = await prisma.location.findFirst({
+    const location = await request.db.location.findFirst({
       where: {
         OR: [{ id: idOrCode }, { code: idOrCode }],
       },
@@ -56,12 +53,12 @@ export default async function locationRoutes(server: FastifyInstance) {
         };
 
       // Check if code is unique
-      const existing = await prisma.location.findUnique({ where: { code } });
+      const existing = await request.db.location.findUnique({ where: { code } });
       if (existing) {
         return reply.status(400).send({ error: 'Bu lokasyon kodu zaten kullanımda' });
       }
 
-      const location = await prisma.location.create({
+      const location = await request.db.location.create({
         data: {
           name,
           code: code.toLowerCase().replace(/\s/g, '-'),
@@ -89,7 +86,7 @@ export default async function locationRoutes(server: FastifyInstance) {
 
       // Prevent code change if it conflicts
       if (data.code) {
-        const existing = await prisma.location.findFirst({
+        const existing = await request.db.location.findFirst({
           where: { code: data.code, NOT: { id } },
         });
         if (existing) {
@@ -97,7 +94,7 @@ export default async function locationRoutes(server: FastifyInstance) {
         }
       }
 
-      const location = await prisma.location.update({
+      const location = await request.db.location.update({
         where: { id },
         data,
       });
@@ -114,7 +111,7 @@ export default async function locationRoutes(server: FastifyInstance) {
       const { id } = request.params as { id: string };
 
       // Check if location has active orders
-      const activeOrders = await prisma.order.count({
+      const activeOrders = await request.db.order.count({
         where: {
           locationId: id,
           status: { notIn: ['COMPLETED', 'CANCELLED'] },
@@ -127,7 +124,7 @@ export default async function locationRoutes(server: FastifyInstance) {
         });
       }
 
-      await prisma.location.update({
+      await request.db.location.update({
         where: { id },
         data: { active: false },
       });
@@ -140,16 +137,16 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.post(
     '/locations/:id/set-default',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
       // Remove default from all
-      await prisma.location.updateMany({
+      await request.db.location.updateMany({
         data: { isDefault: false },
       });
 
       // Set new default
-      await prisma.location.update({
+      await request.db.location.update({
         where: { id },
         data: { isDefault: true },
       });
@@ -162,12 +159,12 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.get('/locations/:id/menu', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const location = await prisma.location.findUnique({ where: { id } });
+    const location = await request.db.location.findUnique({ where: { id } });
     if (!location) {
       return reply.status(404).send({ error: 'Lokasyon bulunamadı' });
     }
 
-    const categories = await prisma.category.findMany({
+    const categories = await request.db.category.findMany({
       where: { active: true },
       orderBy: { sortOrder: 'asc' },
       include: {
@@ -210,14 +207,14 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.post(
     '/locations/:locationId/menu/:menuItemId',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { locationId, menuItemId } = request.params as {
         locationId: string;
         menuItemId: string;
       };
       const { price, available } = request.body as { price?: number; available?: boolean };
 
-      const itemLocation = await prisma.menuItemLocation.upsert({
+      const itemLocation = await request.db.menuItemLocation.upsert({
         where: {
           menuItemId_locationId: { menuItemId, locationId },
         },
@@ -241,7 +238,7 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.get(
     '/locations/:id/stats',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const { period } = request.query as { period?: string };
 
@@ -261,12 +258,12 @@ export default async function locationRoutes(server: FastifyInstance) {
       }
 
       const [orderStats, revenueStats, tableCount, staffCount] = await Promise.all([
-        prisma.order.aggregate({
+        request.db.order.aggregate({
           where: { locationId: id, createdAt: { gte: startDate } },
           _count: true,
           _avg: { total: true },
         }),
-        prisma.order.aggregate({
+        request.db.order.aggregate({
           where: {
             locationId: id,
             createdAt: { gte: startDate },
@@ -274,8 +271,8 @@ export default async function locationRoutes(server: FastifyInstance) {
           },
           _sum: { total: true, tip: true },
         }),
-        prisma.table.count({ where: { locationId: id, active: true } }),
-        prisma.user.count({ where: { locationId: id, active: true } }),
+        request.db.table.count({ where: { locationId: id, active: true } }),
+        request.db.user.count({ where: { locationId: id, active: true } }),
       ]);
 
       return {
@@ -297,12 +294,12 @@ export default async function locationRoutes(server: FastifyInstance) {
   server.post(
     '/locations/:fromId/copy-menu/:toId',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { fromId, toId } = request.params as { fromId: string; toId: string };
       const { priceAdjustment } = request.body as { priceAdjustment?: number }; // Percentage adjustment
 
       // Get source location menu settings
-      const sourceSettings = await prisma.menuItemLocation.findMany({
+      const sourceSettings = await request.db.menuItemLocation.findMany({
         where: { locationId: fromId },
       });
 
@@ -315,7 +312,7 @@ export default async function locationRoutes(server: FastifyInstance) {
             Math.round(Number(setting.price) * (1 + priceAdjustment / 100) * 100) / 100;
         }
 
-        const copied = await prisma.menuItemLocation.upsert({
+        const copied = await request.db.menuItemLocation.upsert({
           where: {
             menuItemId_locationId: { menuItemId: setting.menuItemId, locationId: toId },
           },

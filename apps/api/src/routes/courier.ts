@@ -13,7 +13,6 @@
 //   - GET /active → aktif (çevrimiçi) kuryeler
 //   - GET /:courierId/location → son konum
 
-import { PrismaClient } from '@prisma/client';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAuth, verifyAdmin, verifyCourier } from '../middleware/auth';
 import {
@@ -27,15 +26,13 @@ import * as path from 'path';
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
 export default async function courierRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ---------------------------------------------------------------------------
   // GET /assigned — aktif atanmış siparişler
   // ---------------------------------------------------------------------------
   server.get('/assigned', { preHandler: verifyCourier }, async (request: FastifyRequest) => {
     const user = (request as any).user;
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         courierId: user.userId,
         status: { in: ['READY', 'OUT_FOR_DELIVERY'] },
@@ -61,7 +58,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     const lim = Math.min(parseInt(limit, 10) || 50, 200);
     const off = parseInt(offset, 10) || 0;
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         courierId: user.userId,
         status: { in: ['DELIVERED', 'COMPLETED'] },
@@ -87,14 +84,14 @@ export default async function courierRoutes(server: FastifyInstance) {
     todayStart.setHours(0, 0, 0, 0);
 
     const [deliveredCount, totalEarnings, activeCount] = await Promise.all([
-      prisma.order.count({
+      request.db.order.count({
         where: {
           courierId: user.userId,
           status: { in: ['DELIVERED', 'COMPLETED'] },
           deliveredAt: { gte: todayStart },
         },
       }),
-      prisma.order.aggregate({
+      request.db.order.aggregate({
         where: {
           courierId: user.userId,
           status: { in: ['DELIVERED', 'COMPLETED'] },
@@ -102,7 +99,7 @@ export default async function courierRoutes(server: FastifyInstance) {
         },
         _sum: { deliveryFee: true },
       }),
-      prisma.order.count({
+      request.db.order.count({
         where: {
           courierId: user.userId,
           status: { in: ['READY', 'OUT_FOR_DELIVERY'] },
@@ -139,7 +136,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'latitude ve longitude gerekli' });
     }
 
-    const created = await prisma.courierLocation.create({
+    const created = await request.db.courierLocation.create({
       data: {
         courierId: user.userId,
         latitude: body.latitude,
@@ -156,7 +153,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     });
 
     // User lastSeen alanlarını güncelle
-    await prisma.user.update({
+    await request.db.user.update({
       where: { id: user.userId },
       data: {
         lastSeenLat: body.latitude,
@@ -167,7 +164,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     });
 
     // Bu kuryeye atanmış aktif teslimat müşteri ID'lerini bul (WS filter için)
-    const activeOrders = await prisma.order.findMany({
+    const activeOrders = await request.db.order.findMany({
       where: {
         courierId: user.userId,
         status: { in: ['READY', 'OUT_FOR_DELIVERY'] },
@@ -185,7 +182,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       const emails = activeOrders.map((o) => o.customerEmail).filter(Boolean) as string[];
       const phones = activeOrders.map((o) => o.customerPhone).filter(Boolean) as string[];
       if (emails.length || phones.length) {
-        const customers = await prisma.customer.findMany({
+        const customers = await request.db.customer.findMany({
           where: {
             OR: [
               ...(emails.length ? [{ email: { in: emails } }] : []),
@@ -243,7 +240,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Batch max 500 nokta olabilir' });
     }
 
-    const created = await prisma.courierLocation.createMany({
+    const created = await request.db.courierLocation.createMany({
       data: body.points
         .filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number')
         .map((p) => ({
@@ -264,7 +261,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     // Son nokta ile lastSeen güncelle
     const last = body.points[body.points.length - 1];
     if (last && typeof last.latitude === 'number' && typeof last.longitude === 'number') {
-      await prisma.user.update({
+      await request.db.user.update({
         where: { id: user.userId },
         data: {
           lastSeenLat: last.latitude,
@@ -283,7 +280,7 @@ export default async function courierRoutes(server: FastifyInstance) {
   // ---------------------------------------------------------------------------
   server.post('/online', { preHandler: verifyCourier }, async (request: FastifyRequest) => {
     const user = (request as any).user;
-    await prisma.user.update({
+    await request.db.user.update({
       where: { id: user.userId },
       data: { isOnline: true, lastSeenAt: new Date() },
     });
@@ -293,7 +290,7 @@ export default async function courierRoutes(server: FastifyInstance) {
 
   server.post('/offline', { preHandler: verifyCourier }, async (request: FastifyRequest) => {
     const user = (request as any).user;
-    await prisma.user.update({
+    await request.db.user.update({
       where: { id: user.userId },
       data: { isOnline: false, lastSeenAt: new Date() },
     });
@@ -305,7 +302,7 @@ export default async function courierRoutes(server: FastifyInstance) {
   // GET /active — admin: çevrimiçi kuryeler
   // ---------------------------------------------------------------------------
   server.get('/active', { preHandler: verifyAdmin }, async () => {
-    const couriers = await prisma.user.findMany({
+    const couriers = await request.db.user.findMany({
       where: {
         role: 'COURIER',
         active: true,
@@ -325,7 +322,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     // Aktif sipariş sayıları
     const withStats = await Promise.all(
       couriers.map(async (c) => {
-        const activeOrders = await prisma.order.count({
+        const activeOrders = await request.db.order.count({
           where: {
             courierId: c.id,
             status: { in: ['READY', 'OUT_FOR_DELIVERY'] },
@@ -347,13 +344,13 @@ export default async function courierRoutes(server: FastifyInstance) {
 
     // Customer ise kendi siparişinin kuryesi mi kontrolü
     if (user.customerId && !user.userId) {
-      const customer = await prisma.customer.findUnique({
+      const customer = await request.db.customer.findUnique({
         where: { id: user.customerId },
         select: { email: true, phone: true },
       });
       if (!customer) return reply.status(403).send({ error: 'Yetkisiz' });
 
-      const hasActive = await prisma.order.findFirst({
+      const hasActive = await request.db.order.findFirst({
         where: {
           courierId,
           status: { in: ['READY', 'OUT_FOR_DELIVERY'] },
@@ -368,7 +365,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     }
     // Staff her zaman görebilir
 
-    const courier = await prisma.user.findUnique({
+    const courier = await request.db.user.findUnique({
       where: { id: courierId },
       select: {
         id: true,
@@ -394,7 +391,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const user = (request as any).user;
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     if (order.courierId !== user.userId) {
       return reply.status(403).send({ error: 'Bu sipariş sana atanmamış' });
@@ -403,7 +400,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş henüz hazır değil' });
     }
 
-    const updated = await prisma.order.update({
+    const updated = await request.db.order.update({
       where: { id },
       data: {
         courierAcceptedAt: new Date(),
@@ -428,7 +425,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     const { reason } = (request.body || {}) as { reason?: string };
     const user = (request as any).user;
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     if (order.courierId !== user.userId) {
       return reply.status(403).send({ error: 'Bu sipariş sana atanmamış' });
@@ -437,7 +434,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Bu durumda reddedilemez' });
     }
 
-    const updated = await prisma.order.update({
+    const updated = await request.db.order.update({
       where: { id },
       data: {
         courierId: null,
@@ -464,7 +461,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const user = (request as any).user;
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     if (order.courierId !== user.userId) {
       return reply.status(403).send({ error: 'Bu sipariş sana atanmamış' });
@@ -492,7 +489,7 @@ export default async function courierRoutes(server: FastifyInstance) {
     }
 
     const photoUrl = `/uploads/${filename}`;
-    const updated = await prisma.order.update({
+    const updated = await request.db.order.update({
       where: { id },
       data: { deliveryPhotoUrl: photoUrl },
       select: { id: true, deliveryPhotoUrl: true },
@@ -513,7 +510,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       deliveryNotes?: string;
     };
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     if (order.courierId !== user.userId) {
       return reply.status(403).send({ error: 'Bu sipariş sana atanmamış' });
@@ -522,7 +519,7 @@ export default async function courierRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş henüz alınmadı' });
     }
 
-    const updated = await prisma.order.update({
+    const updated = await request.db.order.update({
       where: { id },
       data: {
         deliveredAt: new Date(),

@@ -1,13 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function categoryRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all categories
   server.get('/', async () => {
-    const categories = await prisma.category.findMany({
+    const categories = await request.db.category.findMany({
       where: { active: true },
       include: {
         _count: {
@@ -23,7 +20,7 @@ export default async function categoryRoutes(server: FastifyInstance) {
   server.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const category = await prisma.category.findUnique({
+    const category = await request.db.category.findUnique({
       where: { id },
       include: {
         items: {
@@ -52,7 +49,7 @@ export default async function categoryRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Kategori adı gerekli' });
     }
 
-    const category = await prisma.category.create({
+    const category = await request.db.category.create({
       data: {
         name,
         icon,
@@ -73,12 +70,12 @@ export default async function categoryRoutes(server: FastifyInstance) {
       active?: boolean;
     };
 
-    const category = await prisma.category.findUnique({ where: { id } });
+    const category = await request.db.category.findUnique({ where: { id } });
     if (!category) {
       return reply.status(404).send({ error: 'Kategori bulunamadı' });
     }
 
-    const updatedCategory = await prisma.category.update({
+    const updatedCategory = await request.db.category.update({
       where: { id },
       data: {
         name,
@@ -95,14 +92,14 @@ export default async function categoryRoutes(server: FastifyInstance) {
   server.delete('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const category = await prisma.category.findUnique({ where: { id } });
+    const category = await request.db.category.findUnique({ where: { id } });
     if (!category) {
       return reply.status(404).send({ error: 'Kategori bulunamadı' });
     }
 
     // Delete category and all its menu items in a transaction
     try {
-      await prisma.$transaction(async (tx) => {
+      await request.db.$transaction(async (tx) => {
         // Get all menu item IDs in this category
         const items = await tx.menuItem.findMany({
           where: { categoryId: id },
@@ -140,7 +137,7 @@ export default async function categoryRoutes(server: FastifyInstance) {
 
     await Promise.all(
       order.map(({ id, sortOrder }) =>
-        prisma.category.update({
+        request.db.category.update({
           where: { id },
           data: { sortOrder },
         })

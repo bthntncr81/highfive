@@ -40,8 +40,6 @@ async function deductRawMaterialStock(
 }
 
 export default async function externalRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== MENU ENDPOINTS ====================
 
   /**
@@ -52,11 +50,11 @@ export default async function externalRoutes(server: FastifyInstance) {
   server.get(
     '/menu',
     { preHandler: requirePermission('menu:read') },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const partner = (request as any).partner;
 
       // Kategorileri getir
-      const categories = await prisma.category.findMany({
+      const categories = await request.db.category.findMany({
         where: { active: true },
         orderBy: { sortOrder: 'asc' },
         select: {
@@ -74,7 +72,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       // Location filtresi (partner'ın erişebildiği lokasyon)
       const locationId = (request.query as any).locationId || partner.locationId;
 
-      const menuItems = await prisma.menuItem.findMany({
+      const menuItems = await request.db.menuItem.findMany({
         where: whereMenuItem,
         orderBy: { sortOrder: 'asc' },
         select: {
@@ -168,15 +166,15 @@ export default async function externalRoutes(server: FastifyInstance) {
     { preHandler: requirePermission('menu:read') },
     async (request: FastifyRequest) => {
       // Get latest menu update timestamps
-      const latestItem = await prisma.menuItem.findFirst({
+      const latestItem = await request.db.menuItem.findFirst({
         orderBy: { updatedAt: 'desc' },
         select: { updatedAt: true },
       });
-      const latestCategory = await prisma.category.findFirst({
+      const latestCategory = await request.db.category.findFirst({
         orderBy: { updatedAt: 'desc' },
         select: { updatedAt: true },
       });
-      const latestModifier = await prisma.modifier.findFirst({
+      const latestModifier = await request.db.modifier.findFirst({
         orderBy: { createdAt: 'desc' },
         select: { createdAt: true },
       });
@@ -255,7 +253,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       }
 
       // Check duplicate
-      const existingOrder = await prisma.order.findFirst({
+      const existingOrder = await request.db.order.findFirst({
         where: { externalOrderId },
       });
       if (existingOrder) {
@@ -272,7 +270,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       const orderItems = [];
 
       for (const item of items) {
-        const menuItem = await prisma.menuItem.findUnique({
+        const menuItem = await request.db.menuItem.findUnique({
           where: { id: item.menuItemId },
         });
 
@@ -301,7 +299,7 @@ export default async function externalRoutes(server: FastifyInstance) {
 
       // Get tax rate from settings — yapılandırılmadıysa 0 (diğer endpoint'lerle tutarlı).
       // Eskiden 10 default'tu ve WhatsApp siparişlerinde sebepsiz yere KDV ekliyordu.
-      const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+      const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
       const taxRate = (settings?.value as any)?.taxRate ?? 0;
       const tax = subtotal * (taxRate / 100);
       const deliveryAmount = deliveryFee || 0;
@@ -330,18 +328,18 @@ export default async function externalRoutes(server: FastifyInstance) {
       // Auto-create or update Customer record for WhatsApp orders
       if (customerPhone) {
         try {
-          let customer = await prisma.customer.findUnique({
+          let customer = await request.db.customer.findUnique({
             where: { phone: customerPhone },
           });
 
           if (!customer) {
             // Get lowest loyalty tier for new customers
-            const bronzeTier = await prisma.loyaltyTier.findFirst({
+            const bronzeTier = await request.db.loyaltyTier.findFirst({
               where: { isActive: true },
               orderBy: { minPoints: 'asc' },
             });
 
-            customer = await prisma.customer.create({
+            customer = await request.db.customer.create({
               data: {
                 phone: customerPhone,
                 name: customerName || null,
@@ -352,7 +350,7 @@ export default async function externalRoutes(server: FastifyInstance) {
             });
 
             // Welcome bonus points
-            await prisma.pointsTransaction.create({
+            await request.db.pointsTransaction.create({
               data: {
                 customerId: customer.id,
                 points: 50,
@@ -360,7 +358,7 @@ export default async function externalRoutes(server: FastifyInstance) {
                 description: 'WhatsApp hos geldin bonusu',
               },
             });
-            await prisma.customer.update({
+            await request.db.customer.update({
               where: { id: customer.id },
               data: { totalPoints: 50, lifetimePoints: 50 },
             });
@@ -368,7 +366,7 @@ export default async function externalRoutes(server: FastifyInstance) {
             console.log(`👤 [External] Yeni müşteri oluşturuldu: ${customerPhone} (${customerName || 'İsimsiz'})`);
           } else if (customerName && !customer.name) {
             // Update name if missing
-            await prisma.customer.update({
+            await request.db.customer.update({
               where: { id: customer.id },
               data: { name: customerName },
             });
@@ -392,7 +390,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       }
 
       // Create order
-      const order = await prisma.order.create({
+      const order = await request.db.order.create({
         data: {
           locationId: orderLocationId,
           customerName: customerName || null,
@@ -426,11 +424,11 @@ export default async function externalRoutes(server: FastifyInstance) {
       });
 
       // Deduct raw material stock
-      await deductRawMaterialStock(prisma, items);
+      await deductRawMaterialStock(request.db, items);
 
       // Broadcast new order to POS and Kitchen
       broadcastNewOrder(order);
-      notifyNewOrder(prisma, order.id).catch(() => {});
+      notifyNewOrder(request.db, order.id).catch(() => {});
 
       console.log(
         `🔗 [External] Sipariş oluşturuldu: #${order.orderNumber} (${partner.name}, externalId: ${externalOrderId})`,
@@ -467,7 +465,7 @@ export default async function externalRoutes(server: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { externalOrderId } = request.params as { externalOrderId: string };
 
-      const order = await prisma.order.findFirst({
+      const order = await request.db.order.findFirst({
         where: { externalOrderId },
         include: {
           items: {
@@ -588,7 +586,7 @@ export default async function externalRoutes(server: FastifyInstance) {
       const apiKey = crypto.randomBytes(32).toString('hex');
       const secret = webhookSecret || crypto.randomBytes(16).toString('hex');
 
-      const partner = await prisma.integrationPartner.create({
+      const partner = await request.db.integrationPartner.create({
         data: {
           name,
           apiKey,

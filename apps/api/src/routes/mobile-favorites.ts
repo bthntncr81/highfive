@@ -3,22 +3,19 @@
 // POST   /api/mobile/favorites/:menuItemId  - toggle (ekle/çıkar)
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 
 export default async function mobileFavoritesRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // LIST — favori menüleri menuItem ile birlikte döner
   server.get('/', { preHandler: verifyCustomerAuth }, async (request: FastifyRequest) => {
     const customerId = (request as any).customerId as string;
-    const favorites = await prisma.favoriteItem.findMany({
+    const favorites = await request.db.favoriteItem.findMany({
       where: { customerId },
       orderBy: { createdAt: 'desc' },
     });
     if (favorites.length === 0) return { favorites: [], items: [] };
 
-    const items = await prisma.menuItem.findMany({
+    const items = await request.db.menuItem.findMany({
       where: { id: { in: favorites.map((f) => f.menuItemId) } },
       include: { category: true },
     });
@@ -40,18 +37,18 @@ export default async function mobileFavoritesRoutes(server: FastifyInstance) {
     const customerId = (request as any).customerId as string;
     const { menuItemId } = request.params as { menuItemId: string };
 
-    const menuItem = await prisma.menuItem.findUnique({ where: { id: menuItemId } });
+    const menuItem = await request.db.menuItem.findUnique({ where: { id: menuItemId } });
     if (!menuItem) return reply.status(404).send({ error: 'Ürün bulunamadı' });
 
-    const existing = await prisma.favoriteItem.findUnique({
+    const existing = await request.db.favoriteItem.findUnique({
       where: { customerId_menuItemId: { customerId, menuItemId } },
     });
 
     if (existing) {
-      await prisma.favoriteItem.delete({ where: { id: existing.id } });
+      await request.db.favoriteItem.delete({ where: { id: existing.id } });
       return { favorited: false };
     } else {
-      await prisma.favoriteItem.create({
+      await request.db.favoriteItem.create({
         data: { customerId, menuItemId },
       });
       return { favorited: true };

@@ -3,7 +3,7 @@
 // Bu güvenlik garantisi: kullanıcı request manipule ederek farklı ödül kazanamaz.
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { verifyCustomerAuth } from '../lib/customer-auth';
 import { verifyAdmin } from '../middleware/auth';
 import { randomBytes } from 'crypto';
@@ -35,11 +35,9 @@ function generateCouponCode(prefix: string): string {
 }
 
 export default async function gamesRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== SPIN WHEEL — admin config ====================
   server.get('/spin/config', async (req: FastifyRequest) => {
-    const config = await prisma.spinWheelConfig.findFirst({
+    const config = await req.db.spinWheelConfig.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -66,7 +64,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
         ) as { customerId?: string; type?: string; aud?: string };
         const cid = decoded.customerId;
         if (cid && (decoded.type === 'customer' || decoded.aud === 'customer')) {
-          const c = await prisma.customer.findUnique({
+          const c = await req.db.customer.findUnique({
             where: { id: cid },
             select: { lastSpinAt: true },
           });
@@ -115,12 +113,12 @@ export default async function gamesRoutes(server: FastifyInstance) {
     }
     // Eski aktif çarkı pasif yap
     if (body.isActive ?? true) {
-      await prisma.spinWheelConfig.updateMany({
+      await req.db.spinWheelConfig.updateMany({
         where: { isActive: true },
         data: { isActive: false },
       });
     }
-    const config = await prisma.spinWheelConfig.create({
+    const config = await req.db.spinWheelConfig.create({
       data: {
         name: body.name ?? 'Şans Çarkı',
         description: body.description ?? null,
@@ -141,13 +139,13 @@ export default async function gamesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (req as any).customerId as string;
 
-    const config = await prisma.spinWheelConfig.findFirst({
+    const config = await req.db.spinWheelConfig.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
     if (!config) return reply.status(400).send({ error: 'Aktif çark yok' });
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await req.db.customer.findUnique({
       where: { id: customerId },
       select: { id: true, lastSpinAt: true, totalPoints: true, lifetimePoints: true },
     });
@@ -184,7 +182,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       const startDate = new Date();
       const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
       const code = generateCouponCode('SPIN');
-      const c = await prisma.coupon.create({
+      const c = await req.db.coupon.create({
         data: {
           code,
           name: `Şans Çarkı: ${winning.label}`,
@@ -201,15 +199,15 @@ export default async function gamesRoutes(server: FastifyInstance) {
       couponId = c.id;
     } else if (winning.type === 'POINTS' && winning.value > 0) {
       pointsAwarded = Math.floor(winning.value);
-      await prisma.$transaction([
-        prisma.customer.update({
+      await req.db.$transaction([
+        req.db.customer.update({
           where: { id: customerId },
           data: {
             totalPoints: { increment: pointsAwarded },
             lifetimePoints: { increment: pointsAwarded },
           },
         }),
-        prisma.pointsTransaction.create({
+        req.db.pointsTransaction.create({
           data: {
             customerId,
             points: pointsAwarded,
@@ -221,7 +219,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
     }
 
     // Attempt kaydı + cooldown güncelle
-    const attempt = await prisma.spinAttempt.create({
+    const attempt = await req.db.spinAttempt.create({
       data: {
         customerId,
         configId: config.id,
@@ -233,13 +231,13 @@ export default async function gamesRoutes(server: FastifyInstance) {
       },
     });
 
-    await prisma.customer.update({
+    await req.db.customer.update({
       where: { id: customerId },
       data: { lastSpinAt: new Date() },
     });
 
     // SPIN_WIN achievement kontrolü (büyük ödül kazandıysa rozet açılabilir)
-    await checkAchievementsForCustomer(prisma, customerId).catch(() => {});
+    await checkAchievementsForCustomer(req.db, customerId).catch(() => {});
 
     return {
       attempt: {
@@ -261,11 +259,11 @@ export default async function gamesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (req as any).customerId as string;
     const [all, mine] = await Promise.all([
-      prisma.achievement.findMany({
+      req.db.achievement.findMany({
         where: { isActive: true },
         orderBy: { sortOrder: 'asc' },
       }),
-      prisma.customerAchievement.findMany({
+      req.db.customerAchievement.findMany({
         where: { customerId },
         include: { achievement: true },
       }),
@@ -292,11 +290,10 @@ export default async function gamesRoutes(server: FastifyInstance) {
   // Modal görüldü işaretle (her achievement için 1x)
   server.post('/achievements/:id/seen', { preHandler: verifyCustomerAuth }, async (
     req: FastifyRequest,
-    reply: FastifyReply,
   ) => {
     const customerId = (req as any).customerId as string;
     const { id } = req.params as { id: string };
-    const updated = await prisma.customerAchievement.updateMany({
+    const updated = await req.db.customerAchievement.updateMany({
       where: { customerId, achievementId: id, seenAt: null },
       data: { seenAt: new Date() },
     });
@@ -305,7 +302,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
 
   // Admin: tüm achievement'ları listele (POS yönetim ekranı için)
   server.get('/achievements', { preHandler: verifyAdmin }, async () => {
-    const all = await prisma.achievement.findMany({
+    const all = await request.db.achievement.findMany({
       orderBy: { sortOrder: 'asc' },
     });
     return { achievements: all };
@@ -317,7 +314,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
     if (!body.key || !body.name || !body.type || !body.criteria) {
       return reply.status(400).send({ error: 'key, name, type, criteria gerekli' });
     }
-    const a = await prisma.achievement.upsert({
+    const a = await req.db.achievement.upsert({
       where: { key: body.key },
       update: {
         name: body.name,
@@ -354,7 +351,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
     const customerId = (req as any).customerId as string;
     const { orderId } = req.params as { orderId: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await req.db.order.findUnique({
       where: { id: orderId },
       select: { id: true, total: true, paymentStatus: true },
     });
@@ -362,7 +359,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
     if (Number(order.total) < 100) return { reward: null }; // 100₺ altı bonus yok
 
     // Aynı sipariş için zaten kart varsa onu döndür
-    const existing = await prisma.scratchReward.findFirst({
+    const existing = await req.db.scratchReward.findFirst({
       where: { customerId, orderId },
     });
     if (existing) return { reward: existing };
@@ -379,7 +376,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       prizeValue = 5;
       prizeLabel = '%5 İndirim';
       const code = generateCouponCode('SCRATCH');
-      const c = await prisma.coupon.create({
+      const c = await req.db.coupon.create({
         data: {
           code,
           name: 'Kazı Kazan: %5 İndirim',
@@ -398,12 +395,12 @@ export default async function gamesRoutes(server: FastifyInstance) {
       prizeType = 'POINTS';
       prizeValue = 50;
       prizeLabel = '50 Puan';
-      await prisma.$transaction([
-        prisma.customer.update({
+      await req.db.$transaction([
+        req.db.customer.update({
           where: { id: customerId },
           data: { totalPoints: { increment: 50 }, lifetimePoints: { increment: 50 } },
         }),
-        prisma.pointsTransaction.create({
+        req.db.pointsTransaction.create({
           data: {
             customerId,
             points: 50,
@@ -417,7 +414,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       prizeValue = 15;
       prizeLabel = '%15 BÜYÜK İNDİRİM';
       const code = generateCouponCode('SCRATCH');
-      const c = await prisma.coupon.create({
+      const c = await req.db.coupon.create({
         data: {
           code,
           name: 'Kazı Kazan: %15 İndirim',
@@ -437,7 +434,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       prizeLabel = 'Bu sefer şans yok 😔';
     }
 
-    const reward = await prisma.scratchReward.create({
+    const reward = await req.db.scratchReward.create({
       data: {
         customerId,
         orderId,
@@ -457,12 +454,12 @@ export default async function gamesRoutes(server: FastifyInstance) {
   ) => {
     const customerId = (req as any).customerId as string;
     const { id } = req.params as { id: string };
-    const r = await prisma.scratchReward.findUnique({ where: { id } });
+    const r = await req.db.scratchReward.findUnique({ where: { id } });
     if (!r || r.customerId !== customerId) {
       return reply.status(404).send({ error: 'Kart bulunamadı' });
     }
     if (r.scratchedAt) return { reward: r };
-    const updated = await prisma.scratchReward.update({
+    const updated = await req.db.scratchReward.update({
       where: { id },
       data: { scratchedAt: new Date() },
     });
@@ -472,7 +469,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
   // ==================== MYSTERY BOX ====================
   // Listele
   server.get('/mysterybox/list', async () => {
-    const boxes = await prisma.mysteryBoxConfig.findMany({
+    const boxes = await request.db.mysteryBoxConfig.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
       select: {
@@ -505,10 +502,10 @@ export default async function gamesRoutes(server: FastifyInstance) {
     const customerId = (req as any).customerId as string;
     const { id } = req.params as { id: string };
 
-    const box = await prisma.mysteryBoxConfig.findUnique({ where: { id } });
+    const box = await req.db.mysteryBoxConfig.findUnique({ where: { id } });
     if (!box || !box.isActive) return reply.status(404).send({ error: 'Kutu bulunamadı' });
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await req.db.customer.findUnique({
       where: { id: customerId },
       select: { totalPoints: true },
     });
@@ -535,7 +532,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
 
     if (winning.type === 'DISCOUNT_PERCENT' || winning.type === 'DISCOUNT_FIXED') {
       const code = generateCouponCode('MYSTERY');
-      const c = await prisma.coupon.create({
+      const c = await req.db.coupon.create({
         data: {
           code,
           name: `Mystery Box: ${winning.label}`,
@@ -556,13 +553,13 @@ export default async function gamesRoutes(server: FastifyInstance) {
 
     // Atomic: puan harca + (varsa) puan ver + audit
     const ops: any[] = [
-      prisma.customer.update({
+      req.db.customer.update({
         where: { id: customerId },
         data: {
           totalPoints: { decrement: box.pointsCost },
         },
       }),
-      prisma.pointsTransaction.create({
+      req.db.pointsTransaction.create({
         data: {
           customerId,
           points: -box.pointsCost,
@@ -573,14 +570,14 @@ export default async function gamesRoutes(server: FastifyInstance) {
     ];
     if (pointsAwarded > 0) {
       ops.push(
-        prisma.customer.update({
+        req.db.customer.update({
           where: { id: customerId },
           data: {
             totalPoints: { increment: pointsAwarded },
             lifetimePoints: { increment: pointsAwarded },
           },
         }),
-        prisma.pointsTransaction.create({
+        req.db.pointsTransaction.create({
           data: {
             customerId,
             points: pointsAwarded,
@@ -591,9 +588,9 @@ export default async function gamesRoutes(server: FastifyInstance) {
       );
     }
 
-    await prisma.$transaction(ops);
+    await req.db.$transaction(ops);
 
-    const open = await prisma.mysteryBoxOpen.create({
+    const open = await req.db.mysteryBoxOpen.create({
       data: {
         customerId,
         configId: box.id,
@@ -627,7 +624,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'name, pointsCost ve en az 2 prize gerekli' });
     }
     if (body.id) {
-      const b = await prisma.mysteryBoxConfig.update({
+      const b = await req.db.mysteryBoxConfig.update({
         where: { id: body.id },
         data: {
           name: body.name,
@@ -641,7 +638,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       });
       return { box: b };
     }
-    const b = await prisma.mysteryBoxConfig.create({
+    const b = await req.db.mysteryBoxConfig.create({
       data: {
         name: body.name,
         description: body.description ?? null,
@@ -666,7 +663,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
     startOfWeek.setHours(0, 0, 0, 0);
 
     // Bu hafta içinde kazanılan toplam EARN puanlarını topla, top 10
-    const grouped = await prisma.pointsTransaction.groupBy({
+    const grouped = await req.db.pointsTransaction.groupBy({
       by: ['customerId'],
       where: {
         type: 'EARN',
@@ -683,7 +680,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
       return { leaderboard: [], weekStart: startOfWeek.toISOString() };
     }
 
-    const customers = await prisma.customer.findMany({
+    const customers = await req.db.customer.findMany({
       where: { id: { in: customerIds } },
       select: {
         id: true,
@@ -721,7 +718,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
             myPoints = grouped[idx]._sum.points ?? 0;
           } else {
             // Top 10'da değilse rank'i ayrıca hesapla
-            const mine = await prisma.pointsTransaction.aggregate({
+            const mine = await req.db.pointsTransaction.aggregate({
               where: {
                 customerId: cid,
                 type: 'EARN',
@@ -734,7 +731,7 @@ export default async function gamesRoutes(server: FastifyInstance) {
             if (myPts > 0) {
               myPoints = myPts;
               // Daha yüksek puanlı kaç müşteri var?
-              const higher = await prisma.pointsTransaction.groupBy({
+              const higher = await req.db.pointsTransaction.groupBy({
                 by: ['customerId'],
                 where: {
                   type: 'EARN',

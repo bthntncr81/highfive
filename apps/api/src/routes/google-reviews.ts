@@ -7,7 +7,7 @@
 //
 // Eğer key/place_id yoksa kürateli mock yorumlar döner.
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 
 type GoogleReview = {
   authorName: string;
@@ -123,7 +123,7 @@ async function fetchFromGoogle(): Promise<CacheEntry | null> {
 }
 
 export default async function googleReviewsRoutes(server: FastifyInstance) {
-  server.get('/', async (req: FastifyRequest, reply: FastifyReply) => {
+  server.get('/', async () => {
     const now = Date.now();
 
     // Cache hit

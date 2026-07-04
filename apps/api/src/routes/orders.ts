@@ -241,8 +241,6 @@ async function restoreRawMaterialStock(
 }
 
 export default async function orderRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all orders (with filters)
   server.get('/', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const { status, type, date, tableId, limit, includePendingPayment } = request.query as {
@@ -295,7 +293,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       ];
     }
 
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where,
       include: {
         table: true,
@@ -317,7 +315,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
   // Get active orders (for kitchen display) - no auth required for kitchen screens
   server.get('/active', async () => {
-    const orders = await prisma.order.findMany({
+    const orders = await request.db.order.findMany({
       where: {
         status: {
           in: [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY],
@@ -360,7 +358,7 @@ export default async function orderRoutes(server: FastifyInstance) {
   server.get('/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: {
         table: true,
@@ -388,7 +386,7 @@ export default async function orderRoutes(server: FastifyInstance) {
   server.get('/:id/status', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       select: {
         id: true,
@@ -438,7 +436,7 @@ export default async function orderRoutes(server: FastifyInstance) {
   server.get('/:id/public', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       select: {
         id: true,
@@ -536,7 +534,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Check if takeaway/delivery is enabled
     if (type === 'TAKEAWAY' || type === 'DELIVERY') {
-      const servicesSetting = await prisma.settings.findUnique({
+      const servicesSetting = await request.db.settings.findUnique({
         where: { key: 'services' },
       });
       const services = (servicesSetting?.value as any) || { takeawayEnabled: true, deliveryEnabled: true };
@@ -550,7 +548,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Validate session token for table orders
     if (tableId) {
-      const table = await prisma.table.findUnique({
+      const table = await request.db.table.findUnique({
         where: { id: tableId },
       });
 
@@ -580,7 +578,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const orderItems: any[] = [];
 
     for (const item of (items || [])) {
-      const menuItem = await prisma.menuItem.findUnique({
+      const menuItem = await request.db.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
 
@@ -607,7 +605,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     //   - lines for picked options: 0 if INCLUDED, full menu price if ADD_PRICE.
     // Server-side expansion stops the customer from manipulating combo totals.
     for (const bundleReq of bundles || []) {
-      const bundle = await prisma.bundleDeal.findUnique({
+      const bundle = await request.db.bundleDeal.findUnique({
         where: { id: bundleReq.bundleId },
         include: {
           items: { include: { menuItem: true } },
@@ -647,7 +645,7 @@ export default async function orderRoutes(server: FastifyInstance) {
         }
         let eligibleIds: string[] = group.eligibleItemIds;
         if ((!eligibleIds || eligibleIds.length === 0) && group.categoryId) {
-          const catItems = await prisma.menuItem.findMany({
+          const catItems = await request.db.menuItem.findMany({
             where: { categoryId: group.categoryId, available: true },
             select: { id: true },
           });
@@ -715,7 +713,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       for (const group of bundle.optionGroups) {
         const picked = legacySelections.get(group.id) || [];
         for (const itemId of picked) {
-          const mi = await prisma.menuItem.findUnique({ where: { id: itemId } });
+          const mi = await request.db.menuItem.findUnique({ where: { id: itemId } });
           if (!mi) continue;
           const isAddPrice = group.priceMode === 'ADD_PRICE';
           if (isAddPrice) {
@@ -754,7 +752,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Builder (özel pizza/sandviç) expansion + re-validation
     for (const builderReq of builders || []) {
-      const result = await expandBuilderItem(prisma, {
+      const result = await expandBuilderItem(request.db, {
         id: builderReq.cartId,
         price: Number(builderReq.price),
         quantity: builderReq.quantity ?? 1,
@@ -767,7 +765,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Get tax rate from settings
-    const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
@@ -800,7 +798,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       }
     }
 
-    const order = await prisma.order.create({
+    const order = await request.db.order.create({
       data: {
         tableId,
         customerName,
@@ -834,12 +832,12 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Ham madde stoklarını düş — bundle-only siparişlerde items boş olabilir
     if (Array.isArray(items) && items.length > 0) {
-      await deductRawMaterialStock(prisma, items);
+      await deductRawMaterialStock(request.db, items);
     }
 
     // Update table status if table order
     if (tableId) {
-      const table = await prisma.table.update({
+      const table = await request.db.table.update({
         where: { id: tableId },
         data: { status: TableStatus.OCCUPIED },
       });
@@ -849,7 +847,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     // Only broadcast + notify if NOT card payment (card orders wait for payment completion)
     if (paymentMethod !== 'card') {
       broadcastNewOrder(order);
-      notifyNewOrder(prisma, order.id).catch(() => {});
+      notifyNewOrder(request.db, order.id).catch(() => {});
       sendWhatsAppNotification(order).catch(() => {});
     }
 
@@ -887,7 +885,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const orderItems = [];
 
     for (const item of items) {
-      const menuItem = await prisma.menuItem.findUnique({
+      const menuItem = await request.db.menuItem.findUnique({
         where: { id: item.menuItemId },
       });
 
@@ -909,13 +907,13 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Get tax rate from settings
-    const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
 
     // Create order
-    const order = await prisma.order.create({
+    const order = await request.db.order.create({
       data: {
         tableId,
         userId: user.userId,
@@ -947,12 +945,12 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Ham madde stoklarını düş — bundle-only siparişlerde items boş olabilir
     if (Array.isArray(items) && items.length > 0) {
-      await deductRawMaterialStock(prisma, items);
+      await deductRawMaterialStock(request.db, items);
     }
 
     // Update table status if table order
     if (tableId) {
-      const table = await prisma.table.update({
+      const table = await request.db.table.update({
         where: { id: tableId },
         data: { status: TableStatus.OCCUPIED },
       });
@@ -963,7 +961,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     broadcastNewOrder(order);
 
     // Send notifications (async, don't wait)
-    notifyNewOrder(prisma, order.id).catch(() => {});
+    notifyNewOrder(request.db, order.id).catch(() => {});
     sendWhatsAppNotification(order).catch(() => {});
 
     return { order };
@@ -978,7 +976,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Durum gerekli' });
     }
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: { table: true },
     });
@@ -994,7 +992,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       
       // Free up table if table order
       if (order.tableId) {
-        const table = await prisma.table.update({
+        const table = await request.db.table.update({
           where: { id: order.tableId },
           data: { status: TableStatus.CLEANING },
         });
@@ -1002,7 +1000,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       }
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: updateData,
       include: {
@@ -1020,7 +1018,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Update individual item statuses
     if (status === OrderStatus.PREPARING || status === OrderStatus.READY || status === OrderStatus.SERVED) {
-      await prisma.orderItem.updateMany({
+      await request.db.orderItem.updateMany({
         where: { orderId: id },
         data: { status },
       });
@@ -1030,17 +1028,17 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Customer mobil push (status değişti)
     if (status !== order.status) {
-      sendOrderStatusPush(prisma, updatedOrder, status).catch((err) => {
+      sendOrderStatusPush(request.db, updatedOrder, status).catch((err) => {
         console.error('📱 Mobile push error:', err);
       });
     }
 
     // Puan kazanım + sadakat programları — status COMPLETED'a geçtiğinde
     if (status === OrderStatus.COMPLETED && order.status !== OrderStatus.COMPLETED) {
-      awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
+      awardMobileOrderPoints(request.db, updatedOrder).catch((err) => {
         console.error('🏆 Loyalty award error:', err);
       });
-      processOrderForLoyalty(prisma, updatedOrder.id).catch((err) => {
+      processOrderForLoyalty(request.db, updatedOrder.id).catch((err) => {
         console.error('🎁 Loyalty engine error:', err);
       });
     }
@@ -1056,17 +1054,17 @@ export default async function orderRoutes(server: FastifyInstance) {
   });
 
   // Update individual item status (for kitchen) - open for kitchen screens
-  server.patch('/:id/items/:itemId/status', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.patch('/:id/items/:itemId/status', async (request: FastifyRequest) => {
     const { id, itemId } = request.params as { id: string; itemId: string };
     const { status } = request.body as { status: OrderStatus };
 
-    const orderItem = await prisma.orderItem.update({
+    const orderItem = await request.db.orderItem.update({
       where: { id: itemId },
       data: { status },
     });
 
     // Check if all items have the same status
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: {
         items: true,
@@ -1080,7 +1078,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     if (order) {
       const allSameStatus = order.items.every((item) => item.status === status);
       if (allSameStatus && order.status !== status) {
-        const updatedOrder = await prisma.order.update({
+        const updatedOrder = await request.db.order.update({
           where: { id },
           data: { status },
         });
@@ -1106,7 +1104,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       items: { menuItemId: string; quantity: number; notes?: string; modifiers?: string[] }[];
     };
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) {
       return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     }
@@ -1120,7 +1118,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const kitchenItems: { name: string; quantity: number; notes?: string }[] = [];
 
     for (const item of items) {
-      const menuItem = await prisma.menuItem.findUnique({
+      const menuItem = await request.db.menuItem.findUnique({
         where: { id: item.menuItemId },
         include: { category: true },
       });
@@ -1153,15 +1151,15 @@ export default async function orderRoutes(server: FastifyInstance) {
       }
     }
 
-    await prisma.orderItem.createMany({
+    await request.db.orderItem.createMany({
       data: newItems,
     });
 
     // Ham madde stoklarını düş (eklenen ürünler için)
-    await deductRawMaterialStock(prisma, items);
+    await deductRawMaterialStock(request.db, items);
 
     // Update order totals
-    const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const newSubtotal = Number(order.subtotal) + additionalTotal;
     const newTax = newSubtotal * (taxRate / 100);
@@ -1174,7 +1172,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       kitchenItems.length > 0 &&
       (order.status === OrderStatus.READY || order.status === OrderStatus.SERVED);
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         subtotal: newSubtotal,
@@ -1215,7 +1213,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(403).send({ error: 'Bu işlem için yetkiniz yok' });
     }
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: { items: true },
     });
@@ -1233,26 +1231,26 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     if (qtyToDelete >= item.quantity) {
       // Delete entire item
-      await prisma.orderItem.delete({ where: { id: itemId } });
+      await request.db.orderItem.delete({ where: { id: itemId } });
     } else {
       // Reduce quantity
       const newQty = item.quantity - qtyToDelete;
       const newTotal = Number(item.unitPrice) * newQty;
-      await prisma.orderItem.update({
+      await request.db.orderItem.update({
         where: { id: itemId },
         data: { quantity: newQty, total: newTotal },
       });
     }
 
     // Recalculate order total
-    const freshItems = await prisma.orderItem.findMany({ where: { orderId: id } });
+    const freshItems = await request.db.orderItem.findMany({ where: { orderId: id } });
     const remainingItems = freshItems;
     const newSubtotal = remainingItems.reduce((sum, i) => sum + Number(i.total), 0);
-    const settings = await prisma.settings.findUnique({ where: { key: 'restaurant' } });
+    const settings = await request.db.settings.findUnique({ where: { key: 'restaurant' } });
     const taxRate = (settings?.value as any)?.taxRate ?? 0;
     const newTax = newSubtotal * (taxRate / 100);
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: { subtotal: newSubtotal, tax: newTax, total: newSubtotal + newTax + Number(order.tip || 0) + Number(order.deliveryFee || 0) },
       include: { table: true, items: { include: { menuItem: true } } },
@@ -1273,13 +1271,13 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(403).send({ error: 'Bu işlem için yetkiniz yok (sadece admin).' });
     }
 
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
     if (!order) return reply.status(404).send({ error: 'Sipariş bulunamadı' });
 
     try {
-      await prisma.$transaction([
-        prisma.couponUsage.deleteMany({ where: { orderId: id } }),
-        prisma.order.delete({ where: { id } }),
+      await request.db.$transaction([
+        request.db.couponUsage.deleteMany({ where: { orderId: id } }),
+        request.db.order.delete({ where: { id } }),
       ]);
     } catch (e) {
       (request as any).log?.error?.(e);
@@ -1301,7 +1299,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       paidItems?: { [itemId: string]: number }; // itemId -> quantity for split payment
     };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: { 
         payments: { where: { refunded: false } },
@@ -1323,7 +1321,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Create payment with item info
-    await prisma.payment.create({
+    await request.db.payment.create({
       data: {
         orderId: id,
         amount,
@@ -1337,7 +1335,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       for (const [itemId, qty] of Object.entries(paidItems)) {
         const item = order.items.find(i => i.id === itemId);
         if (item) {
-          await prisma.orderItem.update({
+          await request.db.orderItem.update({
             where: { id: itemId },
             data: { paidQuantity: item.paidQuantity + qty },
           });
@@ -1349,7 +1347,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       if (newPaidAmount >= totalWithTip) {
         // Mark all items as fully paid
         for (const item of order.items) {
-          await prisma.orderItem.update({
+          await request.db.orderItem.update({
             where: { id: item.id },
             data: { paidQuantity: item.quantity },
           });
@@ -1362,7 +1360,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const isPaid = newPaidAmount >= totalWithTip;
     const newPaymentStatus = isPaid ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         paymentStatus: newPaymentStatus,
@@ -1387,12 +1385,12 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Award loyalty points if payment is complete and customer phone exists
     if (isPaid && order.customerPhone) {
-      await awardLoyaltyPoints(prisma, order.customerPhone, order.id, Number(order.total));
+      await awardLoyaltyPoints(request.db, order.customerPhone, order.id, Number(order.total));
     }
 
     // Free table if paid
     if (isPaid && order.tableId) {
-      const table = await prisma.table.update({
+      const table = await request.db.table.update({
         where: { id: order.tableId },
         data: { status: TableStatus.CLEANING },
       });
@@ -1409,7 +1407,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const { id, paymentId } = request.params as { id: string; paymentId: string };
     const user = (request as any).user;
 
-    const payment = await prisma.payment.findUnique({
+    const payment = await request.db.payment.findUnique({
       where: { id: paymentId },
       include: { order: { include: { items: true } } },
     });
@@ -1423,7 +1421,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Mark payment as refunded
-    await prisma.payment.update({
+    await request.db.payment.update({
       where: { id: paymentId },
       data: {
         refunded: true,
@@ -1438,7 +1436,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       for (const [itemId, qty] of Object.entries(paidItems)) {
         const item = payment.order.items.find(i => i.id === itemId);
         if (item) {
-          await prisma.orderItem.update({
+          await request.db.orderItem.update({
             where: { id: itemId },
             data: { paidQuantity: Math.max(0, item.paidQuantity - qty) },
           });
@@ -1447,18 +1445,18 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // Recalculate order payment status
-    const remainingPayments = await prisma.payment.findMany({
+    const remainingPayments = await request.db.payment.findMany({
       where: { orderId: id, refunded: false },
     });
     const totalPaid = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await request.db.order.findUnique({ where: { id } });
 
     // If there are no remaining payments, reset all items' paidQuantity
     // (this handles full payments made without paidItems info)
     if (totalPaid <= 0) {
       for (const item of payment.order.items) {
         if (item.paidQuantity > 0) {
-          await prisma.orderItem.update({
+          await request.db.orderItem.update({
             where: { id: item.id },
             data: { paidQuantity: 0 },
           });
@@ -1475,7 +1473,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       newPaymentStatus = PaymentStatus.PARTIAL;
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         paymentStatus: newPaymentStatus,
@@ -1500,7 +1498,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const { reason } = request.body as { reason?: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
       include: { table: true },
     });
@@ -1514,13 +1512,13 @@ export default async function orderRoutes(server: FastifyInstance) {
     }
 
     // İptal edilen siparişin ürünlerini al ve stokları geri ekle
-    const cancelledItems = await prisma.orderItem.findMany({
+    const cancelledItems = await request.db.orderItem.findMany({
       where: { orderId: id },
       select: { menuItemId: true, quantity: true },
     });
-    await restoreRawMaterialStock(prisma, cancelledItems);
+    await restoreRawMaterialStock(request.db, cancelledItems);
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         status: OrderStatus.CANCELLED,
@@ -1541,7 +1539,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
     // Free table
     if (order.tableId) {
-      const table = await prisma.table.update({
+      const table = await request.db.table.update({
         where: { id: order.tableId },
         data: { status: TableStatus.FREE },
       });
@@ -1551,7 +1549,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     broadcastOrderUpdate(updatedOrder);
 
     // Customer mobil push (iptal)
-    sendOrderStatusPush(prisma, updatedOrder, 'CANCELLED').catch((err) => {
+    sendOrderStatusPush(request.db, updatedOrder, 'CANCELLED').catch((err) => {
       console.error('📱 Mobile push error:', err);
     });
 
@@ -1573,7 +1571,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const { courierId } = request.body as { courierId?: string };
     const user = (request as any).user;
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
     });
 
@@ -1589,7 +1587,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş henüz hazır değil' });
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         courierId: courierId || user.id,
@@ -1609,7 +1607,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     broadcastOrderUpdate(updatedOrder);
 
     // Customer mobil push (kurye yola çıktı / paket hazır)
-    sendOrderStatusPush(prisma, updatedOrder, updatedOrder.status).catch((err) => {
+    sendOrderStatusPush(request.db, updatedOrder, updatedOrder.status).catch((err) => {
       console.error('📱 Mobile push error:', err);
     });
 
@@ -1620,7 +1618,7 @@ export default async function orderRoutes(server: FastifyInstance) {
   server.patch('/:id/courier/deliver', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
     });
 
@@ -1632,7 +1630,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Sipariş henüz alınmadı' });
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         deliveredAt: new Date(),
@@ -1650,15 +1648,15 @@ export default async function orderRoutes(server: FastifyInstance) {
     broadcastOrderUpdate(updatedOrder);
 
     // Customer mobil push (teslim edildi)
-    sendOrderStatusPush(prisma, updatedOrder, updatedOrder.status).catch((err) => {
+    sendOrderStatusPush(request.db, updatedOrder, updatedOrder.status).catch((err) => {
       console.error('📱 Mobile push error:', err);
     });
 
     // Sipariş tamamlandığında puan + sadakat programları
-    awardMobileOrderPoints(prisma, updatedOrder).catch((err) => {
+    awardMobileOrderPoints(request.db, updatedOrder).catch((err) => {
       console.error('🏆 Loyalty award error:', err);
     });
-    processOrderForLoyalty(prisma, updatedOrder.id).catch((err) => {
+    processOrderForLoyalty(request.db, updatedOrder.id).catch((err) => {
       console.error('🎁 Loyalty engine error:', err);
     });
 
@@ -1670,7 +1668,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const { courierId } = request.body as { courierId: string };
 
-    const order = await prisma.order.findUnique({
+    const order = await request.db.order.findUnique({
       where: { id },
     });
 
@@ -1678,7 +1676,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Sipariş bulunamadı' });
     }
 
-    const courier = await prisma.user.findUnique({
+    const courier = await request.db.user.findUnique({
       where: { id: courierId },
     });
 
@@ -1686,7 +1684,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Geçersiz kurye' });
     }
 
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await request.db.order.update({
       where: { id },
       data: {
         courierId,
@@ -1707,7 +1705,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
   // Kuryeleri listele
   server.get('/couriers/list', { preHandler: verifyAuth }, async () => {
-    const couriers = await prisma.user.findMany({
+    const couriers = await request.db.user.findMany({
       where: {
         role: 'COURIER',
         active: true,
@@ -1723,7 +1721,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     // Her kurye için aktif sipariş sayısını hesapla
     const couriersWithStats = await Promise.all(
       couriers.map(async (courier) => {
-        const activeOrders = await prisma.order.count({
+        const activeOrders = await request.db.order.count({
           where: {
             courierId: courier.id,
             status: {
@@ -1732,7 +1730,7 @@ export default async function orderRoutes(server: FastifyInstance) {
           },
         });
 
-        const todayDeliveries = await prisma.order.count({
+        const todayDeliveries = await request.db.order.count({
           where: {
             courierId: courier.id,
             status: 'COMPLETED',
@@ -1761,7 +1759,7 @@ export default async function orderRoutes(server: FastifyInstance) {
   //   3. Free up any tables that no longer have outstanding orders.
   //
   // Returns counts so the UI can show a summary to the operator.
-  server.post('/end-of-day', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/end-of-day', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const body = (request.body || {}) as {
       paymentMethod?: PaymentMethod;
       forcePayUnpaid?: boolean;
@@ -1774,7 +1772,7 @@ export default async function orderRoutes(server: FastifyInstance) {
     const end = new Date();
     end.setHours(23, 59, 59, 999);
 
-    const openOrders = await prisma.order.findMany({
+    const openOrders = await request.db.order.findMany({
       where: {
         status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
         createdAt: { gte: start, lte: end },
@@ -1790,7 +1788,7 @@ export default async function orderRoutes(server: FastifyInstance) {
       if (o.tableId) touchedTableIds.add(o.tableId);
 
       // Sum non-refunded payments to know what's actually been paid
-      const payments = await prisma.payment.findMany({
+      const payments = await request.db.payment.findMany({
         where: { orderId: o.id, refunded: false },
       });
       const paidSoFar = payments.reduce((s, p) => s + Number(p.amount), 0);
@@ -1798,7 +1796,7 @@ export default async function orderRoutes(server: FastifyInstance) {
 
       if (paidSoFar >= Number(o.total)) {
         // Effectively paid (Payment records cover the total) — just complete
-        await prisma.order.update({
+        await request.db.order.update({
           where: { id: o.id },
           data: {
             paymentStatus: PaymentStatus.PAID,
@@ -1809,7 +1807,7 @@ export default async function orderRoutes(server: FastifyInstance) {
         });
         for (const item of o.items) {
           if (item.paidQuantity < item.quantity) {
-            await prisma.orderItem.update({
+            await request.db.orderItem.update({
               where: { id: item.id },
               data: { paidQuantity: item.quantity },
             });
@@ -1818,16 +1816,16 @@ export default async function orderRoutes(server: FastifyInstance) {
         completed++;
       } else if (forcePay) {
         // Genuinely unpaid → force a CASH payment for the remaining amount
-        await prisma.payment.create({
+        await request.db.payment.create({
           data: { orderId: o.id, amount: remaining, method },
         });
         for (const item of o.items) {
-          await prisma.orderItem.update({
+          await request.db.orderItem.update({
             where: { id: item.id },
             data: { paidQuantity: item.quantity },
           });
         }
-        await prisma.order.update({
+        await request.db.order.update({
           where: { id: o.id },
           data: {
             paymentStatus: PaymentStatus.PAID,
@@ -1844,11 +1842,11 @@ export default async function orderRoutes(server: FastifyInstance) {
     // 3. Free any tables that no longer have outstanding orders
     let freedTables = 0;
     for (const tableId of touchedTableIds) {
-      const stillOpen = await prisma.order.count({
+      const stillOpen = await request.db.order.count({
         where: { tableId, status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] } },
       });
       if (stillOpen === 0) {
-        await prisma.table.update({
+        await request.db.table.update({
           where: { id: tableId },
           data: { status: 'FREE', sessionToken: null, sessionStartedAt: null },
         });

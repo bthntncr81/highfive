@@ -29,8 +29,6 @@ async function getAutoApproveThreshold(prisma: PrismaClient): Promise<number> {
 }
 
 export default async function expenseRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // List with filters
   server.get('/', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = (request as any).user as AuthUser;
@@ -76,7 +74,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     const pageSize = Math.min(200, Math.max(1, Number(q.pageSize) || 50));
 
     const [expenses, total] = await Promise.all([
-      prisma.expense.findMany({
+      request.db.expense.findMany({
         where,
         include: {
           category: true,
@@ -87,7 +85,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
         take: pageSize,
         skip: (page - 1) * pageSize,
       }),
-      prisma.expense.count({ where }),
+      request.db.expense.count({ where }),
     ]);
 
     return { expenses, total, page, pageSize };
@@ -106,16 +104,16 @@ export default async function expenseRoutes(server: FastifyInstance) {
     weekStart.setHours(0, 0, 0, 0);
 
     const [monthAgg, weekAgg, pendingCount, monthExpenses] = await Promise.all([
-      prisma.expense.aggregate({
+      request.db.expense.aggregate({
         _sum: { amount: true },
         where: { expenseDate: { gte: monthStart, lte: monthEnd }, status: ExpenseStatus.APPROVED },
       }),
-      prisma.expense.aggregate({
+      request.db.expense.aggregate({
         _sum: { amount: true },
         where: { expenseDate: { gte: weekStart, lte: now }, status: ExpenseStatus.APPROVED },
       }),
-      prisma.expense.count({ where: { status: ExpenseStatus.PENDING_APPROVAL } }),
-      prisma.expense.findMany({
+      request.db.expense.count({ where: { status: ExpenseStatus.PENDING_APPROVAL } }),
+      request.db.expense.findMany({
         where: { expenseDate: { gte: monthStart, lte: monthEnd }, status: ExpenseStatus.APPROVED },
         include: { category: true },
       }),
@@ -147,7 +145,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     const start = new Date(year, month, 1);
     const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const expenses = await prisma.expense.findMany({
+    const expenses = await request.db.expense.findMany({
       where: { expenseDate: { gte: start, lte: end }, status: ExpenseStatus.APPROVED },
       include: { category: true },
     });
@@ -176,7 +174,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     const user = (request as any).user as AuthUser;
     if (!hasViewAccess(user)) return reply.status(403).send({ error: 'Yetkisiz' });
     const { id } = request.params as { id: string };
-    const expense = await prisma.expense.findUnique({
+    const expense = await request.db.expense.findUnique({
       where: { id },
       include: {
         category: true,
@@ -211,16 +209,16 @@ export default async function expenseRoutes(server: FastifyInstance) {
     if (!body.categoryId) return reply.status(400).send({ error: 'Kategori seçin' });
     if (!body.expenseDate) return reply.status(400).send({ error: 'Tarih girin' });
 
-    const cat = await prisma.expenseCategory.findUnique({ where: { id: body.categoryId } });
+    const cat = await request.db.expenseCategory.findUnique({ where: { id: body.categoryId } });
     if (!cat) return reply.status(400).send({ error: 'Kategori bulunamadı' });
 
     const amount = Number(body.amount);
-    const threshold = await getAutoApproveThreshold(prisma);
+    const threshold = await getAutoApproveThreshold(request.db);
     const isAdminOrManager = user.role === UserRole.ADMIN || user.role === UserRole.MANAGER;
     const needsApproval = !isAdminOrManager && amount >= threshold;
     const status: ExpenseStatus = needsApproval ? ExpenseStatus.PENDING_APPROVAL : ExpenseStatus.APPROVED;
 
-    const expense = await prisma.expense.create({
+    const expense = await request.db.expense.create({
       data: {
         amount,
         categoryId: body.categoryId,
@@ -251,7 +249,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     if (!hasViewAccess(user)) return reply.status(403).send({ error: 'Yetkisiz' });
 
     const { id } = request.params as { id: string };
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const existing = await request.db.expense.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Gider bulunamadı' });
     if (!canEditExpense(user, existing)) {
       return reply.status(403).send({ error: 'Bu gideri düzenleme yetkiniz yok' });
@@ -272,7 +270,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     // Sadece admin status'u değiştirebilir
     if (isAdminOrManager && body.status) data.status = body.status as ExpenseStatus;
 
-    const expense = await prisma.expense.update({
+    const expense = await request.db.expense.update({
       where: { id },
       data,
       include: {
@@ -288,10 +286,10 @@ export default async function expenseRoutes(server: FastifyInstance) {
   server.patch('/:id/approve', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = (request as any).user as AuthUser;
     const { id } = request.params as { id: string };
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const existing = await request.db.expense.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Gider bulunamadı' });
 
-    const expense = await prisma.expense.update({
+    const expense = await request.db.expense.update({
       where: { id },
       data: { status: ExpenseStatus.APPROVED, approvedById: user.userId, approvedAt: new Date() },
       include: { category: true, createdBy: { select: { id: true, name: true, role: true } }, approvedBy: { select: { id: true, name: true } } },
@@ -303,10 +301,10 @@ export default async function expenseRoutes(server: FastifyInstance) {
   server.patch('/:id/reject', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = (request as any).user as AuthUser;
     const { id } = request.params as { id: string };
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const existing = await request.db.expense.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Gider bulunamadı' });
 
-    const expense = await prisma.expense.update({
+    const expense = await request.db.expense.update({
       where: { id },
       data: { status: ExpenseStatus.REJECTED, approvedById: user.userId, approvedAt: new Date() },
       include: { category: true, createdBy: { select: { id: true, name: true, role: true } }, approvedBy: { select: { id: true, name: true } } },
@@ -320,7 +318,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
     if (!hasViewAccess(user)) return reply.status(403).send({ error: 'Yetkisiz' });
 
     const { id } = request.params as { id: string };
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const existing = await request.db.expense.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Gider bulunamadı' });
 
     const isAdminOrManager = user.role === UserRole.ADMIN || user.role === UserRole.MANAGER;
@@ -334,7 +332,7 @@ export default async function expenseRoutes(server: FastifyInstance) {
       }
     }
 
-    await prisma.expense.delete({ where: { id } });
+    await request.db.expense.delete({ where: { id } });
     return { ok: true };
   });
 }

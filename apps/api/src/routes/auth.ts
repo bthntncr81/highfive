@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
@@ -19,8 +18,6 @@ function isValidEmail(s: string): boolean {
 }
 
 export default async function authRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Login with email and password
   server.post(
     '/login',
@@ -34,7 +31,7 @@ export default async function authRoutes(server: FastifyInstance) {
         return reply.status(400).send({ error: 'Email ve şifre gerekli' });
       }
 
-      const user = await prisma.user.findUnique({
+      const user = await request.db.user.findUnique({
         where: { email },
       });
 
@@ -55,7 +52,7 @@ export default async function authRoutes(server: FastifyInstance) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      await prisma.session.create({
+      await request.db.session.create({
         data: {
           userId: user.id,
           token,
@@ -64,7 +61,7 @@ export default async function authRoutes(server: FastifyInstance) {
       });
 
       // Log activity
-      await prisma.activityLog.create({
+      await request.db.activityLog.create({
         data: {
           userId: user.id,
           action: 'LOGIN',
@@ -99,7 +96,7 @@ export default async function authRoutes(server: FastifyInstance) {
         return reply.status(400).send({ error: '6 haneli şifre giriniz' });
       }
 
-      const user = await prisma.user.findFirst({
+      const user = await request.db.user.findFirst({
         where: { pin, active: true },
       });
 
@@ -116,11 +113,11 @@ export default async function authRoutes(server: FastifyInstance) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      await prisma.session.create({
+      await request.db.session.create({
         data: { userId: user.id, token, expiresAt },
       });
 
-      await prisma.activityLog.create({
+      await request.db.activityLog.create({
         data: {
           userId: user.id,
           action: 'LOGIN',
@@ -157,7 +154,7 @@ export default async function authRoutes(server: FastifyInstance) {
         return reply.status(400).send({ error: '6 haneli şifre giriniz' });
       }
 
-      const user = await prisma.user.findFirst({
+      const user = await request.db.user.findFirst({
         where: { pin, active: true },
       });
 
@@ -176,11 +173,11 @@ export default async function authRoutes(server: FastifyInstance) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      await prisma.session.create({
+      await request.db.session.create({
         data: { userId: user.id, token, expiresAt },
       });
 
-      await prisma.activityLog.create({
+      await request.db.activityLog.create({
         data: {
           userId: user.id,
           action: 'LOGIN',
@@ -216,7 +213,7 @@ export default async function authRoutes(server: FastifyInstance) {
 
       const token = authHeader.replace('Bearer ', '');
 
-      await prisma.session.deleteMany({
+      await request.db.session.deleteMany({
         where: { token },
       });
 
@@ -239,7 +236,7 @@ export default async function authRoutes(server: FastifyInstance) {
         return reply.status(401).send({ error: 'Bu endpoint personel/kurye token gerektirir' });
       }
 
-      const user = await prisma.user.findUnique({
+      const user = await request.db.user.findUnique({
         where: { id: decoded.userId },
         select: {
           id: true,
@@ -273,7 +270,7 @@ export default async function authRoutes(server: FastifyInstance) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string };
       if (!decoded.userId) return reply.status(401).send({ error: 'Personel token gerekli' });
-      const user = await prisma.user.findUnique({
+      const user = await request.db.user.findUnique({
         where: { id: decoded.userId },
         select: {
           id: true, email: true, name: true, role: true, avatar: true,
@@ -311,7 +308,7 @@ export default async function authRoutes(server: FastifyInstance) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
 
-        const user = await prisma.user.findUnique({
+        const user = await request.db.user.findUnique({
           where: { id: decoded.userId },
         });
 
@@ -329,12 +326,12 @@ export default async function authRoutes(server: FastifyInstance) {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        await prisma.user.update({
+        await request.db.user.update({
           where: { id: user.id },
           data: { password: hashedPassword },
         });
 
-        await prisma.activityLog.create({
+        await request.db.activityLog.create({
           data: {
             userId: user.id,
             action: 'PASSWORD_CHANGE',
@@ -401,7 +398,7 @@ export default async function authRoutes(server: FastifyInstance) {
 
     // Phone uniqueness — başka customer aynı phone ile kullanmasın
     if (cleanPhone) {
-      const phoneOwner = await prisma.customer.findUnique({ where: { phone: cleanPhone } });
+      const phoneOwner = await request.db.customer.findUnique({ where: { phone: cleanPhone } });
       if (phoneOwner && phoneOwner.email !== cleaned) {
         return reply.status(400).send({
           error: 'Bu telefon başka bir hesaba kayıtlı',
@@ -411,7 +408,7 @@ export default async function authRoutes(server: FastifyInstance) {
     }
 
     // Find or create. Email is @unique so this is safe.
-    let customer = await prisma.customer.findUnique({ where: { email: cleaned } });
+    let customer = await request.db.customer.findUnique({ where: { email: cleaned } });
     const code = generateOtp();
     const expiresAt = new Date(Date.now() + CUSTOMER_OTP_TTL_MS);
 
@@ -424,7 +421,7 @@ export default async function authRoutes(server: FastifyInstance) {
     const setSmsMarketing = marketingConsent === true ? true : marketingConsent === false ? false : undefined;
 
     if (!customer) {
-      customer = await prisma.customer.create({
+      customer = await request.db.customer.create({
         data: {
           email: cleaned,
           name: name?.trim() || null,
@@ -441,7 +438,7 @@ export default async function authRoutes(server: FastifyInstance) {
         },
       });
     } else {
-      customer = await prisma.customer.update({
+      customer = await request.db.customer.update({
         where: { id: customer.id },
         data: {
           verificationCode: code,
@@ -493,7 +490,7 @@ export default async function authRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'E-posta ve kod gerekli' });
     }
     const cleaned = email.toLowerCase().trim();
-    const customer = await prisma.customer.findUnique({ where: { email: cleaned } });
+    const customer = await request.db.customer.findUnique({ where: { email: cleaned } });
     if (!customer || !customer.verificationCode) {
       return reply.status(400).send({ error: 'Önce kod talebinde bulun' });
     }
@@ -505,7 +502,7 @@ export default async function authRoutes(server: FastifyInstance) {
     }
 
     const wasVerified = customer.isVerified;
-    const updated = await prisma.customer.update({
+    const updated = await request.db.customer.update({
       where: { id: customer.id },
       data: {
         isVerified: true,

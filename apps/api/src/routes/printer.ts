@@ -1,6 +1,6 @@
 // Thermal Printer Integration Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, PrinterType } from '@prisma/client';
+import { PrinterType } from '@prisma/client';
 import { verifyAuth } from '../middleware/auth';
 import * as net from 'net';
 
@@ -26,14 +26,12 @@ const ESCPOS = {
 };
 
 export default async function printerRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // Get all printers
   server.get(
     '/printers',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const printers = await prisma.printer.findMany({
+    async (request: FastifyRequest) => {
+      const printers = await request.db.printer.findMany({
         orderBy: { createdAt: 'desc' },
       });
 
@@ -45,7 +43,7 @@ export default async function printerRoutes(server: FastifyInstance) {
   server.post(
     '/printers',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { name, type, ipAddress, port, paperWidth, categories } = request.body as {
         name: string;
         type: PrinterType;
@@ -55,7 +53,7 @@ export default async function printerRoutes(server: FastifyInstance) {
         categories?: string[];
       };
 
-      const printer = await prisma.printer.create({
+      const printer = await request.db.printer.create({
         data: {
           name,
           type,
@@ -74,11 +72,11 @@ export default async function printerRoutes(server: FastifyInstance) {
   server.put(
     '/printers/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
       const data = request.body as any;
 
-      const printer = await prisma.printer.update({
+      const printer = await request.db.printer.update({
         where: { id },
         data,
       });
@@ -91,10 +89,10 @@ export default async function printerRoutes(server: FastifyInstance) {
   server.delete(
     '/printers/:id',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
 
-      await prisma.printer.delete({ where: { id } });
+      await request.db.printer.delete({ where: { id } });
 
       return { success: true };
     }
@@ -107,7 +105,7 @@ export default async function printerRoutes(server: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const printer = await prisma.printer.findUnique({ where: { id } });
+      const printer = await request.db.printer.findUnique({ where: { id } });
       if (!printer) {
         return reply.status(404).send({ error: 'Yazıcı bulunamadı' });
       }
@@ -149,7 +147,7 @@ export default async function printerRoutes(server: FastifyInstance) {
       const { orderId } = request.params as { orderId: string };
       const { printerId } = request.body as { printerId?: string };
 
-      const order = await prisma.order.findUnique({
+      const order = await request.db.order.findUnique({
         where: { id: orderId },
         include: {
           items: { include: { menuItem: true } },
@@ -165,9 +163,9 @@ export default async function printerRoutes(server: FastifyInstance) {
       // Find printer
       let printer;
       if (printerId) {
-        printer = await prisma.printer.findUnique({ where: { id: printerId } });
+        printer = await request.db.printer.findUnique({ where: { id: printerId } });
       } else {
-        printer = await prisma.printer.findFirst({
+        printer = await request.db.printer.findFirst({
           where: { type: 'RECEIPT', active: true, isDefault: true },
         });
       }
@@ -182,7 +180,7 @@ export default async function printerRoutes(server: FastifyInstance) {
         await printToNetwork(printer.ipAddress, printer.port, receipt);
 
         // Log print job
-        await prisma.printJob.create({
+        await request.db.printJob.create({
           data: {
             printerId: printer.id,
             orderId,
@@ -194,7 +192,7 @@ export default async function printerRoutes(server: FastifyInstance) {
 
         return { success: true, message: 'Fiş yazdırıldı' };
       } catch (error: any) {
-        await prisma.printJob.create({
+        await request.db.printJob.create({
           data: {
             printerId: printer.id,
             orderId,
@@ -216,7 +214,7 @@ export default async function printerRoutes(server: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { orderId } = request.params as { orderId: string };
 
-      const order = await prisma.order.findUnique({
+      const order = await request.db.order.findUnique({
         where: { id: orderId },
         include: {
           items: { include: { menuItem: { include: { category: true } } } },
@@ -229,7 +227,7 @@ export default async function printerRoutes(server: FastifyInstance) {
       }
 
       // Find kitchen printers
-      const printers = await prisma.printer.findMany({
+      const printers = await request.db.printer.findMany({
         where: { type: 'KITCHEN', active: true },
       });
 
@@ -270,8 +268,8 @@ export default async function printerRoutes(server: FastifyInstance) {
   server.get(
     '/print/queue',
     { preHandler: verifyAuth },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const jobs = await prisma.printJob.findMany({
+    async (request: FastifyRequest) => {
+      const jobs = await request.db.printJob.findMany({
         where: { status: 'PENDING' },
         orderBy: { createdAt: 'asc' },
       });
@@ -287,7 +285,7 @@ export default async function printerRoutes(server: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { jobId } = request.params as { jobId: string };
 
-      const job = await prisma.printJob.findUnique({
+      const job = await request.db.printJob.findUnique({
         where: { id: jobId },
       });
 
@@ -295,7 +293,7 @@ export default async function printerRoutes(server: FastifyInstance) {
         return reply.status(404).send({ error: 'Yazdırma işi bulunamadı' });
       }
 
-      const printer = await prisma.printer.findUnique({
+      const printer = await request.db.printer.findUnique({
         where: { id: job.printerId },
       });
 
@@ -306,14 +304,14 @@ export default async function printerRoutes(server: FastifyInstance) {
       try {
         await printToNetwork(printer.ipAddress, printer.port, job.content);
 
-        await prisma.printJob.update({
+        await request.db.printJob.update({
           where: { id: jobId },
           data: { status: 'COMPLETED', printedAt: new Date(), error: null },
         });
 
         return { success: true };
       } catch (error: any) {
-        await prisma.printJob.update({
+        await request.db.printJob.update({
           where: { id: jobId },
           data: { error: error.message },
         });

@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient, RawMaterialUnit } from '@prisma/client';
+import { RawMaterialUnit } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 
 export default async function rawMaterialRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== HAM MADDE (RAW MATERIAL) CRUD ====================
 
   // List all raw materials
@@ -24,7 +22,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
       where.active = active === 'true';
     }
 
-    const materials = await prisma.rawMaterial.findMany({
+    const materials = await request.db.rawMaterial.findMany({
       where,
       include: {
         ingredients: {
@@ -45,7 +43,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   server.get('/:id', { preHandler: verifyAuth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const material = await prisma.rawMaterial.findUnique({
+    const material = await request.db.rawMaterial.findUnique({
       where: { id },
       include: {
         ingredients: {
@@ -81,12 +79,12 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     }
 
     // Check for duplicate name
-    const existing = await prisma.rawMaterial.findUnique({ where: { name } });
+    const existing = await request.db.rawMaterial.findUnique({ where: { name } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu isimde bir ham madde zaten var' });
     }
 
-    const material = await prisma.rawMaterial.create({
+    const material = await request.db.rawMaterial.create({
       data: {
         name,
         unit: unit || 'GRAM',
@@ -113,12 +111,12 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
       active?: boolean;
     };
 
-    const material = await prisma.rawMaterial.findUnique({ where: { id } });
+    const material = await request.db.rawMaterial.findUnique({ where: { id } });
     if (!material) {
       return reply.status(404).send({ error: 'Ham madde bulunamadı' });
     }
 
-    const updated = await prisma.rawMaterial.update({
+    const updated = await request.db.rawMaterial.update({
       where: { id },
       data: {
         name,
@@ -142,7 +140,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
       operation: 'SET' | 'ADD' | 'SUBTRACT';
     };
 
-    const material = await prisma.rawMaterial.findUnique({ where: { id } });
+    const material = await request.db.rawMaterial.findUnique({ where: { id } });
     if (!material) {
       return reply.status(404).send({ error: 'Ham madde bulunamadı' });
     }
@@ -163,7 +161,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
         break;
     }
 
-    const updated = await prisma.rawMaterial.update({
+    const updated = await request.db.rawMaterial.update({
       where: { id },
       data: { currentStock: newStock },
     });
@@ -175,7 +173,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   server.delete('/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
 
-    const material = await prisma.rawMaterial.findUnique({
+    const material = await request.db.rawMaterial.findUnique({
       where: { id },
       include: { ingredients: true },
     });
@@ -186,12 +184,12 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
 
     // If used in menu items, soft delete (deactivate)
     if (material.ingredients.length > 0) {
-      await prisma.rawMaterial.update({
+      await request.db.rawMaterial.update({
         where: { id },
         data: { active: false },
       });
     } else {
-      await prisma.rawMaterial.delete({ where: { id } });
+      await request.db.rawMaterial.delete({ where: { id } });
     }
 
     return { success: true };
@@ -200,7 +198,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   // Get low stock materials
   server.get('/alerts/low-stock', { preHandler: verifyAuth }, async () => {
     // Manual filter since Prisma doesn't support comparing two columns directly
-    const allActive = await prisma.rawMaterial.findMany({
+    const allActive = await request.db.rawMaterial.findMany({
       where: { active: true },
       orderBy: { name: 'asc' },
     });
@@ -218,7 +216,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   server.get('/menu-item/:menuItemId/ingredients', { preHandler: verifyAuth }, async (request: FastifyRequest) => {
     const { menuItemId } = request.params as { menuItemId: string };
 
-    const ingredients = await prisma.menuItemIngredient.findMany({
+    const ingredients = await request.db.menuItemIngredient.findMany({
       where: { menuItemId },
       include: {
         rawMaterial: true,
@@ -243,13 +241,13 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     }
 
     // Check if already exists
-    const existing = await prisma.menuItemIngredient.findUnique({
+    const existing = await request.db.menuItemIngredient.findUnique({
       where: { menuItemId_rawMaterialId: { menuItemId, rawMaterialId } },
     });
 
     if (existing) {
       // Update existing
-      const updated = await prisma.menuItemIngredient.update({
+      const updated = await request.db.menuItemIngredient.update({
         where: { id: existing.id },
         data: { amount, optional: optional ?? existing.optional },
         include: { rawMaterial: true },
@@ -257,7 +255,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
       return { ingredient: updated };
     }
 
-    const ingredient = await prisma.menuItemIngredient.create({
+    const ingredient = await request.db.menuItemIngredient.create({
       data: {
         menuItemId,
         rawMaterialId,
@@ -275,12 +273,12 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     const { ingredientId } = request.params as { menuItemId: string; ingredientId: string };
     const { amount, optional } = request.body as { amount?: number; optional?: boolean };
 
-    const ingredient = await prisma.menuItemIngredient.findUnique({ where: { id: ingredientId } });
+    const ingredient = await request.db.menuItemIngredient.findUnique({ where: { id: ingredientId } });
     if (!ingredient) {
       return reply.status(404).send({ error: 'İçerik bulunamadı' });
     }
 
-    const updated = await prisma.menuItemIngredient.update({
+    const updated = await request.db.menuItemIngredient.update({
       where: { id: ingredientId },
       data: {
         amount: amount !== undefined ? amount : undefined,
@@ -293,10 +291,10 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
   });
 
   // Remove ingredient from menu item
-  server.delete('/menu-item/:menuItemId/ingredients/:ingredientId', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.delete('/menu-item/:menuItemId/ingredients/:ingredientId', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { ingredientId } = request.params as { menuItemId: string; ingredientId: string };
 
-    await prisma.menuItemIngredient.delete({
+    await request.db.menuItemIngredient.delete({
       where: { id: ingredientId },
     });
 
@@ -315,13 +313,13 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     }
 
     // Delete existing ingredients for this menu item
-    await prisma.menuItemIngredient.deleteMany({
+    await request.db.menuItemIngredient.deleteMany({
       where: { menuItemId },
     });
 
     // Create new ingredients
     if (ingredients.length > 0) {
-      await prisma.menuItemIngredient.createMany({
+      await request.db.menuItemIngredient.createMany({
         data: ingredients.map((ing) => ({
           menuItemId,
           rawMaterialId: ing.rawMaterialId,
@@ -332,7 +330,7 @@ export default async function rawMaterialRoutes(server: FastifyInstance) {
     }
 
     // Return the updated ingredients
-    const updatedIngredients = await prisma.menuItemIngredient.findMany({
+    const updatedIngredients = await request.db.menuItemIngredient.findMany({
       where: { menuItemId },
       include: { rawMaterial: true },
     });

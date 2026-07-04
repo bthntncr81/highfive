@@ -11,15 +11,12 @@
 // DELETE /api/bundles/:bundleId/option-groups/:groupId — atamayı kaldır
 
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAdmin } from '../middleware/auth';
 
 export default async function optionGroupsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== LIST ====================
   server.get('/', { preHandler: verifyAdmin }, async () => {
-    const groups = await prisma.optionGroup.findMany({
+    const groups = await request.db.optionGroup.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
       include: {
         items: {
@@ -39,7 +36,7 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
   // ==================== GET ONE ====================
   server.get('/:id', { preHandler: verifyAdmin }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const group = await prisma.optionGroup.findUnique({
+    const group = await req.db.optionGroup.findUnique({
       where: { id },
       include: {
         items: {
@@ -66,7 +63,7 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
       sortOrder?: number;
     };
     if (!body.name) return reply.status(400).send({ error: 'name gerekli' });
-    const group = await prisma.optionGroup.create({
+    const group = await req.db.optionGroup.create({
       data: {
         name: body.name,
         description: body.description ?? null,
@@ -86,14 +83,14 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
     for (const k of ['name', 'description', 'minSelect', 'maxSelect', 'sortOrder', 'isActive']) {
       if (body[k] !== undefined) data[k] = body[k];
     }
-    const group = await prisma.optionGroup.update({ where: { id }, data });
+    const group = await req.db.optionGroup.update({ where: { id }, data });
     return { group };
   });
 
   // ==================== DELETE ====================
   server.delete('/:id', { preHandler: verifyAdmin }, async (req) => {
     const { id } = req.params as { id: string };
-    await prisma.optionGroup.delete({ where: { id } });
+    await req.db.optionGroup.delete({ where: { id } });
     return { ok: true };
   });
 
@@ -107,7 +104,7 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
       isDefault?: boolean;
     };
     if (!body.menuItemId) return reply.status(400).send({ error: 'menuItemId gerekli' });
-    const item = await prisma.optionGroupItem.upsert({
+    const item = await req.db.optionGroupItem.upsert({
       where: { optionGroupId_menuItemId: { optionGroupId: id, menuItemId: body.menuItemId } },
       update: {
         extraPrice: body.extraPrice ?? 0,
@@ -134,21 +131,21 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
     for (const k of ['extraPrice', 'sortOrder', 'isDefault']) {
       if (body[k] !== undefined) data[k] = body[k];
     }
-    const item = await prisma.optionGroupItem.update({ where: { id: itemId }, data });
+    const item = await req.db.optionGroupItem.update({ where: { id: itemId }, data });
     return { item };
   });
 
   // ==================== DELETE ITEM ====================
   server.delete('/:id/items/:itemId', { preHandler: verifyAdmin }, async (req) => {
     const { itemId } = req.params as { id: string; itemId: string };
-    await prisma.optionGroupItem.delete({ where: { id: itemId } });
+    await req.db.optionGroupItem.delete({ where: { id: itemId } });
     return { ok: true };
   });
 
   // ==================== ASSIGN TO BUNDLE ====================
   server.post('/assign/:bundleId/:groupId', { preHandler: verifyAdmin }, async (req) => {
     const { bundleId, groupId } = req.params as { bundleId: string; groupId: string };
-    const a = await prisma.bundleOptionGroupAssignment.upsert({
+    const a = await req.db.bundleOptionGroupAssignment.upsert({
       where: { bundleId_optionGroupId: { bundleId, optionGroupId: groupId } },
       update: {},
       create: { bundleId, optionGroupId: groupId },
@@ -159,7 +156,7 @@ export default async function optionGroupsRoutes(server: FastifyInstance) {
   // ==================== UNASSIGN ====================
   server.delete('/assign/:bundleId/:groupId', { preHandler: verifyAdmin }, async (req) => {
     const { bundleId, groupId } = req.params as { bundleId: string; groupId: string };
-    await prisma.bundleOptionGroupAssignment.deleteMany({
+    await req.db.bundleOptionGroupAssignment.deleteMany({
       where: { bundleId, optionGroupId: groupId },
     });
     return { ok: true };

@@ -1,17 +1,14 @@
 // Campaigns, Bundles, Coupons Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastCampaignToMobile } from '../lib/auto-broadcast';
 
 export default async function campaignsRoutes(server: FastifyInstance) {
-  const prisma = (server as any).prisma as PrismaClient;
-
   // ==================== CAMPAIGNS ====================
 
   // Get all campaigns
   server.get('/campaigns', { preHandler: verifyAuth }, async () => {
-    const campaigns = await prisma.campaign.findMany({
+    const campaigns = await request.db.campaign.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return { campaigns };
@@ -23,7 +20,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // - Bitmiş olanlar gizli
   server.get('/campaigns/active', async () => {
     const now = new Date();
-    const campaigns = await prisma.campaign.findMany({
+    const campaigns = await request.db.campaign.findMany({
       where: {
         isActive: true,
         endDate: { gte: now }, // henüz bitmemiş olanlar
@@ -42,7 +39,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       return reply.status(400).send({ error: 'Ad ve tarih alanları gerekli' });
     }
 
-    const campaign = await prisma.campaign.create({
+    const campaign = await request.db.campaign.create({
       data: {
         name: data.name,
         description: data.description,
@@ -71,7 +68,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
 
     // Otomatik mobil duyuru — admin POS'tan "notifyCustomers: true" gönderirse
     if (data.notifyCustomers === true) {
-      broadcastCampaignToMobile(prisma, {
+      broadcastCampaignToMobile(request.db, {
         campaignId: campaign.id,
         title: data.notifyTitle,
         body: data.notifyBody,
@@ -85,7 +82,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // Update campaign
   // Whitelist fields — formdan gelen `notifyCustomers` gibi Prisma'da olmayan
   // alanlar `...data` ile spread edilirse update patlıyor.
-  server.put('/campaigns/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.put('/campaigns/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
 
@@ -104,7 +101,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     if (data.startDate) updateData.startDate = new Date(data.startDate);
     if (data.endDate) updateData.endDate = new Date(data.endDate);
 
-    const campaign = await prisma.campaign.update({
+    const campaign = await request.db.campaign.update({
       where: { id },
       data: updateData,
     });
@@ -115,7 +112,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // Delete campaign
   server.delete('/campaigns/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
-    await prisma.campaign.delete({ where: { id } });
+    await request.db.campaign.delete({ where: { id } });
     return { success: true };
   });
 
@@ -144,7 +141,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
 
   // Get all bundles
   server.get('/bundles', async () => {
-    const bundles = await prisma.bundleDeal.findMany({
+    const bundles = await request.db.bundleDeal.findMany({
       include: bundleInclude,
       orderBy: { sortOrder: 'asc' },
     });
@@ -154,7 +151,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // Get active bundles (public)
   server.get('/bundles/active', async () => {
     const now = new Date();
-    const bundles = await prisma.bundleDeal.findMany({
+    const bundles = await request.db.bundleDeal.findMany({
       where: {
         isActive: true,
         OR: [
@@ -193,7 +190,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       });
     }
 
-    const bundle = await prisma.bundleDeal.create({
+    const bundle = await request.db.bundleDeal.create({
       data: {
         name: data.name,
         description: data.description,
@@ -263,22 +260,22 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   });
 
   // Update bundle
-  server.put('/bundles/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.put('/bundles/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
 
     // If items are being updated, delete old and create new
     if (data.items) {
-      await prisma.bundleItem.deleteMany({ where: { bundleId: id } });
+      await request.db.bundleItem.deleteMany({ where: { bundleId: id } });
     }
     if (data.optionGroups) {
-      await prisma.bundleOptionGroup.deleteMany({ where: { bundleId: id } });
+      await request.db.bundleOptionGroup.deleteMany({ where: { bundleId: id } });
     }
     if (Array.isArray(data.assignedOptionGroupIds) || Array.isArray(data.assignedOptionGroups)) {
-      await prisma.bundleOptionGroupAssignment.deleteMany({ where: { bundleId: id } });
+      await request.db.bundleOptionGroupAssignment.deleteMany({ where: { bundleId: id } });
     }
 
-    const bundle = await prisma.bundleDeal.update({
+    const bundle = await request.db.bundleDeal.update({
       where: { id },
       data: {
         name: data.name,
@@ -352,7 +349,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // Delete bundle
   server.delete('/bundles/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
-    await prisma.bundleDeal.delete({ where: { id } });
+    await request.db.bundleDeal.delete({ where: { id } });
     return { success: true };
   });
 
@@ -360,7 +357,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
 
   // Get all coupons
   server.get('/coupons', { preHandler: verifyAuth }, async () => {
-    const coupons = await prisma.coupon.findMany({
+    const coupons = await request.db.coupon.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return { coupons };
@@ -374,7 +371,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       orderTotal: number;
     };
 
-    const coupon = await prisma.coupon.findUnique({
+    const coupon = await request.db.coupon.findUnique({
       where: { code: code.toUpperCase() },
     });
 
@@ -404,7 +401,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
 
     // Check customer usage
     if (customerId) {
-      const customerUsage = await prisma.couponUsage.count({
+      const customerUsage = await request.db.couponUsage.count({
         where: { couponId: coupon.id, customerId },
       });
       if (customerUsage >= coupon.usagePerCustomer) {
@@ -446,12 +443,12 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     }
 
     // Check if code exists
-    const existing = await prisma.coupon.findUnique({ where: { code: data.code.toUpperCase() } });
+    const existing = await request.db.coupon.findUnique({ where: { code: data.code.toUpperCase() } });
     if (existing) {
       return reply.status(400).send({ error: 'Bu kupon kodu zaten mevcut' });
     }
 
-    const coupon = await prisma.coupon.create({
+    const coupon = await request.db.coupon.create({
       data: {
         code: data.code.toUpperCase(),
         name: data.name,
@@ -477,7 +474,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
     const { id } = request.params as { id: string };
     const data = request.body as any;
 
-    const coupon = await prisma.coupon.update({
+    const coupon = await request.db.coupon.update({
       where: { id },
       data: {
         ...data,
@@ -493,7 +490,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
   // Delete coupon
   server.delete('/coupons/:id', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
-    await prisma.coupon.delete({ where: { id } });
+    await request.db.coupon.delete({ where: { id } });
     return { success: true };
   });
 
@@ -506,7 +503,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       discount: number;
     };
 
-    await prisma.couponUsage.create({
+    await request.db.couponUsage.create({
       data: {
         couponId: id,
         customerId,
@@ -515,7 +512,7 @@ export default async function campaignsRoutes(server: FastifyInstance) {
       },
     });
 
-    await prisma.coupon.update({
+    await request.db.coupon.update({
       where: { id },
       data: { currentUsage: { increment: 1 } },
     });
