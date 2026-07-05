@@ -30,6 +30,24 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/saas-landing && npx vite --port 4300"],
       "port": 4300
+    },
+    {
+      "name": "pos",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/pos && VITE_API_URL=http://localhost:3000 VITE_WS_URL=ws://localhost:3000/ws npx vite --port 4200"],
+      "port": 4200
+    },
+    {
+      "name": "kitchen",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/kitchen && VITE_API_URL=http://localhost:3000 VITE_WS_URL=ws://localhost:3000/ws npx vite --port 4201"],
+      "port": 4201
+    },
+    {
+      "name": "order-site",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/landing && VITE_API_URL=http://localhost:3000 VITE_WS_URL=ws://localhost:3000/ws npx vite --port 4318"],
+      "port": 4318
     }
   ]
 }

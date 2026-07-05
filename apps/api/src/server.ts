@@ -101,7 +101,7 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
     origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Tenant-ID', 'X-API-Key'],
   });
 
   await server.register(websocket);
