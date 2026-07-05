@@ -17,7 +17,8 @@ export type PlanFeature =
   | 'analytics'
   | 'whatsappLink'
   | 'brandedApp'
-  | 'customLanding';
+  | 'customLanding'
+  | 'marketplace';
 
 interface PlanInfo {
   key: string;

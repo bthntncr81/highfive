@@ -100,6 +100,8 @@ model Tenant {
   courierLocations             CourierLocation[]
   savedBuilderDesigns          SavedBuilderDesign[]
   pizzaGameScores              PizzaGameScore[]
+  marketplaceConnections       MarketplaceConnection[]
+  marketplaceProductMappings   MarketplaceProductMapping[]
 }
 
 // Paket tanımı — TABLO (enum değil): limitler/özellikler deploy'suz düzenlenebilir.
@@ -439,10 +441,11 @@ model MenuItem {
   upsoldBy         MenuItemUpsell[]     @relation("UpsellTo")
   crossSellItems   MenuItemCrossSell[]  @relation("CrossSellFrom")
   crossSoldBy      MenuItemCrossSell[]  @relation("CrossSellTo")
-  locations        MenuItemLocation[]
-  happyHourItems   HappyHourItem[]
-  bundleItems      BundleItem[]
-  optionGroupItems OptionGroupItem[]
+  locations           MenuItemLocation[]
+  happyHourItems      HappyHourItem[]
+  bundleItems         BundleItem[]
+  optionGroupItems    OptionGroupItem[]
+  marketplaceMappings MarketplaceProductMapping[]
 
   @@index([tenantId])
 }
@@ -741,6 +744,7 @@ model OrderItem {
   status       OrderStatus @default(PENDING)
   isUpsell     Boolean     @default(false) // Upsell'den mi geldi
   isCrossSell  Boolean     @default(false) // Cross-sell'den mi geldi
+  meta         Json? // Pazar yeri meta'sı: { platformProductId, packageItemIds[] } — TGO kısmi iptal için zorunlu
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -1981,5 +1985,51 @@ model PizzaGameScore {
   createdAt DateTime @default(now())
 
   @@index([score])
+  @@index([tenantId])
+}
+
+// ==================== MARKETPLACE INTEGRATIONS (Trendyol GO / GetirYemek) ====================
+// OtOrder platformlara ISTEMCI olur (polling/webhook) — IntegrationPartner'in tersi yon.
+// Detay: docs/marketplace-integrations.md
+
+enum MarketplacePlatform {
+  TRENDYOL_GO
+  GETIR
+}
+
+model MarketplaceConnection {
+  id            String              @id @default(cuid())
+  tenantId      String              @default("")
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platform      MarketplacePlatform
+  supplierId    String // TGO supplierId (satici paneli > Entegrasyon Bilgileri)
+  apiKey        String
+  apiSecret     String
+  storeId       String? // sube (TGO storeId) — urun listeleme icin gerekli
+  executorEmail String? // x-executor-user header degeri
+  isActive      Boolean             @default(true)
+  lastPolledAt  DateTime?
+  lastError     String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([tenantId, platform])
+  @@index([tenantId])
+}
+
+model MarketplaceProductMapping {
+  id                  String              @id @default(cuid())
+  tenantId            String              @default("")
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platform            MarketplacePlatform
+  platformProductId   String // TGO productId (PLU/harici kod yok — tek eslesme anahtari)
+  menuItemId          String
+  platformProductName String? // eslestirme UI'inda gosterim icin snapshot
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, platform, platformProductId])
   @@index([tenantId])
 }
