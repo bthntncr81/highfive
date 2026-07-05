@@ -1,32 +1,39 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { UtensilsCrossed } from 'lucide-react';
+import { Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import { BASE_DOMAIN } from './lib/api';
 
-function Nav() {
-  const { pathname } = useLocation();
+function Logo({ className = '' }: { className?: string }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/80 backdrop-blur">
-      <nav className="container-x flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-extrabold text-ink">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
-            <UtensilsCrossed size={18} />
-          </span>
-          OtOrder
+    <span className={`inline-flex items-center gap-2.5 font-extrabold tracking-[-0.02em] text-ink ${className}`}>
+      {/* Tabak markası: dış tabak + servis çizgisi */}
+      <svg viewBox="0 0 28 28" className="h-8 w-8" aria-hidden="true">
+        <circle cx="14" cy="14" r="13" fill="oklch(0.42 0.11 150)" />
+        <circle cx="14" cy="14" r="8.5" fill="none" stroke="white" strokeWidth="2" />
+        <circle cx="14" cy="14" r="3" fill="white" />
+      </svg>
+      OtOrder
+    </span>
+  );
+}
+
+function Nav() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-md">
+      <nav className="container-x flex h-16 items-center justify-between" aria-label="Ana gezinme">
+        <Link to="/" aria-label="OtOrder ana sayfa">
+          <Logo />
         </Link>
-        <div className="flex items-center gap-2">
-          {pathname !== '/' && (
-            <Link to="/" className="hidden px-3 py-2 text-sm font-medium text-ink-soft sm:block">
-              Özellikler
-            </Link>
-          )}
-          <Link to="/login" className="btn-ghost text-sm">
-            Giriş
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <a href="/#fiyatlar" className="hidden px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink sm:block">
+            Fiyatlar
+          </a>
+          <Link to="/login" className="px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink">
+            Giriş yap
           </Link>
-          <Link to="/signup" className="btn-primary text-sm">
-            Ücretsiz Başla
+          <Link to="/signup" className="btn-primary px-5 py-2.5 text-sm">
+            Ücretsiz dene
           </Link>
         </div>
       </nav>
@@ -36,18 +43,44 @@ function Nav() {
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-100 py-10 text-sm text-ink-muted">
-      <div className="container-x flex flex-col items-center justify-between gap-4 sm:flex-row">
-        <span>© {new Date().getFullYear()} OtOrder — Restoran Sipariş & Yönetim Platformu</span>
-        <span>
-          <a className="hover:text-brand-600" href={`https://order.${'highfivepps.com'}`}>
-            WhatsApp Sipariş Modülü
-          </a>
-          {' · '}
-          <a className="hover:text-brand-600" href={`https://${BASE_DOMAIN}`}>
-            {BASE_DOMAIN}
-          </a>
-        </span>
+    <footer className="border-t border-line bg-white">
+      <div className="container-x grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <Logo />
+          <p className="mt-3 max-w-[26ch] text-sm leading-relaxed text-ink-muted">
+            Restoranlar için sipariş ve yönetim sistemi. Kasa, mutfak ve müşteri tek hatta.
+          </p>
+        </div>
+        <nav aria-label="Ürün">
+          <p className="font-bold text-ink">Ürün</p>
+          <ul className="mt-3 space-y-2 text-sm text-ink-soft">
+            <li><a className="hover:text-brand-700" href="/#fiyatlar">Planlar ve fiyatlar</a></li>
+            <li><Link className="hover:text-brand-700" to="/signup">Ücretsiz deneme başlat</Link></li>
+            <li><a className="hover:text-brand-700" href="https://order.highfivepps.com">WhatsApp Sipariş Modülü</a></li>
+          </ul>
+        </nav>
+        <nav aria-label="Hesap">
+          <p className="font-bold text-ink">Hesap</p>
+          <ul className="mt-3 space-y-2 text-sm text-ink-soft">
+            <li><Link className="hover:text-brand-700" to="/login">Panele giriş yap</Link></li>
+            <li><Link className="hover:text-brand-700" to="/signup">Restoran kaydı</Link></li>
+          </ul>
+        </nav>
+        <div>
+          <p className="font-bold text-ink">Canlıda</p>
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            <a className="text-ink-soft hover:text-brand-700" href="https://highfivepps.com">
+              High Five Pizza &amp; Makarna, Akçakoca
+            </a>
+            <br />
+            OtOrder altyapısıyla servis yapıyor.
+          </p>
+        </div>
+      </div>
+      <div className="border-t border-line py-5">
+        <p className="container-x text-xs text-ink-muted">
+          © {new Date().getFullYear()} OtOrder · {BASE_DOMAIN}
+        </p>
       </div>
     </footer>
   );
@@ -56,8 +89,14 @@ function Footer() {
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
+      <a
+        href="#icerik"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white"
+      >
+        İçeriğe atla
+      </a>
       <Nav />
-      <main className="flex-1">
+      <main id="icerik" className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />

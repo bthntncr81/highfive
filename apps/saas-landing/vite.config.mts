@@ -8,6 +8,14 @@ export default defineConfig(() => ({
   server: {
     port: 4300,
     host: 'localhost',
+    // Dev'de platform API'si canlı ortama proxy'lenir (plan listesi gerçek veri)
+    proxy: {
+      '/api': {
+        target: 'https://otorder.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   preview: {
     port: 4300,

@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hf-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "const http=require('http'),fs=require('fs');const html=fs.readFileSync('/tmp/hf-redesign/index.html');http.createServer((q,s)=>{s.writeHead(200,{'content-type':'text/html; charset=utf-8'});s.end(html);}).listen(4317,()=>console.log('hf-preview up on 4317'));"
+      ],
+      "port": 4317
+    },
+    {
+      "name": "game",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "const http=require('http'),fs=require('fs');const f='/tmp/hf-game/index.html';http.createServer((q,s)=>{s.writeHead(200,{'content-type':'text/html; charset=utf-8'});s.end(fs.readFileSync(f));}).listen(4319,()=>console.log('game up 4319'));"
+      ],
+      "port": 4319
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/landing && npx vite --port 4318 --host"],
+      "port": 4318
+    },
+    {
+      "name": "saas-landing",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/straitcore/Documents/GitHub/highfive/apps/saas-landing && npx vite --port 4300"],
+      "port": 4300
+    }
+  ]
+}

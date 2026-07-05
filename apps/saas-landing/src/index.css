@@ -2,34 +2,182 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   OtOrder "Beyaz önlük" — saf beyaz zemin, yosun yeşili imza.
+   Renk stratejisi: Restrained (yeşil ≤%10; tek bilinçli drench: WhatsApp bandı)
+   ========================================================================== */
+
 :root {
   color-scheme: light;
+  --green: oklch(0.42 0.11 150);
+  --green-deep: oklch(0.34 0.1 150);
+  --ink: oklch(0.18 0.012 150);
 }
 
 html {
   scroll-behavior: smooth;
 }
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
 
 body {
   @apply bg-white text-ink font-sans antialiased;
+  font-optical-sizing: auto;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: oklch(0.42 0.11 150 / 0.18);
+}
+
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .container-x {
-  @apply mx-auto w-full max-w-6xl px-5;
+  @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
 }
 
+/* --- Butonlar (Signup/Login aynı sınıfları kullanır) --- */
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold transition-colors duration-200;
 }
 .btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-glow;
+  @apply btn bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800;
 }
 .btn-ghost {
-  @apply btn bg-brand-50 text-brand-700 hover:bg-brand-100;
+  @apply btn text-ink border border-line hover:border-brand-600 hover:text-brand-700 bg-white;
 }
 .card {
-  @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm;
+  @apply rounded-2xl border border-line bg-white p-6;
 }
 .input {
-  @apply w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200;
+  @apply w-full rounded-xl border border-line px-4 py-3 text-ink outline-none transition-colors focus:border-brand-600;
+}
+.input::placeholder {
+  color: oklch(0.45 0.02 150);
+}
+
+/* --- Adisyon fişi (perfore üst/alt kenar) --- */
+.ticket {
+  position: relative;
+  background: #fff;
+  border: 1px solid oklch(0.905 0.01 150);
+  border-radius: 4px;
+  --perf: radial-gradient(circle at 8px 50%, oklch(0.972 0.008 150) 5px, #fff 5.5px);
+}
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-image: radial-gradient(circle at 8px 4px, transparent 4.5px, #fff 5px);
+  background-size: 16px 8px;
+  background-repeat: repeat-x;
+}
+.ticket::before {
+  top: -5px;
+  transform: rotate(180deg);
+  filter: drop-shadow(0 -1px 0 oklch(0.905 0.01 150));
+}
+.ticket::after {
+  bottom: -5px;
+  filter: drop-shadow(0 1px 0 oklch(0.905 0.01 150));
+}
+
+.ticket-rule {
+  border-top: 1.5px dashed oklch(0.87 0.012 150);
+}
+
+/* --- Bölüm reveal'ları: içerik VARSAYILAN görünür; destekleyen tarayıcıda
+       scroll'a bağlı giriş (JS yok, IO yok — headless/JS'siz ortam güvenli) --- */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: revealUp both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 38%;
+    }
+    @keyframes revealUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+}
+
+/* --- Hero mockup girişleri --- */
+@media (prefers-reduced-motion: no-preference) {
+  .float-in {
+    animation: floatIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes floatIn {
+    from {
+      opacity: 0;
+      transform: translateY(22px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .kds-new {
+    animation: kdsNew 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  @keyframes kdsNew {
+    0%,
+    8% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    14%,
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .pulse-dot {
+    animation: pulseDot 2.4s ease-out infinite;
+  }
+  @keyframes pulseDot {
+    0% {
+      box-shadow: 0 0 0 0 oklch(0.42 0.11 150 / 0.35);
+    }
+    70% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  .flow-dash {
+    stroke-dasharray: 6 8;
+    animation: flowDash 1.6s linear infinite;
+  }
+  @keyframes flowDash {
+    to {
+      stroke-dashoffset: -14;
+    }
+  }
 }
