@@ -69,7 +69,7 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       // Stats sadece admin için yüklenir
-      if (user?.role === 'ADMIN') {
+      if (user?.role === 'OWNER' || user?.role === 'ADMIN') {
         const reportResponse = await api.get('/api/reports/daily', token!);
         const ordersResponse = await api.get('/api/orders/active', token!);
         const tablesResponse = await api.get('/api/tables', token!);
@@ -177,7 +177,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid - Sadece Admin */}
-      {user?.role === 'ADMIN' && (
+      {(user?.role === 'OWNER' || user?.role === 'ADMIN') && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Today Revenue */}
           <div className="stat-card stagger-item">

@@ -90,7 +90,7 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 
 export default function Expenses() {
   const { user, token } = useAuth();
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);

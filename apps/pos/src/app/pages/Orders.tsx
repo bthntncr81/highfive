@@ -137,7 +137,7 @@ export default function Orders() {
   const { token, user } = useAuth();
   const { onMessage } = useWebSocket();
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);

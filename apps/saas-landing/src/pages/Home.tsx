@@ -16,11 +16,123 @@ export default function Home() {
       <Hero />
       <Tour />
       <Flow />
+      <Gallery />
       <FeatureMenu />
       <WhatsappBand />
       <Pricing plans={plans} annual={annual} onToggle={() => setAnnual((a) => !a)} />
+      <BrandedApp />
       <FinalCta />
     </>
+  );
+}
+
+/* ============================== GERÇEK EKRAN GALERİSİ ============================== */
+
+const GALLERY: Array<{ img: string; url: string; title: string; desc: string; wide?: boolean }> = [
+  {
+    img: 'pos-reports', url: 'mehmet.otorder.com/reports', wide: true,
+    title: 'Raporlar',
+    desc: 'Günlük ciro, net kâr, ödeme dağılımı ve en çok satanlar; yapay zeka önerisiyle.',
+  },
+  {
+    img: 'pos-campaigns', url: 'mehmet.otorder.com/campaigns', wide: true,
+    title: 'Kampanyalar',
+    desc: 'İndirim, hediye ürün, min. sepet kampanyaları; kullanım limitli ve takipli.',
+  },
+  {
+    img: 'pos-loyalty', url: 'mehmet.otorder.com/loyalty',
+    title: 'Sadakat programları',
+    desc: 'Puan, damga kartı, doğum günü, davet: 12+ hazır program türü.',
+  },
+  {
+    img: 'pos-wheel', url: 'mehmet.otorder.com/spin-wheel',
+    title: 'Şans çarkı',
+    desc: 'Dilimleri ve olasılıkları siz belirlersiniz; müşteri sipariş sonrası çevirir.',
+  },
+  {
+    img: 'pos-stock', url: 'mehmet.otorder.com/stock',
+    title: 'Stok takibi',
+    desc: 'Ham madde bazlı düşüm; kritik seviyede uyarı, tedarikçi ve maliyet kaydı.',
+  },
+];
+
+function Gallery() {
+  return (
+    <section className="border-t border-line bg-wash py-20 lg:py-28">
+      <div className="container-x">
+        <h2 className="reveal max-w-[24ch] text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
+          Panelin tamamı: bunlar maket değil, üründen alınmış ekranlar.
+        </h2>
+        <div className="mt-12 grid gap-8 lg:grid-cols-6">
+          {GALLERY.map((g) => (
+            <figure key={g.img} className={`reveal ${g.wide ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
+              <div className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.25)]">
+                <div className="flex items-center gap-2 border-b border-line bg-white px-3.5 py-2">
+                  <span className="flex gap-1.5" aria-hidden="true">
+                    <i className="h-2 w-2 rounded-full bg-line" />
+                    <i className="h-2 w-2 rounded-full bg-line" />
+                    <i className="h-2 w-2 rounded-full bg-line" />
+                  </span>
+                  <span className="ml-1 flex-1 truncate rounded bg-wash px-2.5 py-0.5 font-mono text-[9px] text-ink-muted ring-1 ring-line">
+                    {g.url}
+                  </span>
+                </div>
+                <img
+                  src={`/media/${g.img}.jpg`}
+                  width={1280}
+                  height={800}
+                  alt={`OtOrder ${g.title} ekranı`}
+                  loading="lazy"
+                  className="block w-full"
+                />
+              </div>
+              <figcaption className="mt-3.5">
+                <p className="font-bold text-ink">{g.title}</p>
+                <p className="mt-0.5 text-sm leading-snug text-ink-muted">{g.desc}</p>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================== MARKALI MOBİL UYGULAMA (KURUMSAL) ============================== */
+
+function BrandedApp() {
+  return (
+    <section className="border-t border-line py-20 lg:py-24">
+      <div className="container-x grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
+        <div className="reveal mx-auto w-full max-w-[250px]">
+          <PhoneMockup />
+        </div>
+        <div className="reveal">
+          <p className="font-mono text-[12px] font-semibold text-brand-700">Kurumsal paket</p>
+          <h2 className="mt-2 text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
+            Aynı sipariş deneyimi, kendi adınızla App Store ve Google Play'de.
+          </h2>
+          <p className="mt-4 max-w-measure leading-relaxed text-ink-soft">
+            Kurumsal pakette sipariş siteniz, sizin adınızı, ikonunuzu ve renklerinizi taşıyan
+            markalı bir mobil uygulamaya dönüşür. Yayınlamayı biz yürütürüz; puanlar,
+            kampanyalar ve push bildirimleri uygulamada da aynı hesapla çalışır.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {['Kendi uygulama adınız ve ikonunuz', 'Push bildirimiyle kampanya duyurusu', 'Sadakat puanları ve çark uygulamada da geçerli'].map((p) => (
+              <li key={p} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
+                <svg viewBox="0 0 16 16" className="mt-1 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true">
+                  <path fill="currentColor" d="M6.5 12.2 2.3 8l1.4-1.4 2.8 2.8 5.8-5.8L13.7 5z" />
+                </svg>
+                {p}
+              </li>
+            ))}
+          </ul>
+          <Link to="/signup?plan=ENTERPRISE" className="btn-primary mt-8">
+            Kurumsal ile başla
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

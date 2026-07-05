@@ -44,7 +44,8 @@ export default function Layout() {
     try { localStorage.setItem(VOLUME_KEY, String(alertVolume)); } catch { /* ignore */ }
   }, [alertVolume]);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  // OWNER: SaaS'ta tenant sahibi — admin menüsünün tamamını görür
+  const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const handleLogout = () => {
     logout();
@@ -52,7 +53,7 @@ export default function Layout() {
   };
 
   // CASHIER de Giderler'i görebilsin diye navItems'a koşullu ekliyoruz (admin-only değil)
-  const canViewExpenses = user?.role === 'ADMIN' || user?.role === 'MANAGER' || user?.role === 'CASHIER';
+  const canViewExpenses = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'MANAGER' || user?.role === 'CASHIER';
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Ana Sayfa', emoji: '🏠' },

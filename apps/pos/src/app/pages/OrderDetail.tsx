@@ -139,8 +139,8 @@ export default function OrderDetail() {
     }
   };
 
-  const isAdmin = user?.role === 'ADMIN';
-  const canDeleteItems = ['ADMIN', 'CASHIER', 'WAITER'].includes(user?.role || '');
+  const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const canDeleteItems = ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'].includes(user?.role || '');
 
   const handleStatusChange = async (newStatus: string) => {
     setIsProcessing(true);

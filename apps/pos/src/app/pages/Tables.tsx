@@ -125,7 +125,7 @@ export default function Tables() {
       // Backend rejects free/clean when there are unpaid orders. Surface
       // the message and offer the admin a force-override.
       const data = error?.data || error?.response?.data;
-      const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+      const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'MANAGER';
       const msg = error?.message || data?.error || 'Durum güncellenemedi';
       if (data?.unpaidOrders?.length && isAdmin) {
         const total = data.unpaidTotal ?? 0;
@@ -321,7 +321,7 @@ export default function Tables() {
                 <Link2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Birleştir</span>
               </button>
-              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+              {(user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                 <button
                   onClick={handleEndOfDay}
                   className="btn flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-700"
@@ -557,7 +557,7 @@ export default function Tables() {
               })()}
 
               {/* Admin: Masayı Boşalt */}
-              {table.status === 'OCCUPIED' && !mergeMode && user?.role === 'ADMIN' && (
+              {table.status === 'OCCUPIED' && !mergeMode && (user?.role === 'OWNER' || user?.role === 'ADMIN') && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

@@ -60,17 +60,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
-  if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+  // OWNER: SaaS'ta tenant sahibi — tüm admin yetkilerine sahiptir
+  if (user?.role !== 'OWNER' && user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
     return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 }
 
-// Expense Route wrapper — ADMIN/MANAGER/CASHIER görebilir (admin-only değil)
+// Expense Route wrapper — OWNER/ADMIN/MANAGER/CASHIER görebilir (admin-only değil)
 function ExpenseRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const allowed = ['ADMIN', 'MANAGER', 'CASHIER'];
+  const allowed = ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'];
   if (!user || !allowed.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
