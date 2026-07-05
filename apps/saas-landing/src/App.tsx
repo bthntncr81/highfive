@@ -9,7 +9,7 @@ function Logo({ className = '' }: { className?: string }) {
     <span className={`inline-flex items-center gap-2.5 font-extrabold tracking-[-0.02em] text-ink ${className}`}>
       {/* Tabak markası: dış tabak + servis çizgisi */}
       <svg viewBox="0 0 28 28" className="h-8 w-8" aria-hidden="true">
-        <circle cx="14" cy="14" r="13" fill="oklch(0.42 0.11 150)" />
+        <circle cx="14" cy="14" r="13" fill="#bb1e10" />
         <circle cx="14" cy="14" r="8.5" fill="none" stroke="white" strokeWidth="2" />
         <circle cx="14" cy="14" r="3" fill="white" />
       </svg>

@@ -6,7 +6,7 @@
 
 export function BrowserFrame({ url, children, className = '' }: { url: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.18_0.012_150/0.25)] ${className}`}>
+    <div className={`overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.25)] ${className}`}>
       <div className="flex items-center gap-2 border-b border-line bg-wash px-3.5 py-2.5">
         <span className="flex gap-1.5" aria-hidden="true">
           <i className="h-2.5 w-2.5 rounded-full bg-line" />
@@ -24,7 +24,7 @@ export function BrowserFrame({ url, children, className = '' }: { url: string; c
 
 export function PhoneFrame({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-[2rem] border-[6px] border-ink bg-white shadow-[0_30px_70px_-28px_oklch(0.18_0.012_150/0.4)] ${className}`}>
+    <div className={`overflow-hidden rounded-[2rem] border-[6px] border-ink bg-white shadow-[0_30px_70px_-28px_oklch(0.2_0.01_29/0.4)] ${className}`}>
       <div className="relative">
         <div className="absolute left-1/2 top-1.5 z-10 h-4 w-20 -translate-x-1/2 rounded-full bg-ink" aria-hidden="true" />
         {children}
@@ -52,7 +52,7 @@ export function PosMockup({ className = '' }: { className?: string }) {
 /* --- KDS: gerçek mutfak ekranı (koyu) --- */
 export function KdsMockup({ className = '' }: { className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-xl shadow-[0_24px_60px_-24px_oklch(0.18_0.012_150/0.45)] ring-1 ring-kds-line ${className}`}>
+    <div className={`overflow-hidden rounded-xl shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.45)] ring-1 ring-kds-line ${className}`}>
       <img
         src="/media/kds-board.jpg"
         width={1280}
@@ -84,7 +84,7 @@ export function PhoneMockup({ className = '' }: { className?: string }) {
 /* --- QR menü çipi (hero kompozisyonunda küçük detay) --- */
 export function QrChip({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2.5 rounded-xl border border-line bg-white p-2.5 shadow-[0_16px_40px_-18px_oklch(0.18_0.012_150/0.3)] ${className}`}>
+    <div className={`flex items-center gap-2.5 rounded-xl border border-line bg-white p-2.5 shadow-[0_16px_40px_-18px_oklch(0.2_0.01_29/0.3)] ${className}`}>
       <svg viewBox="0 0 21 21" className="h-10 w-10" aria-hidden="true">
         <rect width="21" height="21" fill="white" />
         <path

@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   OtOrder "Beyaz önlük" — saf beyaz zemin, yosun yeşili imza.
-   Renk stratejisi: Restrained (yeşil ≤%10; tek bilinçli drench: WhatsApp bandı)
+   OtOrder "Beyaz önlük" — saf beyaz zemin, HighFive kırmızısı imza (highfivepps.com paleti).
+   Renk stratejisi: Restrained (kırmızı ≤%10; tek bilinçli drench: WhatsApp bandı)
    ========================================================================== */
 
 :root {
   color-scheme: light;
-  --green: oklch(0.42 0.11 150);
-  --green-deep: oklch(0.34 0.1 150);
-  --ink: oklch(0.18 0.012 150);
+  --brand: #bb1e10;
+  --brand-deep: #8a1610;
+  --ink: oklch(0.185 0.008 29);
 }
 
 html {
@@ -38,11 +38,11 @@ p {
 }
 
 ::selection {
-  background: oklch(0.42 0.11 150 / 0.18);
+  background: rgb(187 30 16 / 0.16);
 }
 
 :focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -68,16 +68,16 @@ p {
   @apply w-full rounded-xl border border-line px-4 py-3 text-ink outline-none transition-colors focus:border-brand-600;
 }
 .input::placeholder {
-  color: oklch(0.45 0.02 150);
+  color: oklch(0.45 0.014 29);
 }
 
 /* --- Adisyon fişi (perfore üst/alt kenar) --- */
 .ticket {
   position: relative;
   background: #fff;
-  border: 1px solid oklch(0.905 0.01 150);
+  border: 1px solid oklch(0.905 0.008 29);
   border-radius: 4px;
-  --perf: radial-gradient(circle at 8px 50%, oklch(0.972 0.008 150) 5px, #fff 5.5px);
+  --perf: radial-gradient(circle at 8px 50%, oklch(0.972 0.006 29) 5px, #fff 5.5px);
 }
 .ticket::before,
 .ticket::after {
@@ -93,15 +93,15 @@ p {
 .ticket::before {
   top: -5px;
   transform: rotate(180deg);
-  filter: drop-shadow(0 -1px 0 oklch(0.905 0.01 150));
+  filter: drop-shadow(0 -1px 0 oklch(0.905 0.008 29));
 }
 .ticket::after {
   bottom: -5px;
-  filter: drop-shadow(0 1px 0 oklch(0.905 0.01 150));
+  filter: drop-shadow(0 1px 0 oklch(0.905 0.008 29));
 }
 
 .ticket-rule {
-  border-top: 1.5px dashed oklch(0.87 0.012 150);
+  border-top: 1.5px dashed oklch(0.88 0.01 29);
 }
 
 /* --- Bölüm reveal'ları: içerik VARSAYILAN görünür; destekleyen tarayıcıda
@@ -162,7 +162,7 @@ p {
   }
   @keyframes pulseDot {
     0% {
-      box-shadow: 0 0 0 0 oklch(0.42 0.11 150 / 0.35);
+      box-shadow: 0 0 0 0 rgb(187 30 16 / 0.35);
     }
     70% {
       box-shadow: 0 0 0 10px transparent;

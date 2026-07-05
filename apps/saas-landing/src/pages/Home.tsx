@@ -153,7 +153,7 @@ function Flow() {
                   className="absolute left-[calc(100%_-_1.25rem)] top-4 hidden h-2 w-[calc(100%_-_2rem)] lg:block"
                   aria-hidden="true"
                 >
-                  <line x1="0" y1="4" x2="100%" y2="4" stroke="oklch(0.78 0.085 150)" strokeWidth="2" className="flow-dash" />
+                  <line x1="0" y1="4" x2="100%" y2="4" stroke="#f9a8a2" strokeWidth="2" className="flow-dash" />
                 </svg>
               )}
               <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 font-mono text-sm font-semibold text-white">
@@ -308,7 +308,7 @@ function PlanTicket({ plan, annual, featured }: { plan: Plan; annual: boolean; f
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   return (
     <article
-      className={`ticket p-7 ${featured ? 'md:-translate-y-3 md:shadow-[0_28px_60px_-24px_oklch(0.42_0.11_150/0.35)]' : ''}`}
+      className={`ticket p-7 ${featured ? 'md:-translate-y-3 md:shadow-[0_28px_60px_-24px_rgb(187_30_16/0.30)]' : ''}`}
     >
       <header className="flex items-start justify-between">
         <div>
