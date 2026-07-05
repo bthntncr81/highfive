@@ -22,8 +22,8 @@ function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-md">
       <nav className="container-x flex h-16 items-center justify-between" aria-label="Ana gezinme">
-        <Link to="/" aria-label="OtOrder ana sayfa">
-          <Logo />
+        <Link to="/" aria-label="OtOrder ana sayfa" className="group">
+          <Logo className="[&>svg]:transition-transform [&>svg]:duration-500 [&>svg]:ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:[&>svg]:rotate-180" />
         </Link>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <a href="/#fiyatlar" className="hidden px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink sm:block">

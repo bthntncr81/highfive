@@ -126,35 +126,153 @@ p {
   }
 }
 
-/* --- Hero mockup girişleri --- */
+/* ==========================================================================
+   MOTION SİSTEMİ — bölüm başına karakter; transform/opacity/clip/stroke;
+   ease-out-expo ailesi; reduced-motion'da HEPSİ kapanır (en altta).
+   ========================================================================== */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Global mikro-etkileşim: butonlar --- */
+.btn {
+  transition:
+    transform 0.15s var(--ease-out-quint),
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+.btn:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-primary:hover {
+  box-shadow: 0 12px 28px -10px rgb(187 30 16 / 0.5);
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  /* ====================== HERO ====================== */
+  /* Başlık: satır satır perdeden yükselme */
+  .line-mask {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+  .line-rise {
+    display: inline-block;
+    animation: lineRise 0.85s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 110ms);
+  }
+  @keyframes lineRise {
+    from {
+      transform: translateY(110%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  /* "saniyesinde" altı fırça süpürmesi */
+  .sweep {
+    position: relative;
+  }
+  .sweep::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.04em;
+    height: 0.12em;
+    background: rgb(187 30 16 / 0.22);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: sweepIn 0.7s var(--ease-out-expo) 0.9s both;
+  }
+  @keyframes sweepIn {
+    to {
+      transform: scaleX(1);
+    }
+  }
   .float-in {
-    animation: floatIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: floatIn 0.9s var(--ease-out-expo) both;
     animation-delay: var(--d, 0ms);
   }
   @keyframes floatIn {
     from {
       opacity: 0;
-      transform: translateY(22px) scale(0.985);
+      transform: translateY(26px) scale(0.98);
     }
     to {
       opacity: 1;
       transform: none;
     }
   }
-  .kds-new {
-    animation: kdsNew 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  /* Sürekli ambiyans: mockup'lar nefes alır (giriş bittikten sonra) */
+  .bob {
+    animation:
+      floatIn 0.9s var(--ease-out-expo) both,
+      bobY 7s ease-in-out calc(1s + var(--d, 0ms)) infinite;
   }
-  @keyframes kdsNew {
+  @keyframes bobY {
     0%,
-    8% {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    14%,
     100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-9px);
+    }
+  }
+  .bob-alt {
+    animation:
+      floatIn 0.9s var(--ease-out-expo) both,
+      bobYalt 8s ease-in-out calc(1.2s + var(--d, 0ms)) infinite;
+  }
+  @keyframes bobYalt {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(7px);
+    }
+  }
+  /* Hero arka planı: QR'dan KDS'ye giden sipariş noktası (offset-path) */
+  .hero-path-dot {
+    offset-path: path('M 30 300 C 140 340, 300 330, 420 220 S 560 60, 640 90');
+    offset-rotate: 0deg;
+    animation: rideHero 5.5s var(--ease-out-quint) 1.6s infinite;
+    opacity: 0;
+  }
+  @keyframes rideHero {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    8% {
       opacity: 1;
-      transform: none;
+    }
+    58% {
+      offset-distance: 100%;
+      opacity: 1;
+    }
+    66%,
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+  .hero-path-draw {
+    stroke-dasharray: 6 10;
+    animation: heroDash 1.4s linear infinite;
+  }
+  @keyframes heroDash {
+    to {
+      stroke-dashoffset: -16;
     }
   }
   .pulse-dot {
@@ -171,6 +289,51 @@ p {
       box-shadow: 0 0 0 0 transparent;
     }
   }
+
+  /* ====================== TUR: blur'dan netleşme + tik çizimi ====================== */
+  @supports (animation-timeline: view()) {
+    .reveal-art {
+      animation: artIn both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 45%;
+    }
+    @keyframes artIn {
+      from {
+        opacity: 0;
+        transform: translateY(22px) scale(0.985);
+        filter: blur(10px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+        filter: blur(0);
+      }
+    }
+    .draw-check path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: drawCheck 0.6s var(--ease-out-quint) both;
+      animation-timeline: view();
+      animation-range: entry 15% entry 55%;
+      animation-delay: calc(var(--i, 0) * 60ms);
+    }
+    @keyframes drawCheck {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+  }
+  /* Tur görselleri: hover'da hafif 3B eğim */
+  .tilt {
+    transition:
+      transform 0.35s var(--ease-out-quint),
+      filter 0.35s;
+  }
+  .tilt:hover {
+    transform: perspective(900px) rotateX(2.2deg) rotateY(-2.2deg) translateY(-4px);
+  }
+
+  /* ====================== SİPARİŞ YOLCULUĞU: bayrak yarışı ====================== */
   .flow-dash {
     stroke-dasharray: 6 8;
     animation: flowDash 1.6s linear infinite;
@@ -179,5 +342,295 @@ p {
     to {
       stroke-dashoffset: -14;
     }
+  }
+  .flow-num {
+    animation: numPing 4.8s ease-out infinite;
+    animation-delay: calc(var(--i, 0) * 1.2s);
+  }
+  @keyframes numPing {
+    0%,
+    18% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    22% {
+      box-shadow: 0 0 0 0 rgb(187 30 16 / 0.4);
+    }
+    38% {
+      box-shadow: 0 0 0 12px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  /* ====================== GALERİ: kademeli giriş + hover yükselme ====================== */
+  @supports (animation-timeline: view()) {
+    .gal-in {
+      animation: galIn both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 40%;
+    }
+    @keyframes galIn {
+      from {
+        opacity: 0;
+        transform: translateY(26px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+  .gal-card {
+    transition:
+      transform 0.3s var(--ease-out-quint),
+      box-shadow 0.3s;
+  }
+  figure:hover .gal-card {
+    transform: translateY(-6px) scale(1.012);
+    box-shadow: 0 34px 70px -28px oklch(0.2 0.01 29 / 0.4);
+  }
+
+  /* ====================== ÖZELLİK MENÜSÜ: liderler çizilir ====================== */
+  @supports (animation-timeline: view()) {
+    .leader-row {
+      animation: rowIn both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+    @keyframes rowIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    .leader-row .leader {
+      transform-origin: left;
+      animation: leaderDraw both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 45%;
+    }
+    @keyframes leaderDraw {
+      from {
+        transform: scaleX(0) translateY(-0.25rem);
+      }
+      to {
+        transform: scaleX(1) translateY(-0.25rem);
+      }
+    }
+  }
+
+  /* ====================== WHATSAPP: yaşayan sohbet (12sn döngü) ====================== */
+  .wa-blob {
+    animation: waBlob 16s ease-in-out infinite alternate;
+  }
+  .wa-blob-2 {
+    animation: waBlob 19s ease-in-out 2s infinite alternate-reverse;
+  }
+  @keyframes waBlob {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(40px, -30px) scale(1.15);
+    }
+  }
+  .wa-msg-1 {
+    animation: waPop 12s var(--ease-out-expo) infinite;
+  }
+  .wa-typing {
+    animation: waTyping 12s linear infinite;
+  }
+  .wa-msg-2 {
+    animation: waPop2 12s var(--ease-out-expo) infinite;
+  }
+  .wa-chip {
+    animation: waChip 12s var(--ease-out-expo) infinite;
+  }
+  @keyframes waPop {
+    0% {
+      opacity: 0;
+      transform: translateY(12px) scale(0.92);
+    }
+    5%,
+    92% {
+      opacity: 1;
+      transform: none;
+    }
+    97%,
+    100% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes waTyping {
+    0%,
+    8% {
+      opacity: 0;
+    }
+    12%,
+    26% {
+      opacity: 1;
+    }
+    30%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes waPop2 {
+    0%,
+    30% {
+      opacity: 0;
+      transform: translateY(12px) scale(0.92);
+    }
+    36%,
+    92% {
+      opacity: 1;
+      transform: none;
+    }
+    97%,
+    100% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes waChip {
+    0%,
+    48% {
+      opacity: 0;
+      transform: translateX(14px);
+    }
+    54%,
+    92% {
+      opacity: 1;
+      transform: none;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+  .type-dot {
+    animation: typeDot 1s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 0.18s);
+  }
+  @keyframes typeDot {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+    30% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
+  }
+
+  /* ====================== FİYATLAR: fiş yazdırma + damga ====================== */
+  @supports (animation-timeline: view()) {
+    .ticket-print {
+      animation: ticketPrint both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+      animation-delay: calc(var(--i, 0) * 90ms);
+    }
+    @keyframes ticketPrint {
+      from {
+        opacity: 0;
+        transform: translateY(-18px);
+        clip-path: inset(0 0 92% 0);
+      }
+      60% {
+        clip-path: inset(0 0 0 0);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+        clip-path: inset(0 0 0 0);
+      }
+    }
+    .stamp-in {
+      animation: stampIn both;
+      animation-timeline: view();
+      animation-range: entry 25% entry 60%;
+    }
+    @keyframes stampIn {
+      from {
+        opacity: 0;
+        transform: rotate(-14deg) scale(1.7);
+      }
+      to {
+        opacity: 1;
+        transform: rotate(6deg) scale(1);
+      }
+    }
+  }
+  .ticket {
+    transition:
+      transform 0.3s var(--ease-out-quint),
+      box-shadow 0.3s;
+  }
+  .ticket:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 30px 60px -26px oklch(0.2 0.01 29 / 0.35);
+  }
+
+  /* ====================== KURUMSAL: telefon + push bildirimi ====================== */
+  .phone-bob {
+    animation: bobY 6s ease-in-out infinite;
+  }
+  .push-note {
+    animation: pushNote 7s var(--ease-out-expo) infinite;
+    opacity: 0;
+  }
+  @keyframes pushNote {
+    0%,
+    12% {
+      opacity: 0;
+      transform: translateY(-115%);
+    }
+    17%,
+    62% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    69%,
+    100% {
+      opacity: 0;
+      transform: translateY(-115%);
+    }
+  }
+
+  /* ====================== FİNAL: süzülen çizim SVG'ler ====================== */
+  .drift {
+    animation: drift 14s ease-in-out infinite alternate;
+    animation-delay: calc(var(--i, 0) * -4s);
+  }
+  @keyframes drift {
+    from {
+      transform: translate(0, 0) rotate(-6deg);
+    }
+    to {
+      transform: translate(18px, -26px) rotate(10deg);
+    }
+  }
+}
+
+/* Reduced-motion: tüm animasyon/geçişler etkisiz, içerik tam görünür */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .hero-path-dot {
+    display: none;
   }
 }

@@ -64,9 +64,9 @@ function Gallery() {
           Panelin tamamı: bunlar maket değil, üründen alınmış ekranlar.
         </h2>
         <div className="mt-12 grid gap-8 lg:grid-cols-6">
-          {GALLERY.map((g) => (
-            <figure key={g.img} className={`reveal ${g.wide ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
-              <div className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.25)]">
+          {GALLERY.map((g, i) => (
+            <figure key={g.img} className={`gal-in ${g.wide ? 'lg:col-span-3' : 'lg:col-span-2'}`} style={{ ['--i' as never]: i }}>
+              <div className="gal-card overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.25)]">
                 <div className="flex items-center gap-2 border-b border-line bg-white px-3.5 py-2">
                   <span className="flex gap-1.5" aria-hidden="true">
                     <i className="h-2 w-2 rounded-full bg-line" />
@@ -104,8 +104,24 @@ function BrandedApp() {
   return (
     <section className="border-t border-line py-20 lg:py-24">
       <div className="container-x grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
-        <div className="reveal mx-auto w-full max-w-[250px]">
-          <PhoneMockup />
+        <div className="reveal relative mx-auto w-full max-w-[250px]">
+          <div className="phone-bob">
+            <PhoneMockup />
+            {/* Döngüde inen push bildirimi — Kurumsal'ın kanıtı */}
+            <div
+              className="push-note absolute left-1/2 top-9 z-20 w-[86%] -translate-x-1/2 rounded-xl bg-white/95 p-2.5 shadow-[0_14px_34px_-12px_oklch(0.2_0.01_29/0.45)] ring-1 ring-line backdrop-blur"
+              aria-hidden="true"
+            >
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-600 text-[11px] font-extrabold text-white">P</span>
+                <div className="min-w-0 text-[10px] leading-tight">
+                  <p className="font-bold text-ink">Pizzacı Mehmet</p>
+                  <p className="truncate text-ink-muted">🎁 Öğlene özel %15: kupon sepette hazır!</p>
+                </div>
+                <span className="ml-auto shrink-0 text-[9px] text-ink-muted">şimdi</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="reveal">
           <p className="font-mono text-[12px] font-semibold text-brand-700">Kurumsal paket</p>
@@ -144,27 +160,46 @@ function Hero() {
       <div className="container-x grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:py-24">
         <div>
           <h1 className="text-[clamp(2.5rem,6vw,4.25rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-ink">
-            Sipariş mutfağa <span className="text-brand-600">saniyesinde</span> düşer.
+            <span className="line-mask"><span className="line-rise" style={{ ['--i' as never]: 0 }}>Sipariş mutfağa</span></span>
+            <span className="line-mask"><span className="line-rise text-brand-600" style={{ ['--i' as never]: 1 }}><span className="sweep">saniyesinde</span></span></span>
+            <span className="line-mask"><span className="line-rise" style={{ ['--i' as never]: 2 }}>düşer.</span></span>
           </h1>
-          <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-soft">
+          <p className="float-in mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-soft [--d:320ms]">
             OtOrder, restoranınızın tamamını tek abonelikte toplar: POS, mutfak ekranı,
             size özel sipariş sitesi ve QR menü. Komisyon yok. Kurulum dakikalar sürer.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="float-in mt-8 flex flex-wrap items-center gap-3 [--d:440ms]">
             <Link to="/signup" className="btn-primary text-base">Ücretsiz dene</Link>
             <a href="#fiyatlar" className="btn-ghost text-base">Planları gör</a>
           </div>
-          <p className="mt-4 text-sm text-ink-muted">14 gün ücretsiz · kart gerekmez · dilediğinde iptal</p>
-          <p className="mt-8 flex items-center gap-2.5 text-sm text-ink-soft">
+          <p className="float-in mt-4 text-sm text-ink-muted [--d:540ms]">14 gün ücretsiz · kart gerekmez · dilediğinde iptal</p>
+          <p className="float-in mt-8 flex items-center gap-2.5 text-sm text-ink-soft [--d:640ms]">
             <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-brand-600" aria-hidden="true" />
             High Five Pizza &amp; Makarna, Akçakoca: bu sistemle servis yapıyor.
           </p>
         </div>
 
-        {/* Katmanlı ürün kompozisyonu */}
+        {/* Katmanlı ürün kompozisyonu + QR'dan mutfağa süzülen sipariş */}
         <div className="relative mx-auto w-full max-w-[560px] lg:max-w-none" aria-label="OtOrder ürün ekranları: POS, mutfak ekranı ve QR menü">
-          <PosMockup className="float-in relative z-10 w-[88%]" />
-          <KdsMockup className="float-in absolute -bottom-10 right-0 z-20 w-[64%] [--d:180ms]" />
+          <svg
+            viewBox="0 0 680 380"
+            className="pointer-events-none absolute -inset-x-4 -bottom-16 top-auto hidden h-[420px] w-[calc(100%+2rem)] lg:block"
+            aria-hidden="true"
+          >
+            <path
+              d="M 30 300 C 140 340, 300 330, 420 220 S 560 60, 640 90"
+              fill="none"
+              stroke="#f9a8a2"
+              strokeWidth="2"
+              className="hero-path-draw"
+            />
+          </svg>
+          <span
+            className="hero-path-dot pointer-events-none absolute left-0 top-0 hidden h-3 w-3 rounded-full bg-brand-600 shadow-[0_0_0_4px_rgb(187_30_16/0.15)] lg:block"
+            aria-hidden="true"
+          />
+          <PosMockup className="bob relative z-10 w-[88%]" />
+          <KdsMockup className="bob-alt absolute -bottom-10 right-0 z-20 w-[64%] [--d:180ms]" />
           <QrChip className="float-in absolute -left-2 -bottom-6 z-30 [--d:340ms] max-sm:hidden" />
         </div>
       </div>
@@ -217,17 +252,30 @@ function Tour() {
                 <h3 className="text-2xl font-bold tracking-[-0.01em] text-ink">{t.title}</h3>
                 <p className="mt-3 max-w-measure leading-relaxed text-ink-soft">{t.body}</p>
                 <ul className="mt-5 space-y-2.5">
-                  {t.points.map((p) => (
+                  {t.points.map((p, j) => (
                     <li key={p} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
-                      <svg viewBox="0 0 16 16" className="mt-1 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true">
-                        <path fill="currentColor" d="M6.5 12.2 2.3 8l1.4-1.4 2.8 2.8 5.8-5.8L13.7 5z" />
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="draw-check mt-1 h-4 w-4 shrink-0 text-brand-600"
+                        style={{ ['--i' as never]: j }}
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M2.5 8.5 6 12 13.5 4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          pathLength={1}
+                        />
                       </svg>
                       {p}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className={`reveal flex justify-center ${t.dark ? '' : ''}`}>
+              <div className="reveal-art tilt flex justify-center">
                 {t.art('w-full max-w-[520px]')}
               </div>
             </div>
@@ -268,7 +316,10 @@ function Flow() {
                   <line x1="0" y1="4" x2="100%" y2="4" stroke="#f9a8a2" strokeWidth="2" className="flow-dash" />
                 </svg>
               )}
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 font-mono text-sm font-semibold text-white">
+              <span
+                className="flow-num grid h-9 w-9 place-items-center rounded-full bg-brand-600 font-mono text-sm font-semibold text-white"
+                style={{ ['--i' as never]: i }}
+              >
                 {i + 1}
               </span>
               <h3 className="mt-3 font-bold text-ink">{s.t}</h3>
@@ -307,11 +358,11 @@ function FeatureMenu() {
             aynı panelde, ayrı kurulum yok.
           </p>
         </div>
-        <dl className="reveal space-y-4">
-          {FEATURES.map(([name, desc]) => (
-            <div key={name} className="flex items-baseline gap-2">
+        <dl className="space-y-4">
+          {FEATURES.map(([name, desc], i) => (
+            <div key={name} className="leader-row flex items-baseline gap-2" style={{ ['--i' as never]: i }}>
               <dt className="shrink-0 font-bold text-ink">{name}</dt>
-              <span className="mx-1 flex-1 -translate-y-1 border-b-2 border-dotted border-line" aria-hidden="true" />
+              <span className="leader mx-1 flex-1 -translate-y-1 border-b-2 border-dotted border-line" aria-hidden="true" />
               <dd className="max-w-[52%] text-right text-sm leading-snug text-ink-muted">{desc}</dd>
             </div>
           ))}
@@ -325,8 +376,11 @@ function FeatureMenu() {
 
 function WhatsappBand() {
   return (
-    <section className="bg-brand-700 py-16 text-white lg:py-20">
-      <div className="container-x grid items-center gap-10 lg:grid-cols-[1.3fr_1fr]">
+    <section className="relative overflow-hidden bg-brand-700 py-16 text-white lg:py-20">
+      {/* Yavaşça süzülen ışık lekeleri */}
+      <span className="wa-blob pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-500/25 blur-3xl" aria-hidden="true" />
+      <span className="wa-blob-2 pointer-events-none absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-brand-900/50 blur-3xl" aria-hidden="true" />
+      <div className="container-x relative grid items-center gap-10 lg:grid-cols-[1.3fr_1fr]">
         <div className="reveal">
           <h2 className="text-[clamp(1.6rem,3vw,2.3rem)] font-bold tracking-[-0.02em]">
             WhatsApp'tan gelen sipariş de aynı mutfağa düşer.
@@ -344,16 +398,21 @@ function WhatsappBand() {
           </a>
         </div>
         <div className="reveal">
-          {/* Mini sohbet vinyeti */}
+          {/* Yaşayan sohbet vinyeti — 12 sn'de bir baştan oynar */}
           <div className="ml-auto max-w-[320px] space-y-2.5 rounded-2xl bg-brand-800/60 p-4 text-[13px]">
-            <p className="w-fit max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-ink">
+            <p className="wa-msg-1 w-fit max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-ink">
               2 sucuklu pizza, 1 ayran. Adres kayıtlı 🙏
             </p>
-            <p className="ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-brand-600 px-3 py-2">
+            <p className="wa-typing ml-auto flex w-fit items-center gap-1 rounded-xl rounded-br-sm bg-brand-600/70 px-3 py-2.5" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="type-dot inline-block h-1.5 w-1.5 rounded-full bg-white" style={{ ['--i' as never]: i }} />
+              ))}
+            </p>
+            <p className="wa-msg-2 -mt-9 ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-brand-600 px-3 py-2">
               Siparişiniz alındı! Tahmini teslimat 30 dk. Toplam ₺465
             </p>
-            <p className="ml-auto flex w-fit items-center gap-1.5 rounded-lg bg-brand-900/60 px-2.5 py-1.5 font-mono text-[10px] text-brand-200">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-lichen" aria-hidden="true" />
+            <p className="wa-chip ml-auto flex w-fit items-center gap-1.5 rounded-lg bg-brand-900/60 px-2.5 py-1.5 font-mono text-[10px] text-brand-200">
+              <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-lichen" aria-hidden="true" />
               POS'a işlendi · #1043 mutfakta
             </p>
           </div>
@@ -396,7 +455,7 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
             <p className="col-span-3 text-center text-ink-muted">Planlar yükleniyor…</p>
           )}
           {plans.map((p, i) => (
-            <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} />
+            <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} order={i} />
           ))}
         </div>
       </div>
@@ -416,9 +475,10 @@ const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }>
   { label: 'Özel tasarım landing', has: (p) => !!p.features.customLanding },
 ];
 
-function PlanTicket({ plan, annual, featured }: { plan: Plan; annual: boolean; featured: boolean }) {
+function PlanTicket({ plan, annual, featured, order }: { plan: Plan; annual: boolean; featured: boolean; order: number }) {
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   return (
+    <div className="ticket-print" style={{ ['--i' as never]: order }}>
     <article
       className={`ticket p-7 ${featured ? 'md:-translate-y-3 md:shadow-[0_28px_60px_-24px_rgb(187_30_16/0.30)]' : ''}`}
     >
@@ -428,7 +488,7 @@ function PlanTicket({ plan, annual, featured }: { plan: Plan; annual: boolean; f
           <h3 className="mt-1 text-xl font-extrabold tracking-[-0.01em] text-ink">{plan.name}</h3>
         </div>
         {featured && (
-          <span className="rotate-6 rounded border-2 border-brand-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700">
+          <span className="stamp-in rotate-6 rounded border-2 border-brand-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700">
             en çok tercih
           </span>
         )}
@@ -472,6 +532,7 @@ function PlanTicket({ plan, annual, featured }: { plan: Plan; annual: boolean; f
         </p>
       </div>
     </article>
+    </div>
   );
 }
 
@@ -479,8 +540,20 @@ function PlanTicket({ plan, annual, featured }: { plan: Plan; annual: boolean; f
 
 function FinalCta() {
   return (
-    <section className="border-t border-line bg-wash py-20 text-center lg:py-24">
-      <div className="container-x">
+    <section className="relative overflow-hidden border-t border-line bg-wash py-20 text-center lg:py-24">
+      {/* Süzülen çizim: pizza dilimi, çatal, fesleğen */}
+      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute left-[6%] top-12 h-16 w-16 text-brand-200" style={{ ['--i' as never]: 0 }} aria-hidden="true">
+        <path d="M8 14 L56 26 A34 34 0 0 1 20 56 Z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx="28" cy="30" r="3.5" fill="currentColor" />
+        <circle cx="38" cy="42" r="3.5" fill="currentColor" />
+      </svg>
+      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute right-[8%] top-20 h-14 w-14 text-brand-200" style={{ ['--i' as never]: 1 }} aria-hidden="true">
+        <path d="M22 6 v16 M30 6 v16 M38 6 v16 M22 22 h16 a0 0 0 0 1 0 0 c0 8 -8 8 -8 14 v22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute bottom-10 left-[14%] h-12 w-12 text-brand-200" style={{ ['--i' as never]: 2 }} aria-hidden="true">
+        <path d="M32 56 C 12 44, 14 18, 34 8 C 52 18, 52 44, 32 56 Z M32 56 V 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+      </svg>
+      <div className="container-x relative">
         <h2 className="reveal mx-auto max-w-[24ch] text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-tight tracking-[-0.025em] text-ink">
           Bu akşamki servise yetişir.
         </h2>
