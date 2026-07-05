@@ -55,3 +55,4 @@ coverage/
 # macOS AppleDouble
 ._*
 **/._*
+.env.otorder

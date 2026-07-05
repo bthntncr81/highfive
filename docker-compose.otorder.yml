@@ -1,0 +1,21 @@
+# OtOrder SaaS override — docker-compose.prod.yml üzerine uygulanır.
+# Sırlar .env.otorder içinde (git'e GİRMEZ; sunucuda chmod 600):
+#   OTORDER_DATABASE_URL / OTORDER_APP_DATABASE_URL / OTORDER_JWT_SECRET / OTORDER_APP_DB_PASSWORD
+# Çalıştırma (sunucu-2 /opt/highfive):
+#   docker compose -f docker-compose.prod.yml -f docker-compose.otorder.yml --env-file .env.otorder up -d --no-deps api
+services:
+  api:
+    # db push yerine migrate deploy: RLS policy + CHECK constraint migration'ları
+    # dosyadan deterministik uygulanır.
+    command: sh -c "cd packages/database && npx prisma migrate deploy && cd /app && npx ts-node -P apps/api/tsconfig.app.json apps/api/src/main.ts"
+    environment:
+      DATABASE_URL: ${OTORDER_DATABASE_URL}
+      APP_DATABASE_URL: ${OTORDER_APP_DATABASE_URL}
+      TENANT_RLS: "on"
+      JWT_SECRET: ${OTORDER_JWT_SECRET}
+      SUPERADMIN_EMAILS: soft@haberbenim.com
+      PLATFORM_BASE_DOMAIN: otorder.com
+      API_URL: https://api.otorder.com
+      # ts-node ambient .d.ts yüklemesi (types/fastify.d.ts — request.db augmentasyonu).
+      # Bunsuz boot TS2339 ile düşer; tam include type-check boot'u ~40-60 sn sürer.
+      TS_NODE_FILES: "true"
