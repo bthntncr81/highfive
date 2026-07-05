@@ -10,6 +10,7 @@ import { startDailyCloseScheduler } from './lib/daily-close';
 import { startWinbackScheduler } from './lib/winback';
 import { scheduleCourierLocationCleanup } from './lib/courier-location-cleanup';
 import { startBillingScheduler } from './lib/subscription-billing';
+import { startMarketplacePoller } from './lib/marketplace-poller';
 
 const prisma = new PrismaClient();
 
@@ -63,6 +64,12 @@ const start = async () => {
     // Abonelik yenileme + deneme taraması — saatte bir. Dönem sonu geçmiş
     // abonelikleri saklı kartla çeker; başarısızlıkta grace→otomatik askıya alma.
     startBillingScheduler(prisma, (msg, err) =>
+      err ? server.log.error({ err }, msg) : server.log.info(msg),
+    );
+
+    // Pazar yeri poller'ı — 30 sn'de bir aktif Trendyol GO bağlantılarını tarar,
+    // yeni paketleri sipariş hattına enjekte eder ve TGO'ya kabul (picked) bildirir.
+    startMarketplacePoller(prisma, (msg, err) =>
       err ? server.log.error({ err }, msg) : server.log.info(msg),
     );
   } catch (err) {

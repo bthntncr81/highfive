@@ -59,6 +59,7 @@ import mobilePrefsRoutes from './routes/mobile-prefs';
 import courierRoutes from './routes/courier';
 import platformRoutes from './routes/platform';
 import integrationRoutes from './routes/integrations';
+import marketplaceRoutes from './routes/marketplace';
 
 // WebSocket handler
 import { setupWebSocket } from './websocket';
@@ -176,6 +177,9 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
 
   // "Bağlan" akışı — WhatsApp Sipariş Modülü entegrasyonu (Pro+ feature-flag)
   server.register(integrationRoutes, { prefix: '/api/integrations' });
+
+  // Pazar yeri entegrasyonları — Trendyol GO bağlantı + eşleme (marketplace feature-flag)
+  server.register(marketplaceRoutes, { prefix: '/api/marketplace' });
 
   // WebSocket - must be registered AFTER websocket plugin is ready
   server.after(() => {

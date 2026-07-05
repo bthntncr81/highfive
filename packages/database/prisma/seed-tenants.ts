@@ -11,11 +11,11 @@ const prisma = new PrismaClient();
 
 const PLANS = [
   { key: 'STARTER', name: 'Başlangıç', monthlyPrice: 0, annualPrice: 0, maxLocations: 1, maxUsers: 5, sortOrder: 1,
-    features: { loyalty: false, campaigns: false, analytics: false, whatsappLink: false, brandedApp: false, customLanding: false } },
+    features: { loyalty: false, campaigns: false, analytics: false, whatsappLink: false, brandedApp: false, customLanding: false, marketplace: false } },
   { key: 'PRO', name: 'Pro', monthlyPrice: 0, annualPrice: 0, maxLocations: 3, maxUsers: 15, sortOrder: 2,
-    features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: false, customLanding: false } },
+    features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: false, customLanding: false, marketplace: true } },
   { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 0, annualPrice: 0, maxLocations: -1, maxUsers: -1, sortOrder: 3,
-    features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: true, customLanding: true } },
+    features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: true, customLanding: true, marketplace: true } },
 ];
 
 // mark('A'|'B', 'Model') → tenant satırlarını ayırt eden isim üretir
