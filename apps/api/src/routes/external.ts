@@ -290,6 +290,7 @@ export default async function externalRoutes(server: FastifyInstance) {
 
         orderItems.push({
           menuItemId: item.menuItemId,
+          menuItemName: menuItem.name, // POS/KDS'te ürün adı görünsün (dış siparişte de)
           quantity: item.quantity,
           unitPrice: menuItem.price,
           total: itemTotal,
