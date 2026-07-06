@@ -8,9 +8,11 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
+// basename = Vite BASE_URL: subdomain alt-yolunda (/pos/) sunulunca router doğru
+// çalışır; kök dizinde (base '/') sunulunca BASE_URL '/' olur → davranış değişmez.
 root.render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <App />
     </BrowserRouter>
   </StrictMode>
