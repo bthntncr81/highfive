@@ -1,0 +1,109 @@
+// POS beyaz-etiket teması — açılışta /api/settings/public/theme çekilir; marka
+// rengi/logo/isim uygulanır. Tema yoksa styles.css :root varsayılanları (HighFive
+// kırmızısı) devrede kalır → görsel değişmez. (landing/src/lib/theme.ts ile aynı mantık.)
+
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
+
+export interface TenantTheme {
+  name?: string;
+  logoUrl?: string | null;
+  fontFamily?: string;
+  colors?: Record<string, string>; // "primary": "#bb1e10" veya "187 30 16"
+}
+
+let cached: TenantTheme | null = null;
+const listeners = new Set<(t: TenantTheme | null) => void>();
+export function subscribeTheme(fn: (t: TenantTheme | null) => void): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+function emit() { for (const fn of listeners) fn(cached); }
+
+function toRgbTriplet(input?: string): [number, number, number] | null {
+  if (!input) return null;
+  const s = input.trim();
+  const m = s.match(/^(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})$/);
+  if (m) return [+m[1], +m[2], +m[3]];
+  const hex = s.replace('#', '');
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  if (/^[0-9a-fA-F]{3}$/.test(hex)) return [parseInt(hex[0] + hex[0], 16), parseInt(hex[1] + hex[1], 16), parseInt(hex[2] + hex[2], 16)];
+  return null;
+}
+
+const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+const mix = ([r, g, b]: number[], [r2, g2, b2]: number[], t: number): [number, number, number] =>
+  [clamp(r + (r2 - r) * t), clamp(g + (g2 - g) * t), clamp(b + (b2 - b) * t)];
+
+function buildRamp(base: [number, number, number]): Record<string, [number, number, number]> {
+  const white: [number, number, number] = [255, 255, 255];
+  const black: [number, number, number] = [0, 0, 0];
+  return {
+    DEFAULT: base,
+    50: mix(base, white, 0.94),
+    100: mix(base, white, 0.86),
+    200: mix(base, white, 0.72),
+    300: mix(base, white, 0.52),
+    400: mix(base, white, 0.28),
+    500: base,
+    600: mix(base, black, 0.14),
+    700: mix(base, black, 0.26),
+    800: mix(base, black, 0.4),
+    900: mix(base, black, 0.52),
+  };
+}
+
+export function applyTheme(theme: TenantTheme): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const primary = toRgbTriplet(theme.colors?.primary);
+  if (primary) {
+    const ramp = buildRamp(primary);
+    for (const [k, [r, g, b]] of Object.entries(ramp)) {
+      root.style.setProperty(`--brand-${k}`, `${r} ${g} ${b}`);
+    }
+    const rgb = ([r, g, b]: number[]) => `rgb(${r} ${g} ${b})`;
+    root.style.setProperty('--color-primary', rgb(ramp.DEFAULT));
+    root.style.setProperty('--color-primary-dark', rgb(ramp[700]));
+    root.style.setProperty('--color-primary-light', rgb(ramp[400]));
+  }
+  const accent = toRgbTriplet(theme.colors?.accent);
+  if (accent) {
+    const rgb = ([r, g, b]: number[]) => `rgb(${r} ${g} ${b})`;
+    root.style.setProperty('--color-accent', rgb(accent));
+    root.style.setProperty('--color-accent-dark', rgb(mix(accent, [0, 0, 0], 0.25)));
+    root.style.setProperty('--color-accent-light', rgb(mix(accent, [255, 255, 255], 0.2)));
+  }
+  if (theme.name) document.title = `${theme.name} · POS`;
+}
+
+export async function bootstrapTheme(): Promise<TenantTheme | null> {
+  if (typeof window === 'undefined') return null;
+  const sub = window.location.hostname.split('.')[0];
+  const key = `otorder.pos.theme.${sub}`;
+  try {
+    const c = localStorage.getItem(key);
+    if (c) { cached = JSON.parse(c); applyTheme(cached!); emit(); }
+  } catch { /* ignore */ }
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/public/theme`);
+    if (!res.ok) return cached;
+    const theme = (await res.json()) as TenantTheme;
+    cached = theme;
+    applyTheme(theme);
+    emit();
+    try { localStorage.setItem(key, JSON.stringify(theme)); } catch { /* ignore */ }
+    return theme;
+  } catch {
+    return cached;
+  }
+}
+
+export function getTheme(): TenantTheme | null { return cached; }
+
+// Logo göreli yolunu (/uploads/...) API tabanına göre absolute'e çevir.
+export function brandLogoUrl(): string | null {
+  const u = cached?.logoUrl;
+  if (!u) return null;
+  if (/^https?:\/\//.test(u) || u.startsWith('data:')) return u;
+  return `${API_BASE}${u.startsWith('/') ? '' : '/'}${u}`;
+}

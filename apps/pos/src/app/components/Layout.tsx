@@ -22,11 +22,13 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { itemCount, total } = useCart();
   const { isConnected } = useWebSocket();
+  const { brandName, brandLogo } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -109,14 +111,16 @@ export default function Layout() {
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         shadow-2xl lg:shadow-xl
       `}>
-        {/* Logo Section */}
+        {/* Logo Section — tenant logo/adı */}
         <div className="p-6 border-b border-[#e5e5e0] bg-[#005387]">
           <div className="flex items-center gap-4">
-            <img
-              src="/logo.svg"
-              alt="High Five"
-              className="h-12 w-auto brightness-0 invert"
-            />
+            {brandLogo ? (
+              <img src={brandLogo} alt={brandName || 'Logo'} className="h-12 w-auto max-w-[150px] object-contain" />
+            ) : brandName ? (
+              <span className="text-white font-display text-2xl font-extrabold tracking-tight truncate">{brandName}</span>
+            ) : (
+              <img src="/logo.svg" alt="Logo" className="h-12 w-auto brightness-0 invert" />
+            )}
             <div>
               <p className="text-white/70 text-xs font-medium">POS SİSTEMİ v1.0</p>
             </div>

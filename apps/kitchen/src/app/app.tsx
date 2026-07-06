@@ -61,6 +61,7 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
   const [alertNow, setAlertNow] = useState(Date.now());
+  const [brandName, setBrandName] = useState('');
   const alertIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const alertMaxTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref so the WebSocket onmessage closure (created once in useEffect) always
@@ -77,6 +78,14 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Tenant marka adı — KDS başlığında gösterilir (subdomain'den çözülür).
+  useEffect(() => {
+    fetch(`${API_URL}/api/settings/public/theme`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((t) => { if (t?.name) setBrandName(t.name); })
+      .catch(() => { /* varsayılan başlık kalır */ });
   }, []);
 
   useEffect(() => {
@@ -368,7 +377,7 @@ export default function App() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">MUTFAK EKRANI</h1>
               <p className="text-sm text-gray-400 flex items-center gap-2">
-                <span className="text-accent-300">HIGH FIVE</span>
+                <span className="text-accent-300">{(brandName || 'OtOrder').toLocaleUpperCase('tr-TR')}</span>
                 <span>•</span>
                 <span className="font-mono">
                   {currentTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

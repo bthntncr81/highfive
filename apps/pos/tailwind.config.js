@@ -7,17 +7,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Beyaz-etiket: --brand-* CSS değişkenlerinden okunur (styles.css :root
+        // varsayılanı = HighFive kırmızısı). theme.ts tenant rengiyle override eder.
         primary: {
-          50: '#fef2f0',
-          100: '#fee0db',
-          200: '#fec5bb',
-          300: '#fc9a8a',
-          400: '#f87161',
-          500: '#bb1e10',
-          600: '#a01a0d',
-          700: '#8a1610',
-          800: '#6b0f00',
-          900: '#520c00',
+          DEFAULT: 'rgb(var(--brand-DEFAULT) / <alpha-value>)',
+          50: 'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          200: 'rgb(var(--brand-200) / <alpha-value>)',
+          300: 'rgb(var(--brand-300) / <alpha-value>)',
+          400: 'rgb(var(--brand-400) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
+          800: 'rgb(var(--brand-800) / <alpha-value>)',
+          900: 'rgb(var(--brand-900) / <alpha-value>)',
         },
         accent: {
           50: '#eef6fb',

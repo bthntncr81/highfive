@@ -9,6 +9,21 @@
    ============================================ */
 
 :root {
+  /* Beyaz-etiket marka rampası — VARSAYILAN = HighFive kırmızısı (birebir).
+     theme.ts tenant rengiyle bu değişkenleri override eder; tema yokken görsel
+     değişmez. rgb kanalları (tailwind rgb(var(--brand-*) / <alpha>) için). */
+  --brand-DEFAULT: 187 30 16;
+  --brand-50: 254 242 240;
+  --brand-100: 254 224 219;
+  --brand-200: 254 197 187;
+  --brand-300: 252 154 138;
+  --brand-400: 248 113 97;
+  --brand-500: 187 30 16;
+  --brand-600: 160 26 13;
+  --brand-700: 138 22 16;
+  --brand-800: 107 15 0;
+  --brand-900: 82 12 0;
+
   /* Primary Colors */
   --color-primary: #bb1e10;
   --color-primary-dark: #8a1610;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, Pizza } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,7 +10,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+  const { brandName, brandLogo } = useTheme();
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -50,15 +52,19 @@ export default function Login() {
       {/* Login Card */}
       <div className="w-full max-w-md relative z-10 animate-bounce-in">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Header with pattern */}
-          <div className="bg-gradient-to-r from-[#bb1e10] to-[#8a1610] p-6 relative">
+          {/* Header — marka rengi (primary CSS-var) + tenant logo/adı */}
+          <div className="bg-gradient-to-r from-primary-500 to-primary-700 p-6 relative">
             <div className="relative text-center">
               {/* Logo */}
               <div className="inline-flex items-center justify-center mb-4">
-                <img src="/logo.svg" alt="High Five" className="h-16 w-auto brightness-0 invert" />
+                {brandLogo ? (
+                  <img src={brandLogo} alt={brandName || 'Logo'} className="h-16 w-auto object-contain" />
+                ) : (
+                  <img src="/logo.svg" alt={brandName || 'Logo'} className="h-16 w-auto brightness-0 invert" />
+                )}
               </div>
               <h1 className="font-display text-4xl text-white tracking-wider drop-shadow-lg">
-                HIGH FIVE
+                {(brandName || 'OtOrder').toLocaleUpperCase('tr-TR')}
               </h1>
               <p className="text-white/80 font-medium mt-1">POS SİSTEMİ</p>
             </div>

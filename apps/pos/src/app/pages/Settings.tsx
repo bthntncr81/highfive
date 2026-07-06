@@ -1440,7 +1440,7 @@ export default function Settings() {
                   </head>
                   <body>
                     <h2>🖨️ TEST FİŞİ</h2>
-                    <p>High Five POS Sistemi</p>
+                    <p>${(restaurant.name || theme.name || 'OtOrder')} POS</p>
                     <p>Yazıcı Testi Başarılı!</p>
                     <p>${new Date().toLocaleString('tr-TR')}</p>
                     <p>✅ ✅ ✅</p>

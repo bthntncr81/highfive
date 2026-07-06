@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle, Delete } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 
 export default function PinLogin() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+  const { brandName, brandLogo } = useTheme();
+
   const { pinLogin } = useAuth();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,21 +78,25 @@ export default function PinLogin() {
         />
         
         {/* Floating circles */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#bb1e10]/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl animate-float" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#005387]/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
       </div>
 
       {/* Login Card */}
       <div className="w-full max-w-sm relative z-10 animate-bounce-in">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#bb1e10] to-[#8a1610] p-6 relative">
+          {/* Header — marka rengi (primary CSS-var) + tenant logo/adı */}
+          <div className="bg-gradient-to-r from-primary-500 to-primary-700 p-6 relative">
             <div className="relative text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-3">
-                <span className="text-3xl">🔐</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-3 overflow-hidden">
+                {brandLogo ? (
+                  <img src={brandLogo} alt={brandName || 'Logo'} className="w-12 h-12 object-contain" />
+                ) : (
+                  <span className="text-3xl">🔐</span>
+                )}
               </div>
               <h1 className="font-display text-3xl text-white tracking-wider">
-                GİRİŞ
+                {brandName || 'GİRİŞ'}
               </h1>
               <p className="text-white/70 text-sm mt-1">6 haneli şifrenizi girin</p>
             </div>

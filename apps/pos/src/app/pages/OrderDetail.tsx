@@ -77,6 +77,8 @@ export default function OrderDetail() {
   const navigate = useNavigate();
   
   const [order, setOrder] = useState<Order | null>(null);
+  // Fiş başlığı için tenant restoran bilgisi (beyaz-etiket).
+  const [restaurantInfo, setRestaurantInfo] = useState<{ name?: string; phone?: string; address?: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -105,6 +107,13 @@ export default function OrderDetail() {
 
     return unsubscribe;
   }, [id]);
+
+  // Fiş başlığı için restoran adı/telefonu (tenant Ayarlar'dan).
+  useEffect(() => {
+    api.get('/api/settings/public/restaurant')
+      .then((r) => { if (r?.restaurant) setRestaurantInfo(r.restaurant); })
+      .catch(() => { /* varsayılan başlık kalır */ });
+  }, []);
 
   const fetchOrder = async () => {
     try {
@@ -222,9 +231,9 @@ export default function OrderDetail() {
 </head>
 <body>
   <div class="center">
-    <h1>🖐️ HIGH FIVE</h1>
-    <p>Restoran & Cafe</p>
-    <p>Tel: 0505 691 68 31</p>
+    <h1>${restaurantInfo.name || 'Restoran'}</h1>
+    ${restaurantInfo.address ? `<p>${restaurantInfo.address}</p>` : ''}
+    ${restaurantInfo.phone ? `<p>Tel: ${restaurantInfo.phone}</p>` : ''}
   </div>
   
   <div class="double-line"></div>
@@ -296,7 +305,6 @@ export default function OrderDetail() {
     <div class="line"></div>
     <p>Bizi tercih ettiğiniz için</p>
     <p class="bold">Teşekkür Ederiz! 🙏</p>
-    <p style="margin-top:10px;">www.highfive.com.tr</p>
   </div>
 </body>
 </html>
