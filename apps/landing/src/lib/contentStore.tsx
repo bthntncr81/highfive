@@ -1,10 +1,20 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import defaultContentJson from '../content/content.default.json'
 import type { Content } from '../content/content.schema'
 
-const CONTENT_STORAGE_KEY = 'highfive-content'
+// Beyaz-etiket: içerik artık TENANT başına. Açılışta /api/settings/public/content
+// çekilir (tenant'ın 'siteContent' blob'u) ve bundled default'un ÜSTÜNE bindirilir.
+// Tenant düzenlemediyse default (nötr şablon) + tenant adı gösterilir → High Five sızmaz.
+// localStorage cache subdomain'e göre anahtarlanır (çapraz tenant sızıntısı yok).
+
+const API_BASE = (import.meta as any).env?.VITE_API_URL || ''
 
 const defaultContent = defaultContentJson as Content
+
+const subdomain = (): string =>
+  typeof window !== 'undefined' ? window.location.hostname.split('.')[0] : 'default'
+
+const cacheKey = () => `otorder.content.${subdomain()}`
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -15,14 +25,48 @@ const isValidContent = (value: unknown): value is Content => {
     isRecord(value.site) &&
     isRecord(value.hero) &&
     isRecord(value.menu) &&
-    Array.isArray(value.menu.items)
+    Array.isArray((value.menu as Record<string, unknown>).items)
   )
+}
+
+// Derin birleştirme: nesneler recursive birleşir; diziler ve primitive'ler override eder.
+const deepMerge = (base: unknown, override: unknown): unknown => {
+  if (Array.isArray(override)) return override
+  if (isRecord(base) && isRecord(override)) {
+    const out: Record<string, unknown> = { ...base }
+    for (const k of Object.keys(override)) {
+      out[k] = k in base ? deepMerge(base[k], override[k]) : override[k]
+    }
+    return out
+  }
+  return override === undefined ? base : override
+}
+
+// Tenant içeriğini default'un üstüne bindir + tenant kendi adını set etmediyse enjekte et.
+const mergeTenant = (
+  tenantContent: Partial<Content> | null,
+  tenantName: string | null,
+  subdomainName: string | null,
+): Content => {
+  const merged = (
+    tenantContent ? deepMerge(defaultContent, tenantContent) : { ...defaultContent }
+  ) as Content
+  if (tenantName) {
+    const ownName = tenantContent && isRecord(tenantContent.site) && (tenantContent.site as Record<string, unknown>).name
+    if (!ownName) {
+      merged.site = { ...merged.site, name: tenantName, logoText: tenantName }
+    }
+  }
+  if (subdomainName && !merged.site.domain) {
+    merged.site = { ...merged.site, domain: `${subdomainName}.otorder.com` }
+  }
+  return merged
 }
 
 export const loadContent = (): Content => {
   if (typeof window === 'undefined') return defaultContent
   try {
-    const raw = localStorage.getItem(CONTENT_STORAGE_KEY)
+    const raw = localStorage.getItem(cacheKey())
     if (!raw) return defaultContent
     const parsed = JSON.parse(raw) as unknown
     return isValidContent(parsed) ? parsed : defaultContent
@@ -33,12 +77,48 @@ export const loadContent = (): Content => {
 
 export const saveContent = (content: Content) => {
   if (typeof window === 'undefined') return
-  localStorage.setItem(CONTENT_STORAGE_KEY, JSON.stringify(content))
+  try {
+    localStorage.setItem(cacheKey(), JSON.stringify(content))
+  } catch {
+    /* kota dolabilir — yut */
+  }
 }
 
 export const resetContent = () => {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(CONTENT_STORAGE_KEY)
+  localStorage.removeItem(cacheKey())
+}
+
+// Açılış: tenant içeriğini API'den çek, default üstüne bindir, cache'le.
+export const bootstrapContent = async (): Promise<Content> => {
+  if (typeof window === 'undefined') return defaultContent
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/public/content`)
+    if (!res.ok) return loadContent()
+    const data = (await res.json()) as {
+      content: Partial<Content> | null
+      tenantName: string | null
+      subdomain: string | null
+    }
+    const merged = mergeTenant(data.content, data.tenantName, data.subdomain)
+    saveContent(merged)
+    return merged
+  } catch {
+    return loadContent()
+  }
+}
+
+// Tenant içeriğini API'ye kaydet (editör kullanır; owner/admin JWT gerekir).
+export const saveContentToApi = async (content: Content, token: string): Promise<void> => {
+  const res = await fetch(`${API_BASE}/api/settings/siteContent`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ value: content }),
+  })
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}))
+    throw new Error((msg as { error?: string }).error || 'İçerik kaydedilemedi')
+  }
 }
 
 export const downloadContent = (content: Content) => {
@@ -48,7 +128,7 @@ export const downloadContent = (content: Content) => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = 'highfive-content.json'
+  link.download = 'site-content.json'
   document.body.appendChild(link)
   link.click()
   link.remove()
@@ -89,6 +169,15 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [content, setContent] = useState<Content>(() => loadContent())
 
+  // Açılışta tenant içeriğini API'den çek (cache anında gösterilir, sonra taze gelir).
+  useEffect(() => {
+    bootstrapContent()
+      .then(setContent)
+      .catch(() => {
+        /* default kalır */
+      })
+  }, [])
+
   const updateContent = (next: Content) => {
     setContent(next)
     saveContent(next)
@@ -125,4 +214,3 @@ export const useContent = () => {
   }
   return context
 }
-

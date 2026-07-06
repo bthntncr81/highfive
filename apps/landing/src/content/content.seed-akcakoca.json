@@ -1,25 +1,25 @@
 {
   "site": {
-    "name": "Restoranınız",
-    "tagline": "Lezzetin adresi",
-    "description": "Taze malzemeler, özenle hazırlanan lezzetler ve hızlı teslimat.",
-    "logoText": "Restoranınız",
+    "name": "High Five Pizza & Makarna",
+    "tagline": "Akçakoca'nın Lezzet Durağı - Pizza • Makarna • Sandviç",
+    "description": "Akçakoca Düzce'de el yapımı pizza, taze makarna ve özel sandviçler. Taze malzemeler, hızlı teslimat!",
+    "logoText": "High Five",
     "primaryColor": "#bb1e10",
     "accentColor": "#005387"
   },
   "whatsapp": {
-    "phone": "",
-    "defaultMessage": "Merhaba! Sipariş vermek istiyorum 😊"
+    "phone": "905552438181",
+    "defaultMessage": "Merhaba! Sipariş vermek istiyorum 🍕"
   },
   "links": {
-    "instagram": "",
-    "tiktok": "",
-    "googleMaps": "",
-    "phoneTel": ""
+    "instagram": "https://instagram.com/highfive",
+    "tiktok": "https://tiktok.com/@highfive",
+    "googleMaps": "https://maps.google.com/maps?q=Cumhuriyet+Mahallesi+İstanbul+Caddesi+No+151/1+Akçakoca+Düzce",
+    "phoneTel": "0555 243 81 81"
   },
   "hero": {
-    "headline": "Lezzetin adresi",
-    "subheadline": "Taze malzemeler, özenle hazırlanan tarifler ve hızlı teslimat. Sizin için hazırladığımız menüyü keşfedin!",
+    "headline": "Akçakoca'nın Lezzet Durağı!",
+    "subheadline": "Akçakoca'da el yapımı pizza, taze makarna ve özel sandviçler. Taze malzemeler, bol peynir ve hızlı teslimat ile High Five farkını yaşayın!",
     "heroImages": [
       "/placeholders/pizza-hero.svg",
       "/placeholders/pasta-hero.svg",
@@ -132,7 +132,7 @@
       {
         "id": "p9",
         "category": "pizza",
-        "name": "Şefin Özel Pizzası",
+        "name": "High Five Özel",
         "desc": "Domates sos, mozzarella, sucuk, füme et, biber. Şefin imzası!",
         "price": 239,
         "image": "/placeholders/pizza-highfive-ozel.svg",
@@ -222,7 +222,7 @@
       {
         "id": "m10",
         "category": "makarna",
-        "name": "Şefin Özel Makarnası",
+        "name": "High Five Makarna",
         "desc": "Özel sos, füme et, parmesan, kaşar. Şefin imzası!",
         "price": 169,
         "image": "/placeholders/pasta-highfive-ozel.svg",
@@ -456,61 +456,35 @@
     ]
   },
   "about": {
-    "storyTitle": "Hikayemiz",
+    "storyTitle": "High Five Hikayesi",
     "storyParagraphs": [
-      "Taze malzemeler ve özenli bir mutfak anlayışıyla yola çıktık. Amacımız her siparişte kaliteyi ve lezzeti kapınıza kadar ulaştırmak.",
-      "Felsefemiz basit: taze malzemeler, özenli hazırlık ve bol sevgi. Sizin için en iyisini hazırlıyoruz.",
-      "Ekibimiz işini tutkuyla yapan insanlardan oluşuyor. Amacımız her lokmada memnuniyet ve yüzünüzde bir gülümseme bırakmak."
+      "2018 yılında küçük bir mutfakta başlayan yolculuğumuz, bugün binlerce mutlu müşteriye ulaştı. High Five, 'beşlik çak' anlamına geliyor - çünkü biz her siparişte size beşlik çakıyoruz!",
+      "Felsefemiz basit: Taze malzemeler, geleneksel tarifler ve bol sevgi. Her hamuru el ile açıyor, her sosu taze malzemelerden yapıyoruz. Hiçbir şey dondurulmuş ya da hazır değil.",
+      "Ekibimiz pizza ve makarna konusunda tutkulu insanlardan oluşuyor. Amacımız her lokmanızda İtalya'yı hissettirmek ve yüzünüzde bir gülümseme bırakmak."
     ],
     "galleryImages": [
       "/placeholders/gallery-1.svg",
       "/placeholders/gallery-2.svg",
       "/placeholders/gallery-3.svg",
       "/placeholders/gallery-4.svg"
-    ],
-    "heroEyebrow": "Hakkımızda",
-    "heroTitle": "Hikayemiz",
-    "heroSubtitle": "Taze malzemeler ve özenli bir mutfakla sizin için buradayız.",
-    "missionTitle": "Misyonumuz",
-    "mission": "Her siparişte taze, kaliteli ve lezzetli ürünleri hızlı bir şekilde sizlere ulaştırmak.",
-    "visionTitle": "Vizyonumuz",
-    "vision": "Bölgemizin en sevilen ve güvenilen lezzet adresi olmak.",
-    "valuesTitle": "Değerlerimiz",
-    "values": [
-      { "icon": "🌿", "title": "Tazelik", "desc": "Her gün taze malzeme, günlük hazırlık." },
-      { "icon": "❤️", "title": "Özen", "desc": "Her siparişi kendi siparişimiz gibi hazırlıyoruz." },
-      { "icon": "⚡", "title": "Hız", "desc": "Sıcak ve hızlı teslimat garantisi." }
-    ],
-    "philosophyTitle": "Mutfak Felsefemiz",
-    "philosophyQuote": "İyi malzeme, iyi lezzetin yarısıdır.",
-    "philosophyBody": "Kaliteli malzemeleri özenli bir hazırlıkla buluşturuyoruz. Her tarif, damak tadınıza saygının bir ifadesi.",
-    "foundersTitle": "Ekibimiz",
-    "founders": [],
-    "openingDate": ""
+    ]
   },
   "contact": {
-    "address": "",
+    "address": "Cumhuriyet Mahallesi, İstanbul Caddesi No 151/1, Akçakoca, Düzce",
     "hours": [
-      { "day": "Pazartesi", "open": "11:00", "close": "23:00" },
-      { "day": "Salı", "open": "11:00", "close": "23:00" },
-      { "day": "Çarşamba", "open": "11:00", "close": "23:00" },
-      { "day": "Perşembe", "open": "11:00", "close": "23:00" },
-      { "day": "Cuma", "open": "11:00", "close": "23:00" },
-      { "day": "Cumartesi", "open": "11:00", "close": "23:00" },
-      { "day": "Pazar", "open": "11:00", "close": "23:00" }
+      { "day": "Pazartesi", "open": "11:00", "close": "02:00" },
+      { "day": "Salı", "open": "11:00", "close": "02:00" },
+      { "day": "Çarşamba", "open": "11:00", "close": "02:00" },
+      { "day": "Perşembe", "open": "11:00", "close": "02:00" },
+      { "day": "Cuma", "open": "11:00", "close": "02:00" },
+      { "day": "Cumartesi", "open": "11:00", "close": "02:00" },
+      { "day": "Pazar", "open": "11:00", "close": "02:00" }
     ],
-    "mapEmbedUrl": ""
-  },
-  "blog": [],
-  "game": {
-    "enabled": false,
-    "title": "Pizza Şefi",
-    "brandLabel": "Pizza Şefi",
-    "mark": "🍕"
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12000!2d30.6333!3d41.0889!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zQWvDp2Frb2NhLCBEw7x6Y2U!5e0!3m2!1str!2str!4v1234567890"
   },
   "seo": {
-    "title": "Online Sipariş",
-    "description": "Taze malzemeler, özenle hazırlanan lezzetler ve hızlı teslimat. Online sipariş verin!",
+    "title": "High Five Pizza & Makarna | Akçakoca Düzce - Pizza, Makarna, Sandviç Sipariş",
+    "description": "Akçakoca Düzce'nin en lezzetli pizza, makarna ve sandviç restoranı High Five. El yapımı hamur, taze malzemeler, hızlı teslimat. Akçakoca'da online sipariş ver!",
     "ogImage": "/icon-512x512.png"
   }
 }

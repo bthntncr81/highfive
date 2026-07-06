@@ -109,6 +109,19 @@ export default async function settingsRoutes(server: FastifyInstance) {
     };
   });
 
+  // Public sipariş-sitesi içeriği — tenant kendi hero/hakkımızda/iletişim/blog/oyun
+  // metinlerini 'siteContent' anahtarında saklar. Tenant düzenlemediyse null döner
+  // (order-site kendi content.default.json'una düşer). Sır yok; localStorage cache'lenir.
+  server.get('/public/content', async (request: FastifyRequest) => {
+    const setting = await request.db.settings.findFirst({ where: { key: 'siteContent' } });
+    const tenant = (request as any).tenant as { name?: string; subdomain?: string } | undefined;
+    return {
+      content: setting?.value ?? null,
+      tenantName: tenant?.name ?? null,
+      subdomain: tenant?.subdomain ?? null,
+    };
+  });
+
   // Backup all settings (tenant'ın verisi)
   server.get('/backup', { preHandler: verifyAdmin }, async (request: FastifyRequest) => {
     const settings = await request.db.settings.findMany();
