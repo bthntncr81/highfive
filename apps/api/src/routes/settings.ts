@@ -100,7 +100,8 @@ export default async function settingsRoutes(server: FastifyInstance) {
       ...(t.colors || {}),
     };
     return {
-      name: tenant?.name || t.name || 'OtOrder',
+      // Sahibi Ayarlar'dan özel marka adı girdiyse o öncelikli; yoksa tenant adı.
+      name: t.name || tenant?.name || 'OtOrder',
       subdomain: tenant?.subdomain || null,
       logoUrl: t.logoUrl || null,
       fontFamily: t.fontFamily || 'Inter, system-ui, sans-serif',

@@ -12,6 +12,23 @@
 
 @layer base {
   :root {
+    /* Tenant beyaz-etiket marka rampası — VARSAYILAN = HighFive (birebir).
+       theme.ts tenant marka renginden bu değişkenleri override eder; tema
+       yokken (Akçakoca vb.) görsel değişmez. rgb kanalları (tailwind alpha için). */
+    --brand-DEFAULT: 187 30 16;
+    --brand-dark: 138 22 16;
+    --brand-light: 212 56 42;
+    --brand-50: 254 242 241;
+    --brand-100: 253 227 225;
+    --brand-200: 252 204 200;
+    --brand-300: 249 168 162;
+    --brand-400: 243 114 106;
+    --brand-500: 187 30 16;
+    --brand-600: 160 26 14;
+    --brand-700: 138 22 16;
+    --brand-800: 110 18 13;
+    --brand-900: 90 15 11;
+
     /* Core palette (brand korundu) */
     --color-primary: #bb1e10;
     --color-primary-dark: #8a1610;

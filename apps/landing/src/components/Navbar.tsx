@@ -6,11 +6,18 @@ import { useContent } from '../lib/contentStore'
 import { useLoyalty } from '../lib/loyaltyStore'
 import { LiveOrderStatus } from './LiveOrderStatus'
 import { useSettings } from '../hooks/useSettings'
+import { useTheme } from '../hooks/useTheme'
+import { imageUrl } from '../lib/api'
 
 export const Navbar = () => {
   const { content } = useContent()
   const { member, logout } = useLoyalty()
   const { whatsappEnabled } = useSettings()
+  const theme = useTheme()
+  const brandName = theme?.name || content.site.logoText
+  // Tenant kendi logosunu yüklediyse onu göster; yoksa marka adını yazıyla göster.
+  // /uploads/... yolu imageUrl ile absolute'e çevrilir (tenant build'de API_BASE='').
+  const brandLogo = imageUrl(theme?.logoUrl)
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showMemberMenu, setShowMemberMenu] = useState(false)
@@ -41,13 +48,24 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-[72px]">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <motion.img
-              src="/logo.svg"
-              alt={content.site.logoText}
-              className="h-14 md:h-16 w-auto"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.3 }}
-            />
+            {brandLogo ? (
+              <motion.img
+                src={brandLogo}
+                alt={brandName}
+                className="h-14 md:h-16 w-auto"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.3 }}
+              />
+            ) : (
+              /* Logo yüklenmemiş: markanın adını yazıyla göster */
+              <motion.span
+                className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-primary"
+                whileHover={{ scale: 1.03 }}
+                transition={{ duration: 0.3 }}
+              >
+                {brandName}
+              </motion.span>
+            )}
           </Link>
 
           {/* Desktop Navigation */}

@@ -5,21 +5,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        // HighFive Modern Palette
+        // HighFive Modern Palette — CSS değişkeni tabanlı (tenant beyaz-etiket).
+        // Varsayılanlar globals.css :root'ta HighFive rgb'siyle → tema yokken görsel
+        // BİREBİR aynı; theme.ts tenant marka renginden rampa üretip override eder.
         primary: {
-          DEFAULT: '#bb1e10',
-          dark: '#8a1610',
-          light: '#d4382a',
-          50: '#fef2f1',
-          100: '#fde3e1',
-          200: '#fcccc8',
-          300: '#f9a8a2',
-          400: '#f3726a',
-          500: '#bb1e10',
-          600: '#a01a0e',
-          700: '#8a1610',
-          800: '#6e120d',
-          900: '#5a0f0b',
+          DEFAULT: 'rgb(var(--brand-DEFAULT) / <alpha-value>)',
+          dark: 'rgb(var(--brand-dark) / <alpha-value>)',
+          light: 'rgb(var(--brand-light) / <alpha-value>)',
+          50: 'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          200: 'rgb(var(--brand-200) / <alpha-value>)',
+          300: 'rgb(var(--brand-300) / <alpha-value>)',
+          400: 'rgb(var(--brand-400) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
+          800: 'rgb(var(--brand-800) / <alpha-value>)',
+          900: 'rgb(var(--brand-900) / <alpha-value>)',
         },
         accent: {
           DEFAULT: '#005387',

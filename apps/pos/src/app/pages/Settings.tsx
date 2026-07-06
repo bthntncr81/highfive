@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { Save, Store, Phone, MapPin, Percent, MessageCircle, Mail, Printer, Wifi, TestTube, Link2, Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Store, Phone, MapPin, Percent, MessageCircle, Mail, Printer, Wifi, TestTube, Link2, Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Check, X, ChevronDown, ChevronUp, Palette, Image as ImageIcon, Upload } from 'lucide-react';
 
 interface RestaurantSettings {
   name: string;
@@ -16,6 +16,35 @@ interface WhatsAppSettings {
   phone: string;
   defaultMessage: string;
 }
+
+// Beyaz-etiket marka teması — sipariş sitesine (subdomain) yansır.
+// Renkler hex olarak saklanır; sipariş sitesi theme.ts hem hex hem rgb'yi çözer.
+interface BrandTheme {
+  name: string;
+  logoUrl: string;
+  primary: string;   // #dc2626
+  secondary: string; // #0f172a
+  accent: string;    // #ea580c
+  fontFamily: string;
+}
+
+const DEFAULT_BRAND_THEME: BrandTheme = {
+  name: '',
+  logoUrl: '',
+  primary: '#dc2626',
+  secondary: '#0f172a',
+  accent: '#ea580c',
+  fontFamily: 'Inter, system-ui, sans-serif',
+};
+
+const FONT_OPTIONS = [
+  { value: 'Inter, system-ui, sans-serif', label: 'Inter (modern)' },
+  { value: 'Poppins, system-ui, sans-serif', label: 'Poppins (yuvarlak)' },
+  { value: 'Montserrat, system-ui, sans-serif', label: 'Montserrat (geniş)' },
+  { value: '"Plus Jakarta Sans", system-ui, sans-serif', label: 'Plus Jakarta Sans' },
+  { value: 'Nunito, system-ui, sans-serif', label: 'Nunito (samimi)' },
+  { value: 'Georgia, serif', label: 'Georgia (klasik serif)' },
+];
 
 interface PrinterSettings {
   receiptPrinter: {
@@ -170,6 +199,8 @@ export default function Settings() {
   });
   const [orderNotifyEnabled, setOrderNotifyEnabled] = useState(false);
   const [orderNotifyEmails, setOrderNotifyEmails] = useState('');
+  const [theme, setTheme] = useState<BrandTheme>(DEFAULT_BRAND_THEME);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -210,10 +241,29 @@ export default function Settings() {
         setOrderNotifyEnabled(!!on.enabled);
         setOrderNotifyEmails(Array.isArray(on.emails) ? on.emails.join('\n') : '');
       }
+      if (response.settings?.theme) {
+        setTheme((t) => ({ ...t, ...response.settings.theme }));
+      }
     } catch (error) {
       console.error('Settings fetch error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const res = await api.upload('/api/upload', file, token!);
+      setTheme((t) => ({ ...t, logoUrl: res.file.url }));
+    } catch {
+      setMessage('Logo yükleme hatası');
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setLogoUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -342,6 +392,7 @@ export default function Settings() {
       await api.put('/api/settings/restaurant', { value: restaurant }, token!);
       await api.put('/api/settings/whatsapp', { value: whatsapp }, token!);
       await api.put('/api/settings/services', { value: services }, token!);
+      await api.put('/api/settings/theme', { value: theme }, token!);
       await api.put(
         '/api/settings/orderNotifications',
         {
@@ -398,6 +449,174 @@ export default function Settings() {
           {message}
         </div>
       )}
+
+      {/* Marka & Görünüm — beyaz-etiket (sipariş sitesine yansır) */}
+      <div className="card border-2 border-primary-100">
+        <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+          <Palette className="w-5 h-5 text-primary-500" />
+          Marka &amp; Görünüm
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Logonuz ve renkleriniz sipariş sitenize (kendi adresiniz) otomatik yansır.
+          Müşteriler High Five değil, <strong>sizin markanızı</strong> görür.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Sol: ayarlar */}
+          <div className="space-y-4">
+            {/* Marka adı */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Marka Adı
+              </label>
+              <input
+                type="text"
+                value={theme.name}
+                onChange={(e) => setTheme({ ...theme, name: e.target.value })}
+                className="input"
+                placeholder="Örn. Lezzet Durağı"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Boş bırakırsanız restoran adınız kullanılır.
+              </p>
+            </div>
+
+            {/* Logo yükleme */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <ImageIcon className="w-4 h-4 inline mr-1" />
+                Logo
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="btn btn-secondary flex items-center gap-2 cursor-pointer !py-2">
+                  <Upload className="w-4 h-4" />
+                  {logoUploading ? 'Yükleniyor...' : 'Logo Yükle'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoUpload}
+                    disabled={logoUploading}
+                    className="hidden"
+                  />
+                </label>
+                {theme.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setTheme({ ...theme, logoUrl: '' })}
+                    className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" /> Kaldır
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                PNG / SVG önerilir (şeffaf arka plan). Yoksa marka adınız yazıyla gösterilir.
+              </p>
+            </div>
+
+            {/* Renkler */}
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { key: 'primary', label: 'Ana Renk' },
+                { key: 'secondary', label: 'İkincil' },
+                { key: 'accent', label: 'Vurgu' },
+              ] as const).map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={theme[key]}
+                      onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
+                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white"
+                    />
+                    <input
+                      type="text"
+                      value={theme[key]}
+                      onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
+                      className="input !py-1.5 !px-2 text-xs font-mono uppercase w-full"
+                      placeholder="#dc2626"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Font */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Yazı Tipi</label>
+              <select
+                value={theme.fontFamily}
+                onChange={(e) => setTheme({ ...theme, fontFamily: e.target.value })}
+                className="input"
+              >
+                {FONT_OPTIONS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Sağ: canlı önizleme */}
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Önizleme</p>
+            <div
+              className="rounded-2xl border border-gray-200 overflow-hidden shadow-sm"
+              style={{ fontFamily: theme.fontFamily }}
+            >
+              {/* Sahte navbar */}
+              <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+                {theme.logoUrl ? (
+                  <img
+                    src={theme.logoUrl.startsWith('http') ? theme.logoUrl : `${import.meta.env.VITE_API_URL || ''}${theme.logoUrl}`}
+                    alt="logo"
+                    className="h-8 w-auto"
+                  />
+                ) : (
+                  <span className="font-extrabold text-lg" style={{ color: theme.primary }}>
+                    {theme.name || restaurant.name || 'Markanız'}
+                  </span>
+                )}
+                <span
+                  className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  Sipariş Ver
+                </span>
+              </div>
+              {/* Sahte içerik */}
+              <div className="p-4" style={{ backgroundColor: '#faf9f7' }}>
+                <div className="rounded-xl bg-white p-3 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm" style={{ color: theme.secondary }}>
+                      Margherita Pizza
+                    </span>
+                    <span className="font-bold text-sm" style={{ color: theme.primary }}>₺180</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Domates, mozzarella, fesleğen</p>
+                  <div className="flex gap-2 mt-3">
+                    <span
+                      className="text-[11px] font-bold px-2 py-1 rounded-full text-white"
+                      style={{ backgroundColor: theme.accent }}
+                    >
+                      Popüler
+                    </span>
+                    <span
+                      className="text-[11px] font-semibold px-2 py-1 rounded-full"
+                      style={{ backgroundColor: theme.primary + '18', color: theme.primary }}
+                    >
+                      Sepete Ekle
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Kaydettikten sonra sipariş siteniz otomatik güncellenir.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Restaurant settings */}
       <div className="card">
