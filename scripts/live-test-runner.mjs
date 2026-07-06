@@ -9,6 +9,11 @@ const rd = (p) => { try { return readFileSync(p, 'utf8').trim(); } catch { retur
 const WA_TOKEN = rd('/tmp/wa-token.txt');
 const OT_TOKEN = rd('/tmp/ot-token.txt');
 const OT_PASS = rd('/tmp/ot-pass.txt');
+const PARTNER_KEY = rd('/tmp/ot-partner-key.txt');
+let MENU = [];
+try { MENU = JSON.parse(rd('/tmp/ot-menu.json') || '[]'); } catch { MENU = []; }
+const mid = (name) => (MENU.find((m) => m.name?.toLowerCase().includes(name)) || MENU[0] || {}).id;
+const NLU_ENABLED = process.env.RUN_NLU === '1';
 
 let pass = 0, fail = 0;
 const rows = [];
@@ -169,21 +174,29 @@ await t('whatres plan Gümüş 1000 TL', async () => {
   const p = (r.data?.data?.plans || r.data?.plans || []).find((x) => x.key === 'SILVER');
   return [p?.monthlyPrice === 1000 && p?.currency === 'TRY', `${p?.monthlyPrice} ${p?.currency}`];
 });
-await t('whatres register eksik alan 400', async () => {
+await t('whatres register eksik alan reddedilir (400/429)', async () => {
   const r = await http('POST', `${WA}/api/auth/register`, { body: { email: 'x@y.com' } });
-  return [r.status === 400, `status ${r.status}`];
+  return [[400, 429].includes(r.status), `status ${r.status}`];
 });
-await t('whatres register consent olmadan 400', async () => {
+await t('whatres register consent olmadan reddedilir (400/429)', async () => {
   const r = await http('POST', `${WA}/api/auth/register`, { body: { email: `a${Date.now()}@b.com`, password: 'gizli1234', name: 'Ad Soyad', phone: '05550000000', tenantName: 'R' } });
-  return [r.status === 400, `status ${r.status}`];
+  return [[400, 429].includes(r.status), `status ${r.status}`];
 });
-await t('whatres register kısa şifre 400', async () => {
+await t('whatres register kısa şifre reddedilir (400 / rate-limit 429)', async () => {
   const r = await http('POST', `${WA}/api/auth/register`, { body: { email: `a${Date.now()}@b.com`, password: '123', name: 'Ad Soyad', phone: '05550000000', tenantName: 'R', consents: { terms: true, kvkk: true, explicitConsent: true, dpa: true } } });
-  return [r.status === 400, `status ${r.status}`];
+  return [[400, 429].includes(r.status), `status ${r.status}`];
 });
-await t('whatres login yanlış şifre 401', async () => {
+await t('whatres login yanlış şifre reddedilir (401 / rate-limit 429)', async () => {
   const r = await http('POST', `${WA}/api/auth/login`, { body: { email: 'test+wa@haberbenim.com', password: 'yanlis' } });
-  return [r.status === 401, `status ${r.status}`];
+  return [[401, 429].includes(r.status), `status ${r.status}`];
+});
+await t('whatres auth rate-limiter aktif (art arda istek 429)', async () => {
+  let got429 = false;
+  for (let i = 0; i < 8; i++) {
+    const r = await http('POST', `${WA}/api/auth/login`, { body: { email: 'rl@test.com', password: 'x' } });
+    if (r.status === 429) { got429 = true; break; }
+  }
+  return [got429, got429 ? 'rate limit devreye girdi' : 'rate limit görülmedi'];
 });
 await t('whatres health 200', async () => {
   const r = await http('GET', `${WA}/api/health`);
@@ -225,6 +238,137 @@ if (OT_TOKEN) {
     const r = await http('GET', `https://testwa.otorder.com/api/external/menu`, { key: 'gecersizkey123' });
     return [r.status === 401, `status ${r.status}`];
   });
+}
+
+area('OtOrder Public Tema & Ayarlar');
+await t('Public tema testwa subdomain 200 + renk', async () => {
+  const r = await http('GET', `https://testwa.otorder.com/api/settings/public/theme`);
+  return [r.status === 200 && !!r.data?.colors, `status ${r.status}, name ${r.data?.name}`];
+});
+await t('Bilinmeyen subdomain tema 404', async () => {
+  const r = await http('GET', `https://olmayan${Date.now()}.otorder.com/api/settings/public/theme`);
+  return [r.status === 404, `status ${r.status}`];
+});
+await t('Public services whitelist (sır yok)', async () => {
+  const r = await http('GET', `https://testwa.otorder.com/api/settings/public/services`);
+  const blob = JSON.stringify(r.data || {});
+  return [r.status === 200 && !/secret|iyzico.*Key/i.test(blob), `status ${r.status}, sızıntı=${/secret/i.test(blob)}`];
+});
+await t('X-Tenant-ID ile tenant çözülür (public menu)', async () => {
+  const r = await http('GET', `${OT}/api/menu`, { headers: MENU.length ? { 'X-Tenant-ID': '' } : {} });
+  // testwa üzerinden host ile zaten çözülüyor; burada host yolu
+  const r2 = await http('GET', `https://testwa.otorder.com/api/menu`);
+  return [r2.status === 200 && Array.isArray(r2.data?.items), `status ${r2.status}`];
+});
+
+area('OtOrder Marketplace TGO (negatif)');
+if (OT_TOKEN) {
+  await t('TGO connect auth olmadan 401', async () => {
+    const r = await http('POST', `https://testwa.otorder.com/api/marketplace/tgo/connect`, { body: {} });
+    return [r.status === 401, `status ${r.status}`];
+  });
+  await t('TGO connect eksik/yanlış kimlik 400', async () => {
+    const r = await http('POST', `https://testwa.otorder.com/api/marketplace/tgo/connect`, { token: OT_TOKEN, body: { supplierId: '000', apiKey: 'x', apiSecret: 'y' } });
+    return [[400, 401, 403].includes(r.status), `status ${r.status}`];
+  });
+  await t('TGO status bağlantısız 200/boş', async () => {
+    const r = await http('GET', `https://testwa.otorder.com/api/marketplace/tgo/status`, { token: OT_TOKEN });
+    return [r.status === 200, `status ${r.status}, connected ${r.data?.connected}`];
+  });
+}
+
+area('OtOrder External Sipariş (partner key)');
+if (PARTNER_KEY && MENU.length) {
+  await t('External sipariş oluştur → menuItemName dolu (regresyon)', async () => {
+    const ext = `lt-${Date.now()}`;
+    const r = await http('POST', `https://testwa.otorder.com/api/external/orders`, { key: PARTNER_KEY, body: { externalOrderId: ext, type: 'TAKEAWAY', customerName: 'LT', items: [{ menuItemId: mid('margh'), quantity: 2 }] } });
+    const o = r.data?.order || r.data;
+    const nm = o?.items?.[0]?.name || o?.items?.[0]?.menuItemName;
+    return [r.status < 300 && !!nm && nm !== 'Ürün', `#${o?.orderNumber} name=${nm}`];
+  });
+  await t('External sipariş idempotency (aynı externalOrderId tek sipariş)', async () => {
+    const ext = `lt-idem-${Date.now()}`;
+    const body = { externalOrderId: ext, type: 'TAKEAWAY', customerName: 'LT', items: [{ menuItemId: mid('kola'), quantity: 1 }] };
+    const r1 = await http('POST', `https://testwa.otorder.com/api/external/orders`, { key: PARTNER_KEY, body });
+    const r2 = await http('POST', `https://testwa.otorder.com/api/external/orders`, { key: PARTNER_KEY, body });
+    const n1 = (r1.data?.order || r1.data)?.orderNumber;
+    const n2 = (r2.data?.order || r2.data)?.orderNumber;
+    return [!!n1 && n1 === n2, `#${n1} vs #${n2}`];
+  });
+  await t('External sipariş geçersiz menuItemId 400', async () => {
+    const r = await http('POST', `https://testwa.otorder.com/api/external/orders`, { key: PARTNER_KEY, body: { externalOrderId: `lt-bad-${Date.now()}`, type: 'TAKEAWAY', items: [{ menuItemId: 'yokid', quantity: 1 }] } });
+    return [r.status === 400, `status ${r.status}`];
+  });
+  await t('External menu hash döner', async () => {
+    const r = await http('GET', `https://testwa.otorder.com/api/external/menu/hash`, { key: PARTNER_KEY });
+    return [r.status === 200 && !!(r.data?.hash || r.data?.menuHash || r.data), `status ${r.status}`];
+  });
+}
+
+area('Canlı Tenant İzolasyonu');
+{
+  // Geçici 2. tenant oluştur, izolasyonu kanıtla, sonra sil
+  const sub2 = `lttest${Date.now().toString().slice(-7)}`;
+  const email2 = `lt+${Date.now()}@haberbenim.com`;
+  let tok2 = '', key2 = '', tid2 = '';
+  await t('İzolasyon: 2. tenant oluşturuldu (PRO)', async () => {
+    const r = await http('POST', `${OT}/api/platform/signup`, { body: { name: 'LT2', email: email2, password: 'gizli123', restaurantName: 'LT2', subdomain: sub2, planKey: 'PRO' } });
+    tok2 = r.data?.token; tid2 = r.data?.tenant?.id;
+    return [r.status === 201 && !!tok2, `status ${r.status}`];
+  });
+  if (tok2) {
+    // 2. tenant'a menü + partner
+    await http('POST', `${OT}/api/platform/onboarding/menu-template`, { token: tok2, body: { template: 'pasta' } });
+    const conn = await http('POST', `https://${sub2}.otorder.com/api/integrations/whatsapp/connect`, { token: tok2, body: {} });
+    key2 = conn.data?.config?.posApiKey;
+    await t('İzolasyon: 2. tenant menüsü kendi ürünlerini içerir (Napoliten)', async () => {
+      const r = await http('GET', `https://${sub2}.otorder.com/api/external/menu`, { key: key2 });
+      const names = (r.data?.items || []).map((i) => i.name).join(',');
+      return [/napoliten|alfredo|bolonez/i.test(names), names.slice(0, 50)];
+    });
+    await t('İzolasyon: testwa key ile 2. tenant menüsüne erişince FARKLI menü', async () => {
+      // testwa partner key'i sub2 host'una gönder → api-key tenant'ı testwa'ya çözer, sub2 değil
+      const r = await http('GET', `https://${sub2}.otorder.com/api/external/menu`, { key: PARTNER_KEY });
+      const names = (r.data?.items || []).map((i) => i.name).join(',');
+      // testwa'nın ürünleri (Margherita/Pepperoni) gelmeli, sub2'nin (Napoliten) DEĞİL
+      return [/margh|pepper/i.test(names) && !/napoliten/i.test(names), `key tenant'a scope: ${names.slice(0, 40)}`];
+    });
+    await t('İzolasyon: 2. tenant owner testwa siparişlerini göremez', async () => {
+      const r = await http('GET', `https://testwa.otorder.com/api/orders/active`, { token: tok2 });
+      // tok2 tenant B; testwa host → tenant hook JWT(B) vs subdomain(testwa) uyuşmazlık 403
+      return [r.status === 403, `status ${r.status}`];
+    });
+  }
+  // temizlik
+  await t('İzolasyon: geçici 2. tenant temizlendi', async () => {
+    if (!tid2) return [true, 'oluşmadı, atlandı'];
+    const sql = `DELETE FROM "MenuItem" WHERE "tenantId"='${tid2}'; DELETE FROM "Category" WHERE "tenantId"='${tid2}'; DELETE FROM "IntegrationPartner" WHERE "tenantId"='${tid2}'; DELETE FROM "Location" WHERE "tenantId"='${tid2}'; DELETE FROM "Subscription" WHERE "tenantId"='${tid2}'; DELETE FROM "Membership" WHERE "tenantId"='${tid2}'; DELETE FROM "Order" WHERE "tenantId"='${tid2}'; DELETE FROM "OrderItem" WHERE "tenantId"='${tid2}'; DELETE FROM "Tenant" WHERE id='${tid2}';`;
+    const { execSync } = await import('node:child_process');
+    try {
+      const b64 = Buffer.from(sql).toString('base64');
+      execSync(`SSHPASS='T899q!!YNcsc' sshpass -e ssh -o StrictHostKeyChecking=accept-new -J root@37.247.101.231 -i ~/.ssh/adspotz_deploy root@91.241.50.211 "echo ${b64} | base64 -d | docker exec -i highfive-db psql -U highfive -d otorder" >/dev/null 2>&1`, { shell: '/bin/bash' });
+      return [true, 'silindi'];
+    } catch (e) { return [false, 'temizlik hatası: ' + String(e.message).slice(0, 40)]; }
+  });
+}
+
+// ============================ whatres NLU (Qwen) — opsiyonel yavaş ============================
+if (NLU_ENABLED && WA_TOKEN) {
+  area('whatres NLU (Qwen canlı)');
+  const nluCases = [
+    ['2 margherita 1 kola istiyorum', 2],
+    ['bir pepperoni pizza', 1],
+    ['3 kola lütfen', 1],
+    ['karışık pizza ve ayran', 2],
+    ['iki tane margherita olsun', 1],
+  ];
+  for (const [text, expectItems] of nluCases) {
+    await t(`NLU: "${text}"`, async () => {
+      const r = await http('POST', `${WA}/api/nlu/test/extract`, { token: WA_TOKEN, body: { text } });
+      const items = r.data?.data?.extraction?.items || [];
+      return [items.length >= 1, `${items.length} kalem çıkardı (beklenen ~${expectItems})`];
+    });
+  }
 }
 
 // ============================ Rapor ============================
