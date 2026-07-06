@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { RevealOnScroll } from './RevealOnScroll'
+import { useContent } from '../lib/contentStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -41,6 +42,7 @@ const StarRow = ({ count, size = 16 }: { count: number; size?: number }) => (
 )
 
 export const GoogleReviews = () => {
+  const { content } = useContent()
   const [data, setData] = useState<ReviewsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -189,12 +191,12 @@ export const GoogleReviews = () => {
           `}</style>
         </div>
 
-        {/* CTA — Google'da görüntüle */}
-        {data.source === 'google' && (
+        {/* CTA — Google'da görüntüle (tenant kendi Google Maps linkini verdiyse) */}
+        {data.source === 'google' && content.links?.googleMaps && (
           <RevealOnScroll>
             <div className="text-center mt-8">
               <a
-                href="https://www.google.com/maps/search/highfive+pizza+akcakoca"
+                href={content.links.googleMaps}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-primary font-display font-bold hover:underline"

@@ -6,17 +6,18 @@ export const createWhatsAppLink = (phone: string, message: string) => {
   return `https://wa.me/${sanitized}?text=${text}`
 }
 
-export const createWhatsAppOrderLink = (phone: string, items: CartItem[]) => {
+export const createWhatsAppOrderLink = (phone: string, items: CartItem[], brandName = '') => {
   const sanitized = phone.replace(/\D/g, '')
-  
+
   // Build order message
-  const orderLines = items.map((ci) => 
+  const orderLines = items.map((ci) =>
     `• ${ci.item.name} x${ci.quantity} = ₺${ci.item.price * ci.quantity}`
   )
-  
+
   const totalPrice = items.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0)
-  
-  const message = `🍕 *YENİ SİPARİŞ - High Five*
+
+  const header = brandName ? `YENİ SİPARİŞ - ${brandName}` : 'YENİ SİPARİŞ'
+  const message = `🍕 *${header}*
 
 ${orderLines.join('\n')}
 

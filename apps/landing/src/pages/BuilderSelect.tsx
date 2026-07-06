@@ -7,17 +7,20 @@ import { motion } from 'framer-motion'
 import { Pizza, Sandwich, ArrowRight, Sparkles } from 'lucide-react'
 import { SectionContainer } from '../components/SectionContainer'
 import { RevealOnScroll } from '../components/RevealOnScroll'
+import { useContent } from '../lib/contentStore'
 
 export default function BuilderSelect() {
+  const { content } = useContent()
+
   useEffect(() => {
-    document.title = 'Pizza ya da Sandviç Tasarla | HighFive'
+    document.title = `Pizza ya da Sandviç Tasarla | ${content.site.name || 'Restoranımız'}`
     const meta = document.querySelector('meta[name="description"]')
     if (meta)
       meta.setAttribute(
         'content',
         '5 adımda kendi pizzanı ya da sandviçini tasarla — hamur, sos, peynir, içerik. Anlık 2D önizleme.',
       )
-  }, [])
+  }, [content.site.name])
 
   return (
     <main>

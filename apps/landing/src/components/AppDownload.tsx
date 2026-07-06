@@ -5,12 +5,18 @@ import { motion } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import { Smartphone, Star, Gift, Sparkles, Rocket, Camera } from 'lucide-react'
 import { RevealOnScroll } from './RevealOnScroll'
-
-const APP_STORE_URL = 'https://apps.apple.com/tr/app/highfive-pizza/id6768074077'
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.highfive.mobile'
-const APP_LANDING = 'https://highfivepps.com/app' // device-aware redirect
+import { useContent } from '../lib/contentStore'
 
 export const AppDownload = () => {
+  const { content } = useContent()
+  const APP_STORE_URL = content.site.appStoreUrl || ''
+  const PLAY_STORE_URL = content.site.playStoreUrl || ''
+  const APP_LANDING = content.site.appLandingUrl || APP_STORE_URL || PLAY_STORE_URL
+  const brand = content.site.name || 'Markamız'
+
+  // Markalı mobil app (Kurumsal paket) yoksa bu bölüm gösterilmez.
+  if (!APP_STORE_URL && !PLAY_STORE_URL) return null
+
   return (
     <section className="relative overflow-hidden py-20 px-4" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
       {/* Decorative blobs */}
@@ -30,7 +36,7 @@ export const AppDownload = () => {
                 <span style={{ color: '#fbbf24' }}>Hep Daha Çok Kazan</span>
               </h2>
               <p className="font-body text-lg text-white/80 mb-6 max-w-xl">
-                HighFive mobil uygulamasıyla daha hızlı sipariş ver, otomatik puan kazan, sürpriz kuponlar aç ve sadece uygulamaya özel kampanyalardan yararlan.
+                {brand} mobil uygulamasıyla daha hızlı sipariş ver, otomatik puan kazan, sürpriz kuponlar aç ve sadece uygulamaya özel kampanyalardan yararlan.
               </p>
 
               {/* Faydalar */}
@@ -56,6 +62,7 @@ export const AppDownload = () => {
 
               {/* Store badges */}
               <div className="flex flex-wrap gap-3">
+                {APP_STORE_URL && (
                 <a
                   href={APP_STORE_URL}
                   target="_blank"
@@ -70,6 +77,8 @@ export const AppDownload = () => {
                     <div className="font-display font-bold text-lg leading-tight">İndir</div>
                   </div>
                 </a>
+                )}
+                {PLAY_STORE_URL && (
                 <a
                   href={PLAY_STORE_URL}
                   target="_blank"
@@ -87,6 +96,7 @@ export const AppDownload = () => {
                     <div className="font-display font-bold text-lg leading-tight">İndir</div>
                   </div>
                 </a>
+                )}
               </div>
             </RevealOnScroll>
           </div>

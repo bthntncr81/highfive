@@ -2,19 +2,23 @@
 
 import { useEffect } from 'react'
 import { Link, useParams, Navigate } from 'react-router-dom'
-import { blogPosts, getPostBySlug } from '../lib/blogPosts'
+import { useContent } from '../lib/contentStore'
 import { SectionContainer } from '../components/SectionContainer'
 import { HfPizza } from '../components/BrandIcons'
 
 export const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>()
-  const post = slug ? getPostBySlug(slug) : undefined
+  const { content } = useContent()
+  const posts = content.blog || []
+  const siteName = content.site?.name || 'Blog'
+  const domain = content.site?.domain
+  const post = slug ? posts.find((p) => p.slug === slug) : undefined
 
   useEffect(() => {
     if (!post) return
 
     // SEO meta
-    document.title = `${post.title} | HighFive Blog`
+    document.title = `${post.title} | ${siteName}`
     const updateMeta = (selector: string, content: string) => {
       const el = document.querySelector(selector)
       if (el) el.setAttribute('content', content)
@@ -36,27 +40,35 @@ export const BlogPost = () => {
       headline: post.title,
       description: post.metaDescription,
       datePublished: post.publishedAt,
-      author: { '@type': 'Organization', name: 'HighFive Pizza & Makarna' },
+      author: { '@type': 'Organization', name: siteName },
       publisher: {
         '@type': 'Organization',
-        name: 'HighFive Pizza & Makarna',
-        logo: {
-          '@type': 'ImageObject',
-          url: 'https://highfivepps.com/logo.svg',
-        },
+        name: siteName,
+        ...(domain
+          ? {
+              logo: {
+                '@type': 'ImageObject',
+                url: `https://${domain}/logo.svg`,
+              },
+            }
+          : {}),
       },
       keywords: post.tags.join(', '),
-      mainEntityOfPage: {
-        '@type': 'WebPage',
-        '@id': `https://highfivepps.com/blog/${post.slug}`,
-      },
+      ...(domain
+        ? {
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': `https://${domain}/blog/${post.slug}`,
+            },
+          }
+        : {}),
     })
     document.head.appendChild(script)
 
     return () => {
       document.getElementById(ldId)?.remove()
     }
-  }, [post])
+  }, [post, siteName, domain])
 
   if (!slug) return <Navigate to="/blog" replace />
   if (!post) return <Navigate to="/blog" replace />
@@ -136,7 +148,7 @@ export const BlogPost = () => {
               Acıktın mı?
             </h3>
             <p className="text-white/80 text-sm mb-5">
-              HighFive uygulamasıyla saniyeler içinde sipariş ver, üye ol, kazandıran kampanyaları kaçırma.
+              {siteName} ile saniyeler içinde sipariş ver, üye ol, kazandıran kampanyaları kaçırma.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
@@ -157,12 +169,13 @@ export const BlogPost = () => {
       </article>
 
       {/* Related */}
+      {posts.filter((p) => p.slug !== slug).length > 0 && (
       <SectionContainer variant="paper">
         <h2 className="font-heading font-bold text-2xl mb-6 text-center">
           Diğer Yazılar
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {blogPosts
+          {posts
             .filter((p) => p.slug !== slug)
             .slice(0, 3)
             .map((p) => (
@@ -191,6 +204,7 @@ export const BlogPost = () => {
             ))}
         </div>
       </SectionContainer>
+      )}
     </main>
   )
 }

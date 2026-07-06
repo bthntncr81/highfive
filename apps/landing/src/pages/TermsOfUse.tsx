@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion'
+import { useContent } from '../lib/contentStore'
 
 export const TermsOfUse = () => {
+  const { content } = useContent()
+  const siteName = content.site?.name || 'Restoranımız'
+  const domain = content.site?.domain || ''
+  const address = content.contact?.address || ''
+  const phone = content.links?.phoneTel || content.whatsapp?.phone || ''
   return (
     <main className="min-h-screen bg-white">
       <div className="bg-primary py-12 text-center">
@@ -12,7 +18,7 @@ export const TermsOfUse = () => {
           <p><strong>Son Güncelleme:</strong> 10 Mayıs 2026</p>
 
           <h2 className="text-xl font-bold text-gray-900">1. Taraflar</h2>
-          <p>İşbu Üyelik Sözleşmesi ("Sözleşme"), <strong>High Five Pizza & Makarna</strong> ("Şirket" veya "HighFive") ile HighFive web sitesi (highfivepps.com) ya da HighFive mobil uygulamalarını ("Platform") kullanarak üye olan kişi ("Üye" veya "Kullanıcı") arasında elektronik ortamda kurulmuştur.</p>
+          <p>İşbu Üyelik Sözleşmesi ("Sözleşme"), <strong>{siteName}</strong> ("Şirket") ile {siteName} web sitesi{domain && <> ({domain})</>} ya da {siteName} mobil uygulamalarını ("Platform") kullanarak üye olan kişi ("Üye" veya "Kullanıcı") arasında elektronik ortamda kurulmuştur.</p>
 
           <h2 className="text-xl font-bold text-gray-900">2. Sözleşmenin Konusu</h2>
           <p>Sözleşme, Üye'nin Platform üzerinden yararlanacağı hizmetleri ve hizmetlere ilişkin tarafların hak ve yükümlülüklerini düzenler. Üye, Platform'a üye olduğu anda bu sözleşmeyi kabul etmiş sayılır.</p>
@@ -38,7 +44,7 @@ export const TermsOfUse = () => {
           <h2 className="text-xl font-bold text-gray-900">6. Sipariş ve Ödeme</h2>
           <p>Sipariş verilen ürünlerin fiyatları, sipariş anında Platform üzerinde gösterilen fiyatlardır. Ödemeler iyzico 3D Secure altyapısı üzerinden güvenli şekilde alınır. Sipariş onaylandıktan sonra hazırlık süreci başlar; hazırlığa başlanmış siparişler iptal edilemez.</p>
 
-          <h2 className="text-xl font-bold text-gray-900">7. Sadakat Programı (HighFive Puan)</h2>
+          <h2 className="text-xl font-bold text-gray-900">7. Sadakat Programı ({siteName} Puan)</h2>
           <ul className="list-disc pl-6 space-y-1">
             <li>Sadakat puanları yalnızca tamamlanan siparişlerden kazanılır.</li>
             <li>Puanlar, Şirket tarafından belirlenen kurallar çerçevesinde indirim veya hediye ürün olarak kullanılabilir.</li>
@@ -58,7 +64,7 @@ export const TermsOfUse = () => {
 
           <h2 className="text-xl font-bold text-gray-900">11. Hesabın Askıya Alınması veya Sonlandırılması</h2>
           <p>Şirket, Üye'nin işbu sözleşmeyi veya yasal düzenlemeleri ihlal etmesi durumunda, hesabı askıya alma veya tamamen kapatma hakkını saklı tutar. Bu durumda kazanılmış puanlar iptal edilebilir.</p>
-          <p>Üye, dilediği zaman uygulama içinden veya 0555 243 81 81 numarasından bize ulaşarak hesabını silmesini talep edebilir.</p>
+          <p>Üye, dilediği zaman uygulama içinden veya {phone} numarasından bize ulaşarak hesabını silmesini talep edebilir.</p>
 
           <h2 className="text-xl font-bold text-gray-900">12. Sözleşme Değişiklikleri</h2>
           <p>Şirket, işbu sözleşmeyi değiştirme hakkını saklı tutar. Önemli değişiklikler Üye'ye e-posta veya uygulama içi bildirimle iletilir. Üye, değişiklik sonrası Platform'u kullanmaya devam ettiği takdirde yeni sözleşmeyi kabul etmiş sayılır.</p>
@@ -67,10 +73,10 @@ export const TermsOfUse = () => {
           <p>Şirket, Platform'da kesintisiz hizmet sunmaya çalışır ancak teknik arıza, mücbir sebep veya üçüncü taraf hizmet kesintilerinden kaynaklanan kesintilerden sorumlu tutulamaz. Şirket'in toplam sorumluluğu, Üye'nin son 12 ay içinde Platform üzerinden yaptığı toplam harcama ile sınırlıdır.</p>
 
           <h2 className="text-xl font-bold text-gray-900">14. Uyuşmazlık Çözümü ve Yetkili Mahkeme</h2>
-          <p>İşbu sözleşmeden doğan uyuşmazlıklarda Türkiye Cumhuriyeti yasaları uygulanır. Tüketici uyuşmazlıkları için T.C. Ticaret Bakanlığı tarafından her yıl belirlenen parasal limit dahilinde Tüketici Hakem Heyetleri, üzerindeki uyuşmazlıklarda Düzce Tüketici Mahkemeleri yetkilidir.</p>
+          <p>İşbu sözleşmeden doğan uyuşmazlıklarda Türkiye Cumhuriyeti yasaları uygulanır. Tüketici uyuşmazlıkları için T.C. Ticaret Bakanlığı tarafından her yıl belirlenen parasal limit dahilinde Tüketici Hakem Heyetleri, üzerindeki uyuşmazlıklarda yetkili Tüketici Mahkemeleri ve İcra Daireleri yetkilidir.</p>
 
           <h2 className="text-xl font-bold text-gray-900">15. İletişim</h2>
-          <p>High Five Pizza & Makarna<br />Cumhuriyet Mahallesi, İstanbul Caddesi No 151/1, Akçakoca, Düzce<br />Tel: 0555 243 81 81<br />E-posta: info@highfivepps.com</p>
+          <p>{siteName}<br />{address && <>{address}<br /></>}Tel: {phone}<br />E-posta: info@{domain || 'siteniz.com'}</p>
         </motion.div>
       </div>
     </main>

@@ -102,6 +102,9 @@ export type Content = {
     primaryColor: string
     accentColor: string
     domain?: string // JSON-LD url/logo için (ör. "testwa.otorder.com")
+    appStoreUrl?: string // markalı mobil app (Kurumsal paket) — boşsa indirme bölümü gizlenir
+    playStoreUrl?: string
+    appLandingUrl?: string
   }
   whatsapp: {
     phone: string
@@ -122,6 +125,8 @@ export type Content = {
   menu: MenuContent
   about: AboutContent
   contact: ContactContent
+  blog?: BlogPost[]
+  game?: GameContent
   seo: {
     title: string
     description: string

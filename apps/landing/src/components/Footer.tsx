@@ -174,7 +174,7 @@ export const Footer = () => {
             © {currentYear} {content.site.name}. Tüm hakları saklıdır.
           </p>
           <p className="font-body text-white/40 text-sm">
-            High Five
+            {content.site.name || 'Restoranımız'}
           </p>
         </div>
       </div>

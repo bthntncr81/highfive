@@ -3,6 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../lib/cartStore';
 import { useLoyalty } from '../lib/loyaltyStore';
+import { useContent } from '../lib/contentStore';
+import { useTheme } from '../hooks/useTheme';
+import { imageUrl } from '../lib/api';
 
 // Credit card formatting helpers
 const formatCardNumber = (value: string) => {
@@ -237,6 +240,10 @@ export const Payment = () => {
 
   const { items, totalPrice, clearCart, tableSession, clearTableSession } = useCart();
   const { member, refreshMember } = useLoyalty();
+  const { content } = useContent();
+  const theme = useTheme();
+  const brandName = theme?.name || content.site.name;
+  const brandLogo = imageUrl(theme?.logoUrl);
 
   const [step, setStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -264,6 +271,7 @@ export const Payment = () => {
     // ve iyzico'nun popup'ta açılan domain'leri.
     const TRUSTED_ORIGINS = [
       window.location.origin, // kendi domain (callback HTML'i bu origin'den iletilirse)
+      'https://api.otorder.com',
       'https://api.highfivepps.com',
       'https://highfivepps.com',
       'https://order.highfivepps.com',
@@ -278,6 +286,7 @@ export const Payment = () => {
       const isTrusted =
         TRUSTED_ORIGINS.includes(origin) ||
         /\.iyzipay\.com$/.test(new URL(origin || 'https://x').host) ||
+        origin.endsWith('.otorder.com') ||
         origin.endsWith('.highfivepps.com');
 
       if (!isTrusted) {
@@ -543,13 +552,17 @@ ${decodedHtml}
           animate={{ y: 0, opacity: 1 }}
           className="text-center mb-6"
         >
-          <motion.img
-            src="/logo.svg"
-            alt="High Five"
-            className="w-20 h-20 mx-auto mb-2 object-contain"
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 4 }}
-          />
+          {brandLogo ? (
+            <motion.img
+              src={brandLogo}
+              alt={brandName}
+              className="w-20 h-20 mx-auto mb-2 object-contain"
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 4 }}
+            />
+          ) : (
+            <div className="text-3xl font-display font-extrabold text-primary mb-2">{brandName}</div>
+          )}
           <h1 className="font-display text-2xl text-foreground">
             Güvenli Ödeme
           </h1>

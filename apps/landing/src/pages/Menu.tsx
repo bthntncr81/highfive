@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useContent } from '../lib/contentStore'
 import { useCart } from '../lib/cartStore'
-import { orderApi, happyHourApi, type HappyHour, type Category, type MenuItem as APIMenuItem } from '../lib/api'
+import { orderApi, happyHourApi, imageUrl, type HappyHour, type Category, type MenuItem as APIMenuItem } from '../lib/api'
+import { useTheme } from '../hooks/useTheme'
 import { SectionContainer } from '../components/SectionContainer'
 import { MenuGridFromAPI } from '../components/MenuGridFromAPI'
 import { BundleSection } from '../components/BundleSection'
@@ -27,6 +28,9 @@ const CatIcon = ({ name, className }: { name?: string; className?: string }) => 
 
 export const Menu = () => {
   const { content } = useContent()
+  const theme = useTheme()
+  const brandName = theme?.name || content.site.name || 'Restoranımız'
+  const brandLogo = imageUrl(theme?.logoUrl)
   const { tableSession, clearTableSession } = useCart()
   const { whatsappEnabled, services } = useSettings()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -194,13 +198,23 @@ export const Menu = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <motion.img
-            src="/logo-white.svg"
-            alt="High Five"
-            className="h-28 md:h-36 w-auto mx-auto mb-4 drop-shadow-2xl"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ repeat: Infinity, duration: 3 }}
-          />
+          {brandLogo ? (
+            <motion.img
+              src={brandLogo}
+              alt={brandName}
+              className="h-28 md:h-36 w-auto mx-auto mb-4 drop-shadow-2xl"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ repeat: Infinity, duration: 3 }}
+            />
+          ) : (
+            <motion.div
+              className="font-heading font-extrabold text-4xl md:text-5xl text-white mx-auto mb-4 drop-shadow-2xl"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ repeat: Infinity, duration: 3 }}
+            >
+              {brandName}
+            </motion.div>
+          )}
           <h1 className="font-heading font-bold text-5xl md:text-6xl text-white mb-4">
             Menümüz
           </h1>

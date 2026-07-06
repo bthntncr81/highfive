@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>High Five Pizza Şefi 🍕</title>
+<title>Pizza Şefi 🍕</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -147,7 +147,7 @@
 <body>
 <div class="stage" id="stage">
   <div class="hud">
-    <div class="brand"><span class="mark font-d">5</span><b class="font-d">Pizza Şefi</b></div>
+    <div class="brand"><span class="mark font-d" id="brandMark">🍕</span><b class="font-d" id="brandLabel">Pizza Şefi</b></div>
     <div class="stat"><b id="score">0</b><span>Skor</span></div>
     <div class="stat"><b id="combo">x1</b><span>Seri</span></div>
     <div class="stat"><b id="day">1</b><span>Gün</span></div>
@@ -196,7 +196,7 @@
 
   <div class="screen show" id="startScreen">
     <div class="big-emoji">🍕👨‍🍳</div>
-    <h1>High Five<br><span class="r">Pizza Şefi</span></h1>
+    <h1><span id="startName"></span><span class="r" id="startTitle">Pizza Şefi</span></h1>
     <p>Müşteriler geldi! Doğru pizzayı yap, fırında pişir, zamanında servis et.</p>
     <div class="how">
       <b>🧀 Malzeme ekle</b> — siparişteki malzemelerin aynısını koy.<br>
@@ -246,7 +246,34 @@ const TOPPINGS=[
 function shuffle(a){ return [...a].sort(()=>Math.random()-.5); }
 const AVATARS=['🧑','👩','👨','🧔','👵','👴','🧒','🙂','😀','😎','🤠','😺'];
 const $=id=>document.getElementById(id);
-const API_BASE = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '' : 'https://api.highfivepps.com';
+// Subdomain'de /api aynı origin'den proxy'leniyor; localhost dev'de Vite proxy'si var.
+const API_BASE = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '' : location.origin;
+
+// ---- Beyaz-etiket: tenant marka/başlık/mark/renk query paramından okunur ----
+// name=restoran adı, title=oyun başlığı, mark=logo işareti, primary=marka rengi.
+// Hiçbiri gelmezse nötr fallback ('Oyun'/'Pizza Şefi'/'🍕') — "High Five" YAZILMAZ.
+(function applyBranding(){
+  const q = new URLSearchParams(location.search);
+  const name = (q.get('name')||'').trim();
+  const title = (q.get('title')||'').trim() || 'Pizza Şefi';
+  const mark = (q.get('mark')||'').trim() || '🍕';
+  const primary = (q.get('primary')||'').trim();
+
+  // Sekme başlığı
+  document.title = (name ? name+' — ' : '') + title + ' 🍕';
+  // HUD marka
+  const brandMark = $('brandMark'); if(brandMark) brandMark.textContent = mark;
+  const brandLabel = $('brandLabel'); if(brandLabel) brandLabel.textContent = title;
+  // Başlangıç ekranı H1 (restoran adı satırı + başlık satırı)
+  const startName = $('startName'); if(startName) startName.innerHTML = name ? escapeHtml(name)+'<br>' : '';
+  const startTitle = $('startTitle'); if(startTitle) startTitle.textContent = title;
+  // Marka rengi: --red'i tenant primary'siyle ez (geçerli görünen bir renkse)
+  if(primary && /^#?[0-9a-fA-F]{3,8}$|^(rgb|hsl)/.test(primary)){
+    const val = /^[0-9a-fA-F]{3,8}$/.test(primary) ? '#'+primary : primary;
+    document.documentElement.style.setProperty('--red', val);
+    document.documentElement.style.setProperty('--red-d', val);
+  }
+})();
 
 let S={};
 function reset(){

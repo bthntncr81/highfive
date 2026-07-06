@@ -25,7 +25,7 @@ export const Contact = () => {
             </RevealOnScroll>
             <RevealOnScroll delay={0.16}>
               <p className="text-lg text-foreground-muted mt-4 max-w-md">
-                Akçakoca'da bizi ziyaret et, telefonla ara ya da WhatsApp'tan yaz. Siparişin 18 dakikada kapında.
+                {content.about.heroSubtitle || `${content.site.name} ile iletişime geç. Bizi ziyaret et, telefonla ara ya da WhatsApp'tan yaz.`}
               </p>
             </RevealOnScroll>
             <RevealOnScroll delay={0.24}>
@@ -109,28 +109,30 @@ export const Contact = () => {
       </section>
 
       {/* MAP */}
-      <section className="section-cream pb-16 lg:pb-24">
-        <div className="container-diner">
-          <RevealOnScroll>
-            <div className="relative rounded-[2rem] overflow-hidden shadow-xl">
-              <div className="aspect-video md:aspect-[21/9]">
-                <iframe src={content.contact.mapEmbedUrl} width="100%" height="100%" style={{ border: 0 }}
-                  allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="High Five Konum" />
-              </div>
-              <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6">
-                <div className="card max-w-xs flex items-start gap-3">
-                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary shrink-0"><HfPin className="w-5 h-5" /></span>
-                  <div>
-                    <h4 className="font-display font-bold text-foreground">{content.site.logoText}</h4>
-                    <p className="text-sm text-foreground-muted">{content.contact.address}</p>
-                    <a href={content.links.googleMaps} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm mt-3">Yol Tarifi Al</a>
+      {content.contact.mapEmbedUrl && (
+        <section className="section-cream pb-16 lg:pb-24">
+          <div className="container-diner">
+            <RevealOnScroll>
+              <div className="relative rounded-[2rem] overflow-hidden shadow-xl">
+                <div className="aspect-video md:aspect-[21/9]">
+                  <iframe src={content.contact.mapEmbedUrl} width="100%" height="100%" style={{ border: 0 }}
+                    allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={`${content.site.name} Konum`} />
+                </div>
+                <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6">
+                  <div className="card max-w-xs flex items-start gap-3">
+                    <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary shrink-0"><HfPin className="w-5 h-5" /></span>
+                    <div>
+                      <h4 className="font-display font-bold text-foreground">{content.site.logoText}</h4>
+                      <p className="text-sm text-foreground-muted">{content.contact.address}</p>
+                      <a href={content.links.googleMaps} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm mt-3">Yol Tarifi Al</a>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </RevealOnScroll>
-        </div>
-      </section>
+            </RevealOnScroll>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       {whatsappEnabled && (

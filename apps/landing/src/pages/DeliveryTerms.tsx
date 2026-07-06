@@ -1,6 +1,11 @@
 import { motion } from 'framer-motion'
+import { useContent } from '../lib/contentStore'
 
 export const DeliveryTerms = () => {
+  const { content } = useContent()
+  const siteName = content.site?.name || 'Restoranımız'
+  const address = content.contact?.address || ''
+  const phone = content.links?.phoneTel || content.whatsapp?.phone || ''
   return (
     <main className="min-h-screen bg-white">
       <div className="bg-primary py-12 text-center">
@@ -11,7 +16,7 @@ export const DeliveryTerms = () => {
 
           <h2 className="text-xl font-bold text-gray-900">1. Teslimat Koşulları</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Teslimat hizmeti Akçakoca merkez ve yakın çevresine yapılmaktadır.</li>
+            <li>Teslimat hizmeti hizmet bölgemiz ve yakın çevresine yapılmaktadır.</li>
             <li>Tahmini teslimat süresi 30-45 dakikadır. Yoğun saatlerde süre uzayabilir.</li>
             <li>Teslimat ücreti 29₺'dir.</li>
             <li>Minimum sipariş tutarı bulunmamaktadır.</li>
@@ -22,7 +27,7 @@ export const DeliveryTerms = () => {
           <ul className="list-disc pl-6 space-y-1">
             <li>Sipariş henüz hazırlanmaya başlanmamışsa ücretsiz iptal edilebilir.</li>
             <li>Hazırlanmaya başlanan siparişler iptal edilemez.</li>
-            <li>İptal taleplerinizi 0555 243 81 81 numarasından iletebilirsiniz.</li>
+            <li>İptal taleplerinizi {phone} numarasından iletebilirsiniz.</li>
           </ul>
 
           <h2 className="text-xl font-bold text-gray-900">3. İade Koşulları</h2>
@@ -40,9 +45,9 @@ export const DeliveryTerms = () => {
 
           <h2 className="text-xl font-bold text-gray-900">5. İletişim</h2>
           <p>Teslimat ve iade ile ilgili tüm sorularınız için:<br />
-          High Five Pizza & Makarna<br />
-          Tel: 0555 243 81 81<br />
-          Adres: Cumhuriyet Mahallesi, İstanbul Caddesi No 151/1, Akçakoca, Düzce</p>
+          {siteName}<br />
+          Tel: {phone}<br />
+          {address && <>Adres: {address}</>}</p>
         </motion.div>
       </div>
     </main>

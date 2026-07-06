@@ -25,12 +25,13 @@ export const Navbar = () => {
   const [loginPhone, setLoginPhone] = useState('')
   const [loginError, setLoginError] = useState('')
 
+  // Oyun nav item'ı yalnızca tenant oyunu açtıysa gösterilir (content.game.enabled).
   const links = [
     { to: '/', label: 'Ana Sayfa' },
     { to: '/menu', label: 'Menü' },
     { to: '/build', label: 'Tasarla' },
     { to: '/blog', label: 'Blog' },
-    { to: '/oyun', label: '🎮 Oyun' },
+    ...(content.game?.enabled ? [{ to: '/oyun', label: '🎮 Oyun' }] : []),
     { to: '/about', label: 'Hakkımızda' },
     { to: '/contact', label: 'İletişim' },
   ]

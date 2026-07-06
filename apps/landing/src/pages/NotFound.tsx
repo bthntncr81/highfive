@@ -2,16 +2,24 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { HfArrow, HfMenu } from '../components/BrandIcons'
+import { useContent } from '../lib/contentStore'
+import { useTheme } from '../hooks/useTheme'
+import { imageUrl } from '../lib/api'
 
 export const NotFound = () => {
+  const { content } = useContent()
+  const theme = useTheme()
+  const brandName = theme?.name || content.site.name || 'Restoranımız'
+  const brandLogo = imageUrl(theme?.logoUrl)
+
   // 404 → noindex (botlar bu sayfayı dizine almasın). Sayfadan ayrılınca geri al.
   useEffect(() => {
-    document.title = '404 — Sayfa Bulunamadı | High Five'
+    document.title = `404 — Sayfa Bulunamadı | ${content.site.name || 'Restoranımız'}`
     const robots = document.querySelector('meta[name="robots"]')
     const prev = robots?.getAttribute('content') || 'index, follow'
     robots?.setAttribute('content', 'noindex, follow')
     return () => robots?.setAttribute('content', prev)
-  }, [])
+  }, [content.site.name])
 
   return (
     <main className="min-h-[70vh] flex items-center justify-center bg-background">
@@ -22,7 +30,13 @@ export const NotFound = () => {
           transition={{ repeat: Infinity, duration: 3 }}
           className="mb-8"
         >
-          <img src="/logo.svg" alt="High Five" className="h-40 w-auto mx-auto" />
+          {brandLogo ? (
+            <img src={brandLogo} alt={brandName} className="h-40 w-auto mx-auto" />
+          ) : (
+            <div className="font-heading font-extrabold text-4xl md:text-5xl text-primary mx-auto">
+              {brandName}
+            </div>
+          )}
         </motion.div>
 
         {/* Error code */}

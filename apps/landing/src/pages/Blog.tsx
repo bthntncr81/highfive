@@ -4,26 +4,39 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { blogPosts } from '../lib/blogPosts'
+import { useContent } from '../lib/contentStore'
 import { SectionContainer, SectionHeading } from '../components/SectionContainer'
 
 export const Blog = () => {
+  const { content } = useContent()
+  const posts = content.blog || []
+  const siteName = content.site?.name || 'Blog'
+
   useEffect(() => {
-    document.title = 'Blog | HighFive Pizza & Makarna — Akçakoca, Düzce Yemek Rehberi'
+    document.title = content.seo?.title || `Blog | ${siteName}`
     const meta = document.querySelector('meta[name="description"]')
-    if (meta) meta.setAttribute('content', 'Akçakoca, Düzce ve Karadeniz bölgesi yemek rehberleri, hafta sonu kaçamak önerileri, Napoli pizza felsefesi ve daha fazlası — HighFive blog.')
-  }, [])
+    if (meta) meta.setAttribute('content', content.seo?.description || `${siteName} blog yazıları.`)
+  }, [content.seo, siteName])
 
   return (
     <main>
       <SectionContainer variant="paper">
         <SectionHeading
-          title="HighFive Blog"
-          subtitle="Akçakoca, Karadeniz ve İtalyan mutfağı üzerine yazılar"
+          title={`${siteName} Blog`}
+          subtitle="Yazılar, rehberler ve haberler"
         />
 
+        {posts.length === 0 ? (
+          <div className="mt-12 text-center text-foreground-muted">
+            <div className="text-4xl mb-3">📝</div>
+            <p className="font-heading font-bold text-xl text-foreground mb-1">
+              Henüz blog yazısı yok
+            </p>
+            <p className="text-sm">Yakında burada olacağız — takipte kal.</p>
+          </div>
+        ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-          {blogPosts.map((post, i) => (
+          {posts.map((post, i) => (
             <motion.article
               key={post.slug}
               initial={{ opacity: 0, y: 20 }}
@@ -70,6 +83,7 @@ export const Blog = () => {
             </motion.article>
           ))}
         </div>
+        )}
       </SectionContainer>
     </main>
   )

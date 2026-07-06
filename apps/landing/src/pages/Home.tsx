@@ -100,7 +100,7 @@ export const Home = () => {
           <div className="lg:col-span-6">
             <RevealOnScroll>
               <p className="inline-flex items-center gap-2 text-[13px] font-bold tracking-wide text-primary bg-primary/10 rounded-full px-4 py-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {content.contact.address.split(',').slice(-2).join(',').trim() || 'Akçakoca, Düzce'}
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {content.contact.address?.split(',').slice(-2).join(',').trim() || content.site.name}
               </p>
             </RevealOnScroll>
             <RevealOnScroll delay={0.08}>
@@ -285,10 +285,10 @@ export const Home = () => {
             <FoodImg src={STORY_IMG} alt={content.about.storyTitle} Icon={HfRollingPin} className="aspect-[5/4] w-full rounded-[2rem] shadow-2xl" />
           </RevealOnScroll>
           <div className="order-1 lg:order-2">
-            <RevealOnScroll><p className="text-sm font-bold tracking-wide text-primary-light uppercase">Taş fırından, Akçakoca'dan</p></RevealOnScroll>
-            <RevealOnScroll delay={0.08}><h2 className="font-display font-extrabold text-4xl lg:text-5xl mt-3">Akçakoca'da samimi<br className="hidden sm:block" /> bir İtalyan lezzeti</h2></RevealOnScroll>
+            <RevealOnScroll><p className="text-sm font-bold tracking-wide text-primary-light uppercase">{content.about.heroEyebrow || content.site.tagline}</p></RevealOnScroll>
+            <RevealOnScroll delay={0.08}><h2 className="font-display font-extrabold text-4xl lg:text-5xl mt-3">{content.about.storyTitle || content.hero.headline}</h2></RevealOnScroll>
             <RevealOnScroll delay={0.16}>
-              <p className="text-white/70 leading-relaxed mt-6 text-lg max-w-[52ch]">Akçakoca'nın kalbinde küçük bir mutfakta başladık. San Marzano domatesi, mozzarella, kendi yoğurduğumuz Tip "00" hamur ve 450°C taş fırın. İyi yemek aceleye gelmez; sabırla, gönülden gelen lezzettir.</p>
+              <p className="text-white/70 leading-relaxed mt-6 text-lg max-w-[52ch]">{content.about.storyParagraphs?.[0] || content.site.description}</p>
             </RevealOnScroll>
             <RevealOnScroll delay={0.24}>
               <Link to="/about" className="inline-flex items-center gap-2 mt-8 rounded-full border border-white/20 px-6 py-3.5 font-bold hover:bg-white hover:text-foreground transition">
@@ -311,7 +311,7 @@ export const Home = () => {
             <div className="absolute -bottom-24 -right-12 opacity-[0.06] select-none pointer-events-none text-white"><HfPizza className="w-[26rem] h-[26rem]" /></div>
             <div className="relative max-w-xl">
               <h2 className="font-display font-extrabold text-4xl lg:text-5xl">Karnın mı acıktı?</h2>
-              <p className="text-white/85 text-lg mt-4">Akçakoca içi 18 dakikada teslimat. Şimdi sipariş ver, sıcacık kapına gelsin.</p>
+              <p className="text-white/85 text-lg mt-4">{content.hero.subheadline || 'Hızlı teslimat. Şimdi sipariş ver, sıcacık kapına gelsin.'}</p>
               <div className="flex flex-wrap gap-3 mt-8">
                 <Link to="/menu" className="btn bg-white text-primary hover:bg-surface">Sipariş Ver</Link>
                 <a href={`tel:${content.links.phoneTel}`} className="btn bg-white/15 backdrop-blur border border-white/25 text-white hover:bg-white/25">

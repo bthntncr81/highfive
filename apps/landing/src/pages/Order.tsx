@@ -5,7 +5,8 @@ import { useCart } from '../lib/cartStore';
 import { useContent } from '../lib/contentStore';
 import { useLoyalty } from '../lib/loyaltyStore';
 import { useOrderTracking } from '../hooks/useOrderTracking';
-import { orderApi, happyHourApi, serviceChargeApi, type HappyHour } from '../lib/api';
+import { useTheme } from '../hooks/useTheme';
+import { orderApi, happyHourApi, serviceChargeApi, imageUrl, type HappyHour } from '../lib/api';
 
 type OrderMode = 'table' | 'takeaway' | 'delivery' | null;
 
@@ -27,7 +28,10 @@ const TIP_OPTIONS = [
 
 export const Order = () => {
   const navigate = useNavigate();
-  useContent(); // Load content
+  const { content } = useContent(); // Load content
+  const theme = useTheme();
+  const brandName = theme?.name || content.site.name;
+  const brandLogo = imageUrl(theme?.logoUrl);
   const { member, redeemPoints } = useLoyalty();
   const { trackOrder } = useOrderTracking();
   const {
@@ -442,11 +446,17 @@ export const Order = () => {
           animate={{ y: 0, opacity: 1 }}
           className="text-center mb-8"
         >
-          <img
-            src="/logo.svg"
-            alt="High Five"
-            className="w-24 h-24 mx-auto mb-4 object-contain"
-          />
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt={brandName}
+              className="w-24 h-24 mx-auto mb-4 object-contain"
+            />
+          ) : (
+            <span className="block font-display text-3xl font-extrabold text-foreground mb-4">
+              {brandName}
+            </span>
+          )}
           <h1 className="font-display text-3xl text-foreground">
             Sipariş Ver
           </h1>

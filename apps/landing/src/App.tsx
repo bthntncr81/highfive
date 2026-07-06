@@ -7,7 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Navbar } from "./components/Navbar";
 import { CartProvider } from "./lib/cartStore";
-import { ContentProvider } from "./lib/contentStore";
+import { ContentProvider, useContent } from "./lib/contentStore";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
 
@@ -33,85 +33,50 @@ import { BlogPost } from "./pages/BlogPost";
 import BuilderSelect from "./pages/BuilderSelect";
 import Game from "./pages/Game";
 
-// Sayfa bazında SEO meta: canonical + title/description.
-// Prerender (build-time) statik HTML zaten her route için doğru meta'yı basıyor;
-// bu updater SPA içi gezinmede (ve JS-render eden botlarda) tutarlılığı korur.
-const ROUTE_META: Record<string, { title: string; description: string }> = {
-  "/": {
-    title: "High Five Pizza & Makarna | Akçakoca Taş Fırın Pizza",
-    description:
-      "Akçakoca’da taş fırın İtalyan pizza, el yapımı makarna ve premium sandviç. Kendi pizzanı tasarla, sadakat puanı kazan, online sipariş ver. Her gün 11:00–02:00.",
-  },
-  "/menu": {
-    title: "Menü – Pizza, Makarna, Sandviç | High Five Akçakoca",
-    description:
-      "High Five Akçakoca menüsü: taş fırın pizzalar, el yapımı makarnalar, ciabatta & schiacciata sandviçler, içecekler ve tatlılar. Online sipariş ve paket servis.",
-  },
-  "/contact": {
-    title: "İletişim & Adres | High Five Akçakoca",
-    description:
-      "High Five Akçakoca adres, telefon ve çalışma saatleri (her gün 11:00–02:00). WhatsApp veya telefonla hızlı sipariş, 18 dakikada kapında.",
-  },
-  "/app": {
-    title: "Mobil Uygulama | High Five Akçakoca",
-    description:
-      "High Five Akçakoca uygulamasını indir: tek dokunuşla sipariş, sadakat puanları ve sana özel kampanyalar. iOS ve Android.",
-  },
-  "/oyun": {
-    title: "Pizza Şefi Oyunu | High Five Akçakoca",
-    description:
-      "High Five Pizza Şefi mini oyununu oyna, doğru siparişleri yetiştir ve global liderlik tablosunda yerini al!",
-  },
-  "/build/pizza": {
-    title: "Kendi Pizzanı Tasarla | High Five Akçakoca",
-    description:
-      "Hamurdan malzemeye kendi pizzanı 5 adımda tasarla, canlı önizle ve sipariş ver. High Five Akçakoca taş fırın pizza.",
-  },
-  "/build/sandwich": {
-    title: "Kendi Sandviçini Tasarla | High Five Akçakoca",
-    description:
-      "Ekmek, içerik ve soslarını seçerek kendi özel sandviçini tasarla ve sipariş ver. High Five Akçakoca.",
-  },
+// Sayfa bazında SEO meta: canonical + title/description — TENANT içeriğinden türetilir.
+// Route → Türkçe etiket; başlık "{Etiket} | {Marka}" olarak kurulur. Canonical = mevcut origin.
+const ROUTE_LABELS: Record<string, string> = {
+  "/menu": "Menü",
+  "/contact": "İletişim",
+  "/app": "Mobil Uygulama",
+  "/oyun": "Oyun",
+  "/build/pizza": "Kendi Pizzanı Tasarla",
+  "/build/sandwich": "Kendi Sandviçini Tasarla",
 };
 
 const MetaUpdater = () => {
   const location = useLocation();
+  const { content } = useContent();
 
   useEffect(() => {
     const path = location.pathname;
-    const canonical =
-      "https://highfivepps.com" + (path === "/" ? "/" : path.replace(/\/+$/, ""));
+    const brand = content.site?.name || "Online Sipariş";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : `https://${content.site?.domain || ""}`;
+    const canonical = origin + (path === "/" ? "/" : path.replace(/\/+$/, ""));
 
-    // canonical — her route kendi URL'sini gösterir
-    let link = document.querySelector(
-      'link[rel="canonical"]'
-    ) as HTMLLinkElement | null;
+    // canonical — her route kendi URL'sini gösterir (tenant origin'i)
+    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement("link");
       link.setAttribute("rel", "canonical");
       document.head.appendChild(link);
     }
     link.setAttribute("href", canonical);
-    document
-      .querySelector('meta[property="og:url"]')
-      ?.setAttribute("content", canonical);
+    document.querySelector('meta[property="og:url"]')?.setAttribute("content", canonical);
 
-    // bilinen statik route'lar için title/description
-    // (blog/about/build kendi başlığını ayrıca yönetir)
-    const m = ROUTE_META[path];
-    if (m) {
-      document.title = m.title;
-      document
-        .querySelector('meta[name="description"]')
-        ?.setAttribute("content", m.description);
-      document
-        .querySelector('meta[property="og:title"]')
-        ?.setAttribute("content", m.title);
-      document
-        .querySelector('meta[property="og:description"]')
-        ?.setAttribute("content", m.description);
-    }
-  }, [location.pathname]);
+    // blog/about/build kendi başlığını ayrıca yönetir — onlara dokunma
+    if (path.startsWith("/blog") || path === "/about" || path === "/build") return;
+
+    const label = ROUTE_LABELS[path];
+    const title = path === "/" ? content.seo?.title || brand : `${label || brand} | ${brand}`;
+    const description = content.seo?.description || content.site?.description || "";
+
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", description);
+    document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute("content", description);
+  }, [location.pathname, content]);
 
   return null;
 };

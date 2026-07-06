@@ -1,6 +1,13 @@
 import { motion } from 'framer-motion'
+import { useContent } from '../lib/contentStore'
+import { useTheme } from '../hooks/useTheme'
+import { imageUrl } from '../lib/api'
 
 export const SafeMenu = () => {
+  const { content } = useContent()
+  const theme = useTheme()
+  const brandName = theme?.name || content.site.name
+  const brandLogo = imageUrl(theme?.logoUrl)
   return (
     <main className="min-h-screen bg-gray-950">
       <div className="max-w-3xl mx-auto py-8 px-4 space-y-6">
@@ -10,7 +17,11 @@ export const SafeMenu = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <img src="/logo-white.svg" alt="High Five" className="h-20 mx-auto mb-4" />
+          {brandLogo ? (
+            <img src={brandLogo} alt={brandName} className="h-20 mx-auto mb-4 object-contain" />
+          ) : (
+            <span className="block text-3xl font-extrabold text-white mb-4">{brandName}</span>
+          )}
           <h1 className="text-3xl font-bold text-white">Menümüz</h1>
         </motion.div>
 

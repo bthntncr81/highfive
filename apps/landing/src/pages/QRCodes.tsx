@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useContent } from '../lib/contentStore';
 
 interface Table {
   id: string;
@@ -9,6 +10,7 @@ interface Table {
 }
 
 export const QRCodes = () => {
+  const { content } = useContent();
   const [tables, setTables] = useState<Table[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export const QRCodes = () => {
         <body>
           <div class="card">
             <div class="logo">🍕</div>
-            <div class="title">HIGH FIVE</div>
+            <div class="title">${content.site.name || 'Restoran'}</div>
             <div class="table-name">${table.name}</div>
             <div class="qr-placeholder">
               <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}" alt="QR Code" />
@@ -136,7 +138,7 @@ export const QRCodes = () => {
     const cardsHtml = tables.map(table => `
       <div class="card">
         <div class="logo">🍕</div>
-        <div class="title">HIGH FIVE</div>
+        <div class="title">${content.site.name || 'Restoran'}</div>
         <div class="table-name">${table.name}</div>
         <div class="qr-placeholder">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQRUrl(table.id))}" alt="QR Code" />

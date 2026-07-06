@@ -4,10 +4,11 @@ import {
   useContent,
   downloadContent,
   readContentFile,
+  saveContentToApi,
 } from '../lib/contentStore'
-import type { Content, MenuItem, Category } from '../content/content.schema'
+import type { Content, MenuItem, Category, BlogPost } from '../content/content.schema'
 
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'highfive'
+const API_BASE = (import.meta as any).env?.VITE_API_URL || ''
 
 type Section =
   | 'site'
@@ -15,6 +16,8 @@ type Section =
   | 'highlights'
   | 'menu'
   | 'about'
+  | 'blog'
+  | 'game'
   | 'contact'
   | 'seo'
   | 'whatsapp'
@@ -25,6 +28,8 @@ const sections: { id: Section; label: string; icon: string }[] = [
   { id: 'highlights', label: 'Öne Çıkanlar', icon: '✨' },
   { id: 'menu', label: 'Menü Yönetimi', icon: '🍕' },
   { id: 'about', label: 'Hakkımızda', icon: '📖' },
+  { id: 'blog', label: 'Blog', icon: '📝' },
+  { id: 'game', label: 'Oyun', icon: '🎮' },
   { id: 'contact', label: 'İletişim', icon: '📍' },
   { id: 'seo', label: 'SEO Ayarları', icon: '🔍' },
   { id: 'whatsapp', label: 'WhatsApp & Linkler', icon: '💬' },
@@ -32,8 +37,12 @@ const sections: { id: Section; label: string; icon: string }[] = [
 
 export const Admin = () => {
   const [authenticated, setAuthenticated] = useState(false)
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [token, setToken] = useState('')
   const [error, setError] = useState('')
+  const [loggingIn, setLoggingIn] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [activeSection, setActiveSection] = useState<Section>('site')
   const [toast, setToast] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -43,13 +52,47 @@ export const Admin = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Gerçek giriş: restoran sahibi POS e-posta/şifresiyle giriş yapar → JWT alınır.
+  // Bu token ile içerik tenant'a kaydedilir (PUT /api/settings/siteContent, verifyAdmin).
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password === ADMIN_PASSWORD) {
+    setLoggingIn(true)
+    setError('')
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Giriş başarısız')
+        return
+      }
+      const role = data.user?.role
+      if (!['OWNER', 'ADMIN', 'MANAGER'].includes(role)) {
+        setError('Bu panele yalnızca yönetici erişebilir')
+        return
+      }
+      setToken(data.token)
       setAuthenticated(true)
-      setError('')
-    } else {
-      setError('Yanlış şifre!')
+    } catch {
+      setError('Bağlantı hatası')
+    } finally {
+      setLoggingIn(false)
+    }
+  }
+
+  // İçeriği tenant'a (sunucuya) kaydet.
+  const handleServerSave = async () => {
+    setSaving(true)
+    try {
+      await saveContentToApi(content, token)
+      showToast('İçerik yayınlandı! Sipariş siteniz güncellendi.')
+    } catch (err) {
+      showToast('Kayıt hatası: ' + (err instanceof Error ? err.message : ''))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -115,20 +158,27 @@ export const Admin = () => {
             🔐
           </motion.div>
           <h1 className="font-heading font-bold text-3xl text-foreground mb-2">
-            Admin Paneli
+            İçerik Yönetimi
           </h1>
           <p className="font-body text-foreground-muted mb-6">
-            Devam etmek için şifrenizi girin
+            Restoran hesabınızla (POS e-posta ve şifreniz) giriş yapın
           </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="E-posta"
+              className="input-field text-center"
+              autoFocus
+            />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Şifre"
               className="input-field text-center"
-              autoFocus
             />
             {error && (
               <motion.p
@@ -139,8 +189,8 @@ export const Admin = () => {
                 {error}
               </motion.p>
             )}
-            <button type="submit" className="btn-primary w-full">
-              Giriş Yap
+            <button type="submit" disabled={loggingIn} className="btn-primary w-full disabled:opacity-60">
+              {loggingIn ? 'Giriş yapılıyor...' : 'Giriş Yap'}
             </button>
           </form>
         </motion.div>
@@ -175,21 +225,30 @@ export const Admin = () => {
               ☰
             </button>
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="High Five" className="h-12 w-auto" />
-            <span className="font-heading font-bold text-xl md:text-2xl">Admin</span>
+            <span className="font-heading font-bold text-xl md:text-2xl truncate max-w-[200px]">
+              {content.site.name || 'İçerik'}
+            </span>
+            <span className="text-white/70 text-sm hidden sm:inline">İçerik Yönetimi</span>
           </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleExport} className="btn-secondary text-sm py-2">
+            <button
+              onClick={handleServerSave}
+              disabled={saving}
+              className="btn-primary text-sm py-2 disabled:opacity-60"
+            >
+              {saving ? '💾 Kaydediliyor...' : '🚀 Yayınla'}
+            </button>
+            <button onClick={handleExport} className="btn-secondary text-sm py-2 hidden md:inline-flex">
               📤 Export
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="btn-secondary text-sm py-2"
+              className="btn-secondary text-sm py-2 hidden md:inline-flex"
             >
               📥 Import
             </button>
-            <button onClick={handleReset} className="btn-outline text-sm py-2">
+            <button onClick={handleReset} className="btn-outline text-sm py-2 hidden md:inline-flex">
               🔄 Reset
             </button>
             <input
@@ -261,6 +320,12 @@ export const Admin = () => {
                 )}
                 {activeSection === 'about' && (
                   <AboutSection content={content} updateField={updateField} />
+                )}
+                {activeSection === 'blog' && (
+                  <BlogSection content={content} updateContent={updateContent} />
+                )}
+                {activeSection === 'game' && (
+                  <GameSection content={content} updateContent={updateContent} />
                 )}
                 {activeSection === 'contact' && (
                   <ContactSection content={content} updateField={updateField} />
@@ -844,9 +909,30 @@ const AboutSection = ({
     )
   }
 
+  const values = content.about.values || []
+  const setValues = (v: typeof values) => updateField('about', 'values', v)
+  const founders = content.about.founders || []
+  const setFounders = (f: typeof founders) => updateField('about', 'founders', f)
+
   return (
     <div className="space-y-6">
       <h2 className="font-heading font-bold text-2xl text-foreground mb-6">📖 Hakkımızda</h2>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <FormField label="Üst Etiket (eyebrow)">
+          <input type="text" value={content.about.heroEyebrow || ''} onChange={(e) => updateField('about', 'heroEyebrow', e.target.value)} className="input-field" placeholder="Hakkımızda" />
+        </FormField>
+        <FormField label="Sayfa Başlığı">
+          <input type="text" value={content.about.heroTitle || ''} onChange={(e) => updateField('about', 'heroTitle', e.target.value)} className="input-field" placeholder="Hikayemiz" />
+        </FormField>
+        <FormField label="Açılış Tarihi (ops.)">
+          <input type="text" value={content.about.openingDate || ''} onChange={(e) => updateField('about', 'openingDate', e.target.value)} className="input-field" placeholder="Mart 2026" />
+        </FormField>
+      </div>
+      <FormField label="Alt Başlık">
+        <input type="text" value={content.about.heroSubtitle || ''} onChange={(e) => updateField('about', 'heroSubtitle', e.target.value)} className="input-field" />
+      </FormField>
+
       <FormField label="Hikaye Başlığı">
         <input
           type="text"
@@ -881,7 +967,67 @@ const AboutSection = ({
         ))}
       </div>
 
-      <div>
+      {/* Misyon / Vizyon */}
+      <div className="grid md:grid-cols-2 gap-4 border-t border-border-light pt-4">
+        <div className="space-y-2">
+          <FormField label="Misyon Başlığı">
+            <input type="text" value={content.about.missionTitle || ''} onChange={(e) => updateField('about', 'missionTitle', e.target.value)} className="input-field" placeholder="Misyonumuz" />
+          </FormField>
+          <textarea value={content.about.mission || ''} onChange={(e) => updateField('about', 'mission', e.target.value)} rows={3} className="input-field" placeholder="Misyon metni" />
+        </div>
+        <div className="space-y-2">
+          <FormField label="Vizyon Başlığı">
+            <input type="text" value={content.about.visionTitle || ''} onChange={(e) => updateField('about', 'visionTitle', e.target.value)} className="input-field" placeholder="Vizyonumuz" />
+          </FormField>
+          <textarea value={content.about.vision || ''} onChange={(e) => updateField('about', 'vision', e.target.value)} rows={3} className="input-field" placeholder="Vizyon metni" />
+        </div>
+      </div>
+
+      {/* Değerler */}
+      <div className="border-t border-border-light pt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="font-display text-foreground">Değerler</label>
+          <button onClick={() => setValues([...values, { icon: '⭐', title: '', desc: '' }])} className="btn-secondary text-sm py-1">+ Değer</button>
+        </div>
+        {values.map((v, i) => (
+          <div key={i} className="flex gap-2 mb-2">
+            <input value={v.icon} onChange={(e) => setValues(values.map((x, j) => (j === i ? { ...x, icon: e.target.value } : x)))} className="input-field w-16 text-center" placeholder="🌿" />
+            <input value={v.title} onChange={(e) => setValues(values.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} className="input-field w-40" placeholder="Başlık" />
+            <input value={v.desc} onChange={(e) => setValues(values.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))} className="input-field flex-1" placeholder="Açıklama" />
+            <button onClick={() => setValues(values.filter((_, j) => j !== i))} className="text-primary">🗑️</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Mutfak / Felsefe */}
+      <div className="border-t border-border-light pt-4 space-y-2">
+        <FormField label="Felsefe Başlığı">
+          <input type="text" value={content.about.philosophyTitle || ''} onChange={(e) => updateField('about', 'philosophyTitle', e.target.value)} className="input-field" placeholder="Mutfak Felsefemiz" />
+        </FormField>
+        <input type="text" value={content.about.philosophyQuote || ''} onChange={(e) => updateField('about', 'philosophyQuote', e.target.value)} className="input-field italic" placeholder="Öne çıkan alıntı" />
+        <textarea value={content.about.philosophyBody || ''} onChange={(e) => updateField('about', 'philosophyBody', e.target.value)} rows={3} className="input-field" placeholder="Felsefe metni" />
+      </div>
+
+      {/* Ekip / Kurucular */}
+      <div className="border-t border-border-light pt-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <label className="font-display text-foreground">Ekip / Kurucular</label>
+            <input type="text" value={content.about.foundersTitle || ''} onChange={(e) => updateField('about', 'foundersTitle', e.target.value)} className="input-field mt-1 text-sm" placeholder="Bölüm başlığı (ör. Ekibimiz)" />
+          </div>
+          <button onClick={() => setFounders([...founders, { initials: '', name: '', role: '' }])} className="btn-secondary text-sm py-1 self-start">+ Kişi</button>
+        </div>
+        {founders.map((f, i) => (
+          <div key={i} className="flex gap-2 mb-2">
+            <input value={f.initials} onChange={(e) => setFounders(founders.map((x, j) => (j === i ? { ...x, initials: e.target.value } : x)))} className="input-field w-16 text-center" placeholder="AY" />
+            <input value={f.name} onChange={(e) => setFounders(founders.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} className="input-field flex-1" placeholder="Ad Soyad" />
+            <input value={f.role} onChange={(e) => setFounders(founders.map((x, j) => (j === i ? { ...x, role: e.target.value } : x)))} className="input-field w-40" placeholder="Ünvan" />
+            <button onClick={() => setFounders(founders.filter((_, j) => j !== i))} className="text-primary">🗑️</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border-light pt-4">
         <div className="flex items-center justify-between mb-2">
           <label className="font-display text-foreground">Galeri Görselleri</label>
           <button onClick={addGalleryImage} className="btn-secondary text-sm py-1">
@@ -1086,3 +1232,176 @@ const WhatsAppSection = ({
     </FormField>
   </div>
 )
+
+// ── Oyun (game) editörü ──────────────────────────────────────────────
+const GameSection = ({
+  content,
+  updateContent,
+}: {
+  content: Content
+  updateContent: (next: Content) => void
+}) => {
+  const game = content.game || { enabled: false }
+  const setGame = (patch: Partial<NonNullable<Content['game']>>) =>
+    updateContent({ ...content, game: { ...game, ...patch } })
+
+  return (
+    <div className="space-y-6">
+      <h2 className="font-heading font-bold text-2xl text-foreground mb-2">🎮 Oyun</h2>
+      <p className="text-foreground-muted text-sm">
+        Sipariş sitenizde "Pizza Şefi" mini oyununu açıp müşteri etkileşimi ve tekrar ziyaret yaratın.
+        Skorlar kendi liderlik tablonuzda tutulur.
+      </p>
+
+      <label className="flex items-center justify-between p-4 bg-surface rounded-xl cursor-pointer">
+        <div>
+          <p className="font-display font-semibold text-foreground">Oyunu Göster</p>
+          <p className="text-sm text-foreground-muted">Menüde 🎮 Oyun sekmesi görünür</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={!!game.enabled}
+          onChange={(e) => setGame({ enabled: e.target.checked })}
+          className="w-6 h-6 accent-primary"
+        />
+      </label>
+
+      {game.enabled && (
+        <div className="space-y-4">
+          <FormField label="Oyun Adı">
+            <input type="text" value={game.title || ''} onChange={(e) => setGame({ title: e.target.value })} className="input-field" placeholder="Pizza Şefi" />
+          </FormField>
+          <FormField label="HUD Etiketi">
+            <input type="text" value={game.brandLabel || ''} onChange={(e) => setGame({ brandLabel: e.target.value })} className="input-field" placeholder="Pizza Şefi" />
+          </FormField>
+          <FormField label="Logo İşareti (emoji/harf)">
+            <input type="text" value={game.mark || ''} onChange={(e) => setGame({ mark: e.target.value })} className="input-field w-24 text-center" placeholder="🍕" />
+          </FormField>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Blog editörü ─────────────────────────────────────────────────────
+const emptyPost = (): BlogPost => ({
+  slug: '',
+  title: '',
+  metaDescription: '',
+  excerpt: '',
+  publishedAt: new Date().toISOString().slice(0, 10),
+  readMinutes: 3,
+  category: 'Genel',
+  coverImage: '',
+  coverEmoji: '📝',
+  coverGradient: 'from-primary-500 to-primary-700',
+  tags: [],
+  content: '<p></p>',
+})
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const BlogSection = ({
+  content,
+  updateContent,
+}: {
+  content: Content
+  updateContent: (next: Content) => void
+}) => {
+  const posts = content.blog || []
+  const setPosts = (next: BlogPost[]) => updateContent({ ...content, blog: next })
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+
+  const patch = (i: number, p: Partial<BlogPost>) =>
+    setPosts(posts.map((x, j) => (j === i ? { ...x, ...p } : x)))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-heading font-bold text-2xl text-foreground">📝 Blog</h2>
+          <p className="text-foreground-muted text-sm">Kendi yazılarınızı ekleyin — SEO ve müşteri sadakati için birebir.</p>
+        </div>
+        <button
+          onClick={() => { setPosts([emptyPost(), ...posts]); setOpenIdx(0) }}
+          className="btn-primary text-sm py-2"
+        >
+          + Yeni Yazı
+        </button>
+      </div>
+
+      {posts.length === 0 && (
+        <div className="text-center py-10 text-foreground-muted">Henüz blog yazısı yok. "Yeni Yazı" ile başlayın.</div>
+      )}
+
+      {posts.map((post, i) => (
+        <div key={i} className="border border-border-light rounded-xl overflow-hidden">
+          <button
+            onClick={() => setOpenIdx(openIdx === i ? null : i)}
+            className="w-full flex items-center justify-between p-3 bg-surface text-left"
+          >
+            <span className="flex items-center gap-2 font-display">
+              <span className="text-xl">{post.coverEmoji || '📝'}</span>
+              {post.title || '(başlıksız)'}
+            </span>
+            <span className="text-foreground-muted">{openIdx === i ? '▲' : '▼'}</span>
+          </button>
+          {openIdx === i && (
+            <div className="p-4 space-y-3">
+              <FormField label="Başlık">
+                <input
+                  type="text"
+                  value={post.title}
+                  onChange={(e) => patch(i, { title: e.target.value, slug: post.slug || slugify(e.target.value) })}
+                  className="input-field"
+                />
+              </FormField>
+              <div className="grid md:grid-cols-3 gap-3">
+                <FormField label="URL (slug)">
+                  <input type="text" value={post.slug} onChange={(e) => patch(i, { slug: slugify(e.target.value) })} className="input-field" />
+                </FormField>
+                <FormField label="Kategori">
+                  <input type="text" value={post.category} onChange={(e) => patch(i, { category: e.target.value })} className="input-field" />
+                </FormField>
+                <FormField label="Tarih">
+                  <input type="date" value={post.publishedAt?.slice(0, 10)} onChange={(e) => patch(i, { publishedAt: e.target.value })} className="input-field" />
+                </FormField>
+              </div>
+              <div className="grid md:grid-cols-3 gap-3">
+                <FormField label="Kapak Emoji">
+                  <input type="text" value={post.coverEmoji} onChange={(e) => patch(i, { coverEmoji: e.target.value })} className="input-field w-24 text-center" />
+                </FormField>
+                <FormField label="Kapak Görseli (ops.)">
+                  <input type="text" value={post.coverImage} onChange={(e) => patch(i, { coverImage: e.target.value })} className="input-field" placeholder="/uploads/..." />
+                </FormField>
+                <FormField label="Okuma (dk)">
+                  <input type="number" value={post.readMinutes} onChange={(e) => patch(i, { readMinutes: Number(e.target.value) })} className="input-field w-24" />
+                </FormField>
+              </div>
+              <FormField label="Özet">
+                <textarea value={post.excerpt} onChange={(e) => patch(i, { excerpt: e.target.value, metaDescription: post.metaDescription || e.target.value })} rows={2} className="input-field" />
+              </FormField>
+              <FormField label="Etiketler (virgülle)">
+                <input type="text" value={post.tags.join(', ')} onChange={(e) => patch(i, { tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })} className="input-field" />
+              </FormField>
+              <FormField label="İçerik (HTML)">
+                <textarea value={post.content} onChange={(e) => patch(i, { content: e.target.value })} rows={10} className="input-field font-mono text-sm" placeholder="<p>Yazınız...</p>" />
+              </FormField>
+              <button
+                onClick={() => { setPosts(posts.filter((_, j) => j !== i)); setOpenIdx(null) }}
+                className="text-primary text-sm hover:underline"
+              >
+                🗑️ Bu yazıyı sil
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
