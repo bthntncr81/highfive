@@ -18,14 +18,15 @@ const NAVY_DEEP = '#0c1d42'
 const img = (id: string, w = 1200) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
 
+// Fotoğraflar tek tek İNDİRİLİP gözle doğrulandı (status 200 yetmez; içerik burger olmalı).
 const PHOTOS = {
-  hero: img('photo-1568901346375-23c9450c58cd', 1400), // akan cheddar'lı smash, kanonik
-  klasik: img('photo-1550547660-d9450f859349', 900),
-  brisket: img('photo-1603064752734-4c48eff53d05', 900),
-  mantar: img('photo-1565299624946-b28f40a0ae38', 900),
-  sac: img('photo-1607013251379-e6eecfffe234', 1200), // sac başı
-  patates: img('photo-1594212699903-ec8a3eca50f5', 900),
-  sepet: img('photo-1571091718767-18b5b1457add', 1200),
+  hero: img('photo-1568901346375-23c9450c58cd', 1400), // çift köfte, akan cheddar, ahşap tabla
+  klasik: img('photo-1542574271-7f3b92e6c821', 900), // çift cheddar + karamelize soğan, koyu fon
+  brisket: img('photo-1553979459-d2229ba7433b', 900), // pastırmalı üç katlı kule
+  mantar: img('photo-1552526881-721ce8509abb', 900), // açık fon, susamlı bun (kart ritmi: koyu-koyu-açık)
+  sac: img('photo-1607013251379-e6eecfffe234', 1200), // sacdan yeni inmiş, turşulu çift smash
+  patates: img('photo-1594212699903-ec8a3eca50f5', 900), // çelik kupada patates + burger
+  sepet: img('photo-1550547660-d9450f859349', 1200), // ahşap tablada iki burger + gazoz
 }
 
 const MENU = [
@@ -34,7 +35,7 @@ const MENU = [
     desc: 'Çift ezme köfte, iki kat eritme cheddar, turşu, çiğ soğan, Smashé sos.',
     price: 340,
     photo: PHOTOS.klasik,
-    alt: 'Klasik Smashé: çift köfte, akan cheddar, brioche arasında',
+    alt: 'Klasik Smashé: çift köfte, iki kat cheddar, karamelize soğanla',
     tag: 'Çok satan',
   },
   {
@@ -42,7 +43,7 @@ const MENU = [
     desc: 'Dana döş kırığı köfte, isli cheddar, karamelize soğan, hardallı mayo.',
     price: 420,
     photo: PHOTOS.brisket,
-    alt: 'Brisket Smashé: üç katlı, isli cheddar ve karamelize soğanla',
+    alt: 'Brisket Smashé: üç katlı kule, döş kırığı ve isli cheddar',
     tag: 'Şefin ezmesi',
   },
   {
@@ -50,7 +51,7 @@ const MENU = [
     desc: 'Izgara portobello, trüf mayonez, rokfor krema, çıtır soğan.',
     price: 390,
     photo: PHOTOS.mantar,
-    alt: 'Trüflü Mantar burger: portobello ve trüf mayonezle, vejetaryen',
+    alt: 'Trüflü Mantar: susamlı bun arasında portobello, açık fonda',
     tag: 'Vejetaryen',
   },
 ]
@@ -371,7 +372,7 @@ export const SmasheLanding = () => {
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.6, ease: easeOut }}
             src={PHOTOS.sac}
-            alt="Sac başında ezilen köfteler, kenarları kabuk tutmuş"
+            alt="Sacdan yeni inmiş çift smash, cheddar akıyor, turşusu üstünde"
             loading="lazy"
             className="mt-14 h-64 w-full rounded-2xl border-[6px] border-white object-cover md:h-96"
           />
@@ -413,7 +414,7 @@ export const SmasheLanding = () => {
           >
             <img
               src={PHOTOS.patates}
-              alt="Çıtır patates, deniz tuzuyla"
+              alt="Çelik kupada çıtır patates, yanında klasik burger"
               loading="lazy"
               className="aspect-[4/3] w-full rounded-2xl border-[10px] border-white object-cover shadow-xl"
             />
@@ -477,7 +478,7 @@ export const SmasheLanding = () => {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.6, ease: easeOut }}
             src={PHOTOS.sepet}
-            alt="Smashé paketi: burger ve patates, pöti kare kağıt üstünde"
+            alt="Ahşap tablada iki Smashé, yanında soğuk gazoz"
             loading="lazy"
             className="aspect-[4/3] w-full self-center rounded-2xl object-cover"
             style={{ border: `4px solid ${NAVY}` }}
