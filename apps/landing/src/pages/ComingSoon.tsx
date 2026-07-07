@@ -82,14 +82,21 @@ export const ComingSoon = () => {
           )}
         </div>
 
-        {/* Alt bilgi */}
-        <p className="mt-10 text-xs text-white/40">
-          <a href="https://otorder.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/70 transition-colors">
-            OtOrder
-          </a>{' '}
-          ile güçlendirilmiştir · İşletme sahibi misiniz?{' '}
-          <Link to="/admin" className="underline hover:text-white/70">Yönetim paneli</Link>
-        </p>
+        {/* Personel/işletme girişi */}
+        <div className="mt-10">
+          <Link
+            to="/panel"
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            🔐 İşletme Paneli (POS · Mutfak)
+          </Link>
+          <p className="mt-4 text-xs text-white/40">
+            <a href="https://otorder.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/70 transition-colors">
+              OtOrder
+            </a>{' '}
+            ile güçlendirilmiştir
+          </p>
+        </div>
       </motion.div>
     </main>
   )

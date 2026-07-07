@@ -10,6 +10,7 @@ import { CartProvider } from "./lib/cartStore";
 import { ContentProvider, useContent } from "./lib/contentStore";
 import { useTheme } from "./hooks/useTheme";
 import { ComingSoon } from "./pages/ComingSoon";
+import { StaffHub } from "./pages/StaffHub";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
 
@@ -140,9 +141,10 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const theme = useTheme();
   const isAdmin = location.pathname === "/admin";
+  const isStaffHub = location.pathname === "/panel" || location.pathname === "/isletme";
   // Yayınlanmamış tenant'ın kök "site hazırlanıyor" sayfası tam ekran — navbar/footer gizli.
   const isComingSoon = location.pathname === "/" && theme !== null && !theme.published;
-  const hideChrome = isAdmin || isComingSoon;
+  const hideChrome = isAdmin || isComingSoon || isStaffHub;
   const { services, isWithinOrderHours } = useSettings();
 
   return (
@@ -201,6 +203,9 @@ const AnimatedRoutes = () => {
           <Route path="/terms-of-use" element={<PageTransition><TermsOfUse /></PageTransition>} />
           <Route path="/terms" element={<PageTransition><TermsOfUse /></PageTransition>} />
           <Route path="/safemenu" element={<SafeMenu />} />
+          {/* İşletme paneli — personeli POS/Mutfak/Yönetim'e tek tuşla götürür */}
+          <Route path="/panel" element={<StaffHub />} />
+          <Route path="/isletme" element={<StaffHub />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/qr" element={<QRCodes />} />
           <Route

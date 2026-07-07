@@ -173,9 +173,9 @@ export const Footer = () => {
           <p className="font-body text-white/40 text-sm">
             © {currentYear} {content.site.name}. Tüm hakları saklıdır.
           </p>
-          <p className="font-body text-white/40 text-sm">
-            {content.site.name || 'Restoranımız'}
-          </p>
+          <Link to="/panel" className="font-body text-white/40 hover:text-white/70 text-sm transition-colors">
+            İşletme Girişi
+          </Link>
         </div>
       </div>
     </footer>
