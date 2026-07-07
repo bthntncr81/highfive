@@ -94,7 +94,8 @@ export function applyTheme(theme: TenantTheme): void {
     // body font'unu da tema fontuna bağla (globals.css font-body @apply yerine).
     document.body.style.fontFamily = theme.fontFamily;
   }
-  if (theme.name) document.title = theme.name;
+  // Özel landing kendi title/SEO'sunu yönetir — ezme.
+  if (theme.name && !theme.customLanding) document.title = theme.name;
 }
 
 // Açılış bootstrap'ı. Cache anahtarı subdomain → çapraz tenant sızmaz.

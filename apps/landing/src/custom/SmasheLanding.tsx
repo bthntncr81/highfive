@@ -122,8 +122,21 @@ export const SmasheLanding = () => {
         }
         @keyframes smx-scroll { to { transform: translateX(-100%); } }
 
+        /* Hero girişi: saf CSS (JS'e bağımlı değil, her koşulda oynar).
+           Varsayılan görünür; keyframe 'both' ile başlangıçta gizleyip açar. */
+        @keyframes smx-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes smx-photo { from { opacity: 0; transform: rotate(6deg) translateY(30px); } to { opacity: 1; transform: rotate(3deg) translateY(0); } }
+        @keyframes smx-sticker { from { opacity: 0; transform: scale(0) rotate(-30deg); } to { opacity: 1; transform: scale(1) rotate(-12deg); } }
+        .smx-rise   { animation: smx-rise 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+        .smx-rise-1 { animation-delay: 0.08s; }
+        .smx-rise-2 { animation-delay: 0.18s; }
+        .smx-rise-3 { animation-delay: 0.28s; }
+        .smx-photo  { animation: smx-photo 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+        .smx-sticker{ animation: smx-sticker 0.5s 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+
         @media (prefers-reduced-motion: reduce) {
           .smx-marquee > div { animation: none; }
+          .smx-rise, .smx-photo, .smx-sticker { animation-duration: 0.01ms; animation-delay: 0s; }
           .smx * { transition-duration: 0.01ms !important; }
         }
       `}</style>
@@ -156,19 +169,11 @@ export const SmasheLanding = () => {
       <section id="top" className="smx-gingham-dark relative overflow-hidden">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-20 pt-14 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:pb-28 md:pt-20">
           <div>
-            <motion.p
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: easeOut }}
-              className="mb-5 inline-block rounded-full border-2 border-white/25 px-4 py-1.5 text-sm font-bold text-white/85"
-            >
+            <p className="smx-rise mb-5 inline-block rounded-full border-2 border-white/25 px-4 py-1.5 text-sm font-bold text-white/85">
               Kadıköy, İstanbul
-            </motion.p>
-            <motion.h1
-              initial={{ opacity: 0, y: 26 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.08, ease: easeOut }}
-              className="smx-display text-white"
+            </p>
+            <h1
+              className="smx-display smx-rise smx-rise-1 text-white"
               style={{
                 fontSize: 'clamp(2.9rem, 8vw, 5.5rem)',
                 lineHeight: 1.02,
@@ -178,22 +183,12 @@ export const SmasheLanding = () => {
               Sacda ezilir,
               <br />
               kenarında çıtırlar.
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.18, ease: easeOut }}
-              className="mt-6 max-w-md text-lg leading-relaxed text-white/80"
-            >
+            </h1>
+            <p className="smx-rise smx-rise-2 mt-6 max-w-md text-lg leading-relaxed text-white/80">
               90 gramlık dana toplar 230 derece sacda preslenir. On saniyede
               kabuk, doksan saniyede paket. Smashé bu kadar.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.28, ease: easeOut }}
-              className="mt-9 flex flex-wrap items-center gap-4"
-            >
+            </p>
+            <div className="smx-rise smx-rise-3 mt-9 flex flex-wrap items-center gap-4">
               <Link
                 to="/menu"
                 className="rounded-full bg-white px-8 py-4 text-base font-extrabold transition-transform hover:-translate-y-0.5"
@@ -207,16 +202,11 @@ export const SmasheLanding = () => {
               >
                 Menüye bak
               </a>
-            </motion.div>
+            </div>
           </div>
 
           {/* Piknik çerçeveli hero fotoğraf */}
-          <motion.div
-            initial={{ opacity: 0, rotate: 6, y: 30 }}
-            animate={{ opacity: 1, rotate: 3, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15, ease: easeOut }}
-            className="relative mx-auto w-full max-w-md"
-          >
+          <div className="smx-photo relative mx-auto w-full max-w-md">
             <div className="smx-gingham absolute -bottom-4 -right-4 h-full w-full rounded-2xl" aria-hidden="true" />
             <img
               src={PHOTOS.hero}
@@ -224,16 +214,13 @@ export const SmasheLanding = () => {
               className="relative aspect-[4/5] w-full rounded-2xl border-[10px] border-white object-cover shadow-2xl"
               loading="eager"
             />
-            <motion.div
-              initial={{ scale: 0, rotate: -30 }}
-              animate={{ scale: 1, rotate: -12 }}
-              transition={{ duration: 0.5, delay: 0.55, ease: easeOut }}
-              className="smx-display absolute -left-6 -top-6 grid h-24 w-24 place-items-center rounded-full bg-white text-center text-sm leading-tight shadow-xl"
+            <div
+              className="smx-sticker smx-display absolute -left-6 -top-6 grid h-24 w-24 place-items-center rounded-full bg-white text-center text-sm leading-tight shadow-xl"
               style={{ color: NAVY }}
             >
               180g<br />dana
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
