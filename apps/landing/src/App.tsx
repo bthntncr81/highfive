@@ -135,11 +135,12 @@ const RootGate = () => {
   );
 };
 
-// Premium/tanıtım sayfaları (blog/oyun/tasarla/hakkımızda) — yayınlanmamışsa /menu'ye yönlendirir.
+// Premium/tanıtım sayfaları (blog/oyun/tasarla/hakkımızda) — yayınlanmamışsa VEYA özel-kod
+// landing varsa /menu'ye yönlendirir (özel landing tenant'ında generic sayfalar geçerli değil).
 const Premium = ({ children }: { children: React.ReactNode }) => {
   const theme = useTheme();
   if (theme === null) return <SiteSplash />;
-  return theme.published ? <>{children}</> : <Navigate to="/menu" replace />;
+  return theme.published && !theme.customLanding ? <>{children}</> : <Navigate to="/menu" replace />;
 };
 
 // Animated routes component

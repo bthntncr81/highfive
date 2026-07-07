@@ -25,9 +25,9 @@ export const Navbar = () => {
   const [loginPhone, setLoginPhone] = useState('')
   const [loginError, setLoginError] = useState('')
 
-  // Tanıtım landing'i yayınlanmamışsa sadece Menü göster (blog/oyun/tasarla/hakkımızda gizli).
-  // Yayınlandıysa tam menü; Oyun yalnızca content.game.enabled ise.
-  const published = theme?.published
+  // Tanıtım landing'i yayınlanmamışsa VEYA özel-kod landing (customLanding) varsa sadece
+  // Menü göster — özel landing kendi nav'ını taşır, generic blog/tasarla/hakkımızda ona ait değil.
+  const published = theme?.published && !theme?.customLanding
   const links = published
     ? [
         { to: '/', label: 'Ana Sayfa' },
