@@ -11,6 +11,7 @@ import { ContentProvider, useContent } from "./lib/contentStore";
 import { useTheme } from "./hooks/useTheme";
 import { ComingSoon } from "./pages/ComingSoon";
 import { StaffHub } from "./pages/StaffHub";
+import { CUSTOM_LANDINGS } from "./custom";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
 
@@ -50,9 +51,13 @@ const ROUTE_LABELS: Record<string, string> = {
 const MetaUpdater = () => {
   const location = useLocation();
   const { content } = useContent();
+  const theme = useTheme();
 
   useEffect(() => {
     const path = location.pathname;
+    // Özel landing kendi title/description'ını yönetir — kökte ezme.
+    const customRoot =
+      path === "/" && theme?.published && theme?.customLanding && CUSTOM_LANDINGS[theme.customLanding];
     const brand = content.site?.name || "Online Sipariş";
     const origin =
       typeof window !== "undefined" ? window.location.origin : `https://${content.site?.domain || ""}`;
@@ -69,7 +74,7 @@ const MetaUpdater = () => {
     document.querySelector('meta[property="og:url"]')?.setAttribute("content", canonical);
 
     // blog/about/build kendi başlığını ayrıca yönetir — onlara dokunma
-    if (path.startsWith("/blog") || path === "/about" || path === "/build") return;
+    if (customRoot || path.startsWith("/blog") || path === "/about" || path === "/build") return;
 
     const label = ROUTE_LABELS[path];
     const title = path === "/" ? content.seo?.title || brand : `${label || brand} | ${brand}`;
@@ -79,7 +84,7 @@ const MetaUpdater = () => {
     document.querySelector('meta[name="description"]')?.setAttribute("content", description);
     document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
     document.querySelector('meta[property="og:description"]')?.setAttribute("content", description);
-  }, [location.pathname, content]);
+  }, [location.pathname, content, theme]);
 
   return null;
 };
@@ -116,16 +121,17 @@ const SiteSplash = () => (
   </div>
 );
 
-// Kök geçidi: yayınlanmışsa gerçek landing (Home), değilse "site hazırlanıyor".
+// Kök geçidi: yayınlanmışsa özel landing (varsa) ya da Home; değilse "site hazırlanıyor".
 const RootGate = () => {
   const theme = useTheme();
   if (theme === null) return <SiteSplash />;
-  return theme.published ? (
+  if (!theme.published) return <ComingSoon />;
+  const Custom = theme.customLanding ? CUSTOM_LANDINGS[theme.customLanding] : undefined;
+  if (Custom) return <Custom />;
+  return (
     <PageTransition>
       <Home />
     </PageTransition>
-  ) : (
-    <ComingSoon />
   );
 };
 
@@ -144,7 +150,14 @@ const AnimatedRoutes = () => {
   const isStaffHub = location.pathname === "/panel" || location.pathname === "/isletme";
   // Yayınlanmamış tenant'ın kök "site hazırlanıyor" sayfası tam ekran — navbar/footer gizli.
   const isComingSoon = location.pathname === "/" && theme !== null && !theme.published;
-  const hideChrome = isAdmin || isComingSoon || isStaffHub;
+  // Özel kodlanmış premium landing kendi nav/footer'ını taşır — paylaşılan chrome gizli.
+  const isCustomRoot =
+    location.pathname === "/" &&
+    theme !== null &&
+    theme.published === true &&
+    !!theme.customLanding &&
+    !!CUSTOM_LANDINGS[theme.customLanding];
+  const hideChrome = isAdmin || isComingSoon || isStaffHub || isCustomRoot;
   const { services, isWithinOrderHours } = useSettings();
 
   return (

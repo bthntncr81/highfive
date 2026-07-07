@@ -111,6 +111,9 @@ export default async function settingsRoutes(server: FastifyInstance) {
       // Tanıtım landing'i yayınlandı mı? false → kök '/' "site hazırlanıyor" bekleme
       // sayfası + blog/oyun/tasarla/hakkımızda gizli; /menu her durumda çalışır.
       published: t.published === true,
+      // Premium: elle kodlanmış özel landing anahtarı (custom/ registry'sinde).
+      // published=true iken kök '/' bu bileşenle render edilir (ör. "smashe").
+      customLanding: typeof t.customLanding === 'string' && t.customLanding ? t.customLanding : null,
     };
   });
 

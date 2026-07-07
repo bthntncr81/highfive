@@ -13,6 +13,7 @@ export interface TenantTheme {
   colors?: Record<string, string>; // "primary": "187 30 16" (rgb kanal) veya "#bb1e10"
   menuTemplate?: number; // 1-20 menü tasarımı
   published?: boolean;   // tanıtım landing'i yayında mı
+  customLanding?: string | null; // premium elle kodlanmış landing anahtarı (custom/ registry)
 }
 
 let cached: TenantTheme | null = null;
