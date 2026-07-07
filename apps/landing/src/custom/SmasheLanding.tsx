@@ -34,7 +34,7 @@ const PHOTOS = {
 const MENU = [
   {
     name: 'Klasik Smashé',
-    desc: 'Çift ezme köfte, iki kat eritme cheddar, turşu, çiğ soğan, Smashé sos.',
+    desc: 'Çift smash köfte, iki kat eritme cheddar, turşu, çiğ soğan, Smashé sos.',
     price: 340,
     photo: PHOTOS.klasik,
     alt: 'Klasik Smashé: çift köfte, iki kat cheddar, karamelize soğanla',
@@ -47,7 +47,7 @@ const MENU = [
     price: 420,
     photo: PHOTOS.brisket,
     alt: 'Brisket Smashé: üç katlı kule, döş kırığı ve isli cheddar',
-    tag: 'Şefin ezmesi',
+    tag: "Şefin smash'i",
     tilt: '1.2deg',
     down: true,
   },
@@ -64,7 +64,7 @@ const MENU = [
 
 const STEPS = [
   { n: '1', title: 'Topla', body: 'Dana döş her sabah kasaptan gelir, kendi çekeriz. 90 gramlık toplar, buz gibi bekler.' },
-  { n: '2', title: 'Ez', body: '230 derece sacda 10 saniye pres. Köfte inceldikçe yüzey büyür, yüzey büyüdükçe kabuk artar.' },
+  { n: '2', title: "Smash'le", body: '230 derece sacda 10 saniye tam baskı. Köfte inceldikçe yüzey büyür, yüzey büyüdükçe kabuk artar.' },
   { n: '3', title: 'Kızart', body: 'Kenarlar dantel gibi çıtırlayınca cheddar kapanır, brioche sacdan geçer, paket 90 saniyede çıkar.' },
 ]
 
@@ -81,7 +81,7 @@ export const SmasheLanding = () => {
       .querySelector('meta[name="description"]')
       ?.setAttribute(
         'content',
-        'Smashé, Kadıköy. Sacda ezilmiş çıtır kenarlı smash burger, günlük brioche, el yapımı sos. Gel al ya da online sipariş ver.'
+        "Smashé, Kadıköy. Sacda smash'lenmiş çıtır kenarlı burger, günlük brioche, el yapımı sos. Gel al ya da online sipariş ver."
       )
   }, [])
 
@@ -146,7 +146,7 @@ export const SmasheLanding = () => {
           <a href="#top" className="smx-display text-2xl" style={{ color: NAVY }}>SMASHÉ</a>
           <nav className="hidden items-center gap-7 text-[15px] font-semibold md:flex">
             <a href="#menu" className="hover:opacity-70">Lezzetler</a>
-            <a href="#nasil" className="hover:opacity-70">Nasıl ezilir</a>
+            <a href="#nasil" className="hover:opacity-70">Nasıl smash'lenir</a>
             <a href="#konum" className="hover:opacity-70">Konum</a>
           </nav>
           <Link to="/menu" className="rounded-full px-5 py-2.5 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5" style={{ background: NAVY }}>
@@ -163,10 +163,10 @@ export const SmasheLanding = () => {
               Kadıköy, İstanbul
             </p>
             <h1 className="smx-display smx-rise smx-rise-1 text-white" style={{ fontSize: 'clamp(2.9rem, 8vw, 5.5rem)', lineHeight: 1.02, textWrap: 'balance' }}>
-              Sacda ezilir,<br />kenarında çıtırlar.
+              Sacda smash'lenir,<br />kenarında çıtırlar.
             </h1>
             <p className="smx-rise smx-rise-2 mt-6 max-w-md text-lg leading-relaxed text-white/80">
-              90 gramlık dana toplar 230 derece sacda preslenir. On saniyede kabuk, doksan saniyede paket. Smashé bu kadar.
+              90 gramlık dana toplar 230 derece sacda smash'lenir. On saniyede kabuk, doksan saniyede paket. Smashé bu kadar.
             </p>
             <div className="smx-rise smx-rise-3 mt-9 flex flex-wrap items-center gap-4">
               <Link to="/menu" className="rounded-full bg-white px-8 py-4 text-base font-extrabold transition-transform hover:-translate-y-0.5" style={{ color: NAVY }}>
@@ -197,7 +197,7 @@ export const SmasheLanding = () => {
       <div className="smx-marquee bg-white py-4" style={{ borderBottom: `3px solid ${NAVY}` }} aria-hidden="true">
         {[0, 1].map((i) => (
           <div key={i} className="smx-display gap-10 pr-10 text-xl" style={{ color: NAVY }}>
-            {['El ezmesi smash', 'Günlük brioche', 'Çift cheddar', 'Kendi sosumuz', 'Çıtır kenar'].map((t) => (
+            {["Elle smash'lenir", 'Günlük brioche', 'Çift cheddar', 'Kendi sosumuz', 'Çıtır kenar'].map((t) => (
               <span key={t} className="flex items-center gap-10 whitespace-nowrap">{t} <span className="text-2xl">✕</span></span>
             ))}
           </div>
@@ -208,7 +208,7 @@ export const SmasheLanding = () => {
       <section id="menu" className="bg-white py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 className="smx-display smx-reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', textWrap: 'balance' }}>
-            En çok ezilenler
+            En çok smash'lenenler
           </h2>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">
@@ -241,7 +241,7 @@ export const SmasheLanding = () => {
         </div>
       </section>
 
-      {/* ── Nasıl ezilir: gerçek 3 adım ─────────────────────────────── */}
+      {/* ── Nasıl smash'lenir: gerçek 3 adım ─────────────────────────────── */}
       <section id="nasil" className="smx-gingham-dark py-20 text-white md:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid items-end gap-8 md:grid-cols-[1fr_auto]">
