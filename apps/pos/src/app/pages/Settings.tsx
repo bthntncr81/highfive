@@ -26,6 +26,8 @@ interface BrandTheme {
   secondary: string; // #0f172a
   accent: string;    // #ea580c
   fontFamily: string;
+  menuTemplate: number; // 1-20 menü tasarımı
+  published: boolean;   // tanıtım landing'i yayında mı
 }
 
 const DEFAULT_BRAND_THEME: BrandTheme = {
@@ -35,7 +37,33 @@ const DEFAULT_BRAND_THEME: BrandTheme = {
   secondary: '#0f172a',
   accent: '#ea580c',
   fontFamily: 'Inter, system-ui, sans-serif',
+  menuTemplate: 1,
+  published: false,
 };
+
+// Menü tasarımları — landing registry ile aynı sıra (1-20).
+const MENU_TEMPLATES: { id: number; name: string; desc: string }[] = [
+  { id: 1, name: 'Klasik Kart', desc: 'Görsel üstte, fiyat rozeti' },
+  { id: 2, name: 'Dergi', desc: 'Editöryel büyük kartlar' },
+  { id: 3, name: 'Minimal Liste', desc: 'Görselsiz, sade satırlar' },
+  { id: 4, name: 'Izgara Fotoğraf', desc: 'Görsel baskın, koyu' },
+  { id: 5, name: 'Bistro', desc: 'Kağıt hissi, kesik çizgi' },
+  { id: 6, name: 'Modern Bold', desc: 'Keskin, kalın tipografi' },
+  { id: 7, name: 'Kompakt', desc: 'Yoğun, küçük thumbnail' },
+  { id: 8, name: 'Şık Serif', desc: 'Fine-dining, serif' },
+  { id: 9, name: 'Şerit Rozet', desc: 'Köşe şeridi, neşeli' },
+  { id: 10, name: 'Karanlık Neon', desc: 'Koyu kart, neon parıltı' },
+  { id: 11, name: 'Polaroid', desc: 'Eğik fotoğraf çerçevesi' },
+  { id: 12, name: 'Fiş', desc: 'Monospace, termal fiş' },
+  { id: 13, name: 'Cam', desc: 'Glassmorphism, bulanık' },
+  { id: 14, name: 'Yan Görsel', desc: 'Yatay kart, solda görsel' },
+  { id: 15, name: 'Kabarcık', desc: 'Aşırı yuvarlak, pastel' },
+  { id: 16, name: 'Geniş Izgara', desc: 'Sıkı 4 sütun' },
+  { id: 17, name: 'Fast-Food', desc: 'Enerjik, büyük fiyat' },
+  { id: 18, name: 'Kafe', desc: 'Sıcak, butik kafe' },
+  { id: 19, name: 'Lüks', desc: 'Siyah-beyaz, sofistike' },
+  { id: 20, name: 'Tam Görsel', desc: 'Full-bleed görsel' },
+];
 
 const FONT_OPTIONS = [
   { value: 'Inter, system-ui, sans-serif', label: 'Inter (modern)' },
@@ -615,6 +643,71 @@ export default function Settings() {
               Kaydettikten sonra sipariş siteniz otomatik güncellenir.
             </p>
           </div>
+        </div>
+
+        {/* Menü Tasarımı — 20 hazır şablon */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-gray-800">Menü Tasarımı</h3>
+            <a
+              href="/menu"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-primary-600 hover:underline"
+            >
+              Menüyü önizle ↗
+            </a>
+          </div>
+          <p className="text-sm text-gray-500 mb-3">
+            Sipariş sayfanızın görünümü. Seçip <strong>Kaydet</strong>'e basın.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {MENU_TEMPLATES.map((t) => {
+              const selected = theme.menuTemplate === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTheme({ ...theme, menuTemplate: t.id })}
+                  className={`text-left rounded-xl border-2 p-3 transition ${
+                    selected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-gray-400">#{t.id}</span>
+                    {selected && <Check className="w-4 h-4 text-primary-600" />}
+                  </div>
+                  <p className="font-semibold text-sm text-gray-800 mt-1 leading-tight">{t.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-tight">{t.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Yayın durumu — tanıtım landing'i */}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-800">Tanıtım Sayfası Yayını</h3>
+              <p className="text-sm text-gray-500 max-w-md">
+                Kapalıyken sipariş sitenizin ana sayfası "hazırlanıyor" görünür; menü/sipariş
+                yine çalışır. Özel tasarımınız hazır olduğunda açın.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
+              <input
+                type="checkbox"
+                checked={theme.published}
+                onChange={(e) => setTheme({ ...theme, published: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
+            </label>
+          </div>
+          <p className={`text-sm mt-2 font-medium ${theme.published ? 'text-green-600' : 'text-amber-600'}`}>
+            {theme.published ? '🟢 Tanıtım sayfası YAYINDA' : '🟡 Tanıtım sayfası kapalı (menü çalışıyor)'}
+          </p>
         </div>
       </div>
 

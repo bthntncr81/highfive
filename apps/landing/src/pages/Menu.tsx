@@ -6,7 +6,7 @@ import { useCart } from '../lib/cartStore'
 import { orderApi, happyHourApi, imageUrl, type HappyHour, type Category, type MenuItem as APIMenuItem } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
 import { SectionContainer } from '../components/SectionContainer'
-import { MenuGridFromAPI } from '../components/MenuGridFromAPI'
+import { getMenuTemplate } from '../components/menu/registry'
 import { BundleSection } from '../components/BundleSection'
 import { RevealOnScroll } from '../components/RevealOnScroll'
 import { useSettings } from '../hooks/useSettings'
@@ -31,8 +31,9 @@ export const Menu = () => {
   const theme = useTheme()
   const brandName = theme?.name || content.site.name || 'Restoranımız'
   const brandLogo = imageUrl(theme?.logoUrl)
+  const tpl = getMenuTemplate(theme?.menuTemplate) // POS'tan seçilen menü tasarımı (1-20)
   const { tableSession, clearTableSession } = useCart()
-  const { whatsappEnabled, services } = useSettings()
+  const { whatsappEnabled, services, isWithinOrderHours } = useSettings()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialCategory = searchParams.get('category')
@@ -330,12 +331,13 @@ export const Menu = () => {
         )}
       </AnimatePresence>
 
-      {/* Menu Items */}
-      <SectionContainer variant="cream">
+      {/* Menu Items — seçilen şablona göre (surface + grid + kart) */}
+      <section className={`py-12 md:py-16 ${tpl.surface}`}>
+        <div className="container-diner">
         {/* Results count - desktop only */}
         <RevealOnScroll>
           <div className="hidden md:flex items-center justify-between mb-8">
-            <p className="font-body text-foreground-muted">
+            <p className={`font-body ${tpl.dark ? 'text-white/70' : 'text-foreground-muted'}`}>
               <span className="font-display text-primary">{filteredItems.length}</span> ürün bulundu
               {activeHappyHours.length > 0 && (
                 <span className="ml-2 text-purple-600">
@@ -428,21 +430,35 @@ export const Menu = () => {
           </>
         )}
 
-        {/* Grid */}
-        {!loading && (
+        {/* Grid — seçilen şablonun kartı ile */}
+        {!loading && filteredItems.length === 0 && (
+          <div className={`text-center py-20 ${tpl.dark ? 'text-white/70' : 'text-foreground-muted'}`}>
+            <div className="text-6xl mb-4">🔍</div>
+            <p className="font-display text-2xl">Bu kategoride ürün bulunamadı</p>
+          </div>
+        )}
+        {!loading && filteredItems.length > 0 && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeCategory || 'all'}
+              key={`${activeCategory || 'all'}-${tpl.id}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
+              className={tpl.gridClass}
             >
-              <MenuGridFromAPI items={filteredItems} />
+              {filteredItems.map((item) => (
+                <tpl.Card
+                  key={item.id}
+                  item={item}
+                  cartEnabled={services.cartEnabled && isWithinOrderHours}
+                />
+              ))}
             </motion.div>
           </AnimatePresence>
         )}
-      </SectionContainer>
+        </div>
+      </section>
 
       {/* Bottom CTA - only show if WhatsApp enabled */}
       {whatsappEnabled && (
