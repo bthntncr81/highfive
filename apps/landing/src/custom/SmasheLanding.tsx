@@ -121,11 +121,12 @@ export const SmasheLanding = () => {
         .smx-photo  { animation: smx-photo 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
         .smx-stkr   { animation: smx-stkr 0.5s 0.6s cubic-bezier(0.16,1,0.3,1) both; }
 
-        /* Scroll reveal — SADECE animation-timeline destekliyse gizle+aç.
-           Desteklenmiyorsa .smx-reveal hiç dokunmaz → içerik görünür kalır. */
-        @keyframes smx-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+        /* Scroll reveal — İÇERİK HER ZAMAN GÖRÜNÜR (opacity gate YOK). Yalnızca hafif
+           bir yukarı-kayma; animation-timeline yoksa veya range dışındaysa en kötü
+           ihtimalle 30px ötelenir, ASLA kaybolmaz (impeccable: görünür varsayılanı zenginleştir). */
+        @keyframes smx-in { from { transform: translateY(30px); } to { transform: none; } }
         @supports (animation-timeline: view()) {
-          .smx-reveal { opacity: 0; animation: smx-in linear both; animation-timeline: view(); animation-range: entry 0% cover 24%; }
+          .smx-reveal { animation: smx-in linear both; animation-timeline: view(); animation-range: entry 5% entry 95%; }
         }
 
         /* Eğik menü kartı — hover'da düzelir + kalkar (rotate/translate bağımsız özellikler) */
