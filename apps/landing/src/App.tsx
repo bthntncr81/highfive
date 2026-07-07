@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
 
 import { Cart, CartButton } from "./components/Cart";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -8,6 +8,8 @@ import { Footer } from "./components/Footer";
 import { Navbar } from "./components/Navbar";
 import { CartProvider } from "./lib/cartStore";
 import { ContentProvider, useContent } from "./lib/contentStore";
+import { useTheme } from "./hooks/useTheme";
+import { ComingSoon } from "./pages/ComingSoon";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
 
@@ -106,10 +108,41 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Tema (yayın durumu) yüklenene kadar kısa bir splash — published site'da placeholder flaşını önler.
+const SiteSplash = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
+    <div className="h-10 w-10 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+  </div>
+);
+
+// Kök geçidi: yayınlanmışsa gerçek landing (Home), değilse "site hazırlanıyor".
+const RootGate = () => {
+  const theme = useTheme();
+  if (theme === null) return <SiteSplash />;
+  return theme.published ? (
+    <PageTransition>
+      <Home />
+    </PageTransition>
+  ) : (
+    <ComingSoon />
+  );
+};
+
+// Premium/tanıtım sayfaları (blog/oyun/tasarla/hakkımızda) — yayınlanmamışsa /menu'ye yönlendirir.
+const Premium = ({ children }: { children: React.ReactNode }) => {
+  const theme = useTheme();
+  if (theme === null) return <SiteSplash />;
+  return theme.published ? <>{children}</> : <Navigate to="/menu" replace />;
+};
+
 // Animated routes component
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const theme = useTheme();
   const isAdmin = location.pathname === "/admin";
+  // Yayınlanmamış tenant'ın kök "site hazırlanıyor" sayfası tam ekran — navbar/footer gizli.
+  const isComingSoon = location.pathname === "/" && theme !== null && !theme.published;
+  const hideChrome = isAdmin || isComingSoon;
   const { services, isWithinOrderHours } = useSettings();
 
   return (
@@ -117,19 +150,12 @@ const AnimatedRoutes = () => {
       <ScrollToTop />
       <MetaUpdater />
 
-      {/* Show navbar and footer only on non-admin pages */}
-      {!isAdmin && <Navbar />}
+      {/* Show navbar and footer only on non-admin / non-placeholder pages */}
+      {!hideChrome && <Navbar />}
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          <Route
-            path="/"
-            element={
-              <PageTransition>
-                <Home />
-              </PageTransition>
-            }
-          />
+          <Route path="/" element={<RootGate />} />
           <Route
             path="/menu"
             element={
@@ -154,21 +180,21 @@ const AnimatedRoutes = () => {
               </PageTransition>
             }
           />
-          {/* Pizza & Sandwich Builder — seçim + kendi ürün tasarımı */}
-          <Route path="/build" element={<PageTransition><BuilderSelect /></PageTransition>} />
-          <Route path="/build/:type" element={<PageTransition><Builder /></PageTransition>} />
-          {/* Mobile app indirme — device-aware redirect */}
-          <Route path="/app" element={<PageTransition><AppRedirect /></PageTransition>} />
-          {/* Blog — SEO + lokal kaçamak rehberleri */}
-          <Route path="/blog" element={<PageTransition><Blog /></PageTransition>} />
-          <Route path="/blog/:slug" element={<PageTransition><BlogPost /></PageTransition>} />
-          {/* Pizza Şefi mini-oyunu — global liderlik */}
-          <Route path="/oyun" element={<PageTransition><Game /></PageTransition>} />
+          {/* Pizza & Sandwich Builder — seçim + kendi ürün tasarımı (premium/yayınlanmış) */}
+          <Route path="/build" element={<Premium><PageTransition><BuilderSelect /></PageTransition></Premium>} />
+          <Route path="/build/:type" element={<Premium><PageTransition><Builder /></PageTransition></Premium>} />
+          {/* Mobile app indirme — device-aware redirect (premium/yayınlanmış) */}
+          <Route path="/app" element={<Premium><PageTransition><AppRedirect /></PageTransition></Premium>} />
+          {/* Blog — SEO + lokal kaçamak rehberleri (premium/yayınlanmış) */}
+          <Route path="/blog" element={<Premium><PageTransition><Blog /></PageTransition></Premium>} />
+          <Route path="/blog/:slug" element={<Premium><PageTransition><BlogPost /></PageTransition></Premium>} />
+          {/* Pizza Şefi mini-oyunu — global liderlik (premium/yayınlanmış) */}
+          <Route path="/oyun" element={<Premium><PageTransition><Game /></PageTransition></Premium>} />
           {/* QR scan route - fetches table info and redirects to menu */}
           <Route path="/table/:tableId" element={<TableScan />} />
           {/* Payment page */}
           <Route path="/payment" element={<Payment />} />
-          <Route path="/about" element={<PageTransition><About /></PageTransition>} />
+          <Route path="/about" element={<Premium><PageTransition><About /></PageTransition></Premium>} />
           <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
           <Route path="/delivery-terms" element={<PageTransition><DeliveryTerms /></PageTransition>} />
           <Route path="/distance-sales" element={<PageTransition><DistanceSales /></PageTransition>} />
@@ -188,7 +214,7 @@ const AnimatedRoutes = () => {
         </Routes>
       </AnimatePresence>
 
-      {!isAdmin && <Footer />}
+      {!hideChrome && <Footer />}
       {!isAdmin && services.cartEnabled && isWithinOrderHours && <CartButton />}
       {!isAdmin && services.cartEnabled && isWithinOrderHours && <Cart />}
     </>

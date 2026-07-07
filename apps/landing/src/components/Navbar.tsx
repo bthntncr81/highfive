@@ -25,16 +25,20 @@ export const Navbar = () => {
   const [loginPhone, setLoginPhone] = useState('')
   const [loginError, setLoginError] = useState('')
 
-  // Oyun nav item'ı yalnızca tenant oyunu açtıysa gösterilir (content.game.enabled).
-  const links = [
-    { to: '/', label: 'Ana Sayfa' },
-    { to: '/menu', label: 'Menü' },
-    { to: '/build', label: 'Tasarla' },
-    { to: '/blog', label: 'Blog' },
-    ...(content.game?.enabled ? [{ to: '/oyun', label: '🎮 Oyun' }] : []),
-    { to: '/about', label: 'Hakkımızda' },
-    { to: '/contact', label: 'İletişim' },
-  ]
+  // Tanıtım landing'i yayınlanmamışsa sadece Menü göster (blog/oyun/tasarla/hakkımızda gizli).
+  // Yayınlandıysa tam menü; Oyun yalnızca content.game.enabled ise.
+  const published = theme?.published
+  const links = published
+    ? [
+        { to: '/', label: 'Ana Sayfa' },
+        { to: '/menu', label: 'Menü' },
+        { to: '/build', label: 'Tasarla' },
+        { to: '/blog', label: 'Blog' },
+        ...(content.game?.enabled ? [{ to: '/oyun', label: '🎮 Oyun' }] : []),
+        { to: '/about', label: 'Hakkımızda' },
+        { to: '/contact', label: 'İletişim' },
+      ]
+    : [{ to: '/menu', label: 'Menü' }]
 
   const isActive = (path: string) => location.pathname === path
 
@@ -48,7 +52,7 @@ export const Navbar = () => {
       <div className="container-diner">
         <div className="flex items-center justify-between h-[72px]">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to={published ? '/' : '/menu'} className="flex items-center gap-3 group">
             {brandLogo ? (
               <motion.img
                 src={brandLogo}

@@ -106,6 +106,11 @@ export default async function settingsRoutes(server: FastifyInstance) {
       logoUrl: t.logoUrl || null,
       fontFamily: t.fontFamily || 'Inter, system-ui, sans-serif',
       colors,
+      // Menü tasarımı (1-20) — POS'tan seçilir; /menu bu şablonla render edilir.
+      menuTemplate: typeof t.menuTemplate === 'number' ? t.menuTemplate : 1,
+      // Tanıtım landing'i yayınlandı mı? false → kök '/' "site hazırlanıyor" bekleme
+      // sayfası + blog/oyun/tasarla/hakkımızda gizli; /menu her durumda çalışır.
+      published: t.published === true,
     };
   });
 

@@ -11,6 +11,8 @@ export interface TenantTheme {
   logoUrl?: string | null;
   fontFamily?: string;
   colors?: Record<string, string>; // "primary": "187 30 16" (rgb kanal) veya "#bb1e10"
+  menuTemplate?: number; // 1-20 menü tasarımı
+  published?: boolean;   // tanıtım landing'i yayında mı
 }
 
 let cached: TenantTheme | null = null;
