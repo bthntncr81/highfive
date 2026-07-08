@@ -88,8 +88,8 @@ export default function Billing() {
     try {
       const r = await api.post('/api/platform/billing/subscribe-checkout', { planKey, cycle }, token!);
       if (r.simulated) {
-        // SIMULATION: callback'i doğrudan çağır → anında aktive
-        await api.post(`/api/platform/billing/checkout-callback?token=${encodeURIComponent(r.token)}`, {});
+        // SIMULATION: callback'i doğrudan çağır → anında aktive (json=1: redirect değil JSON döner)
+        await api.post(`/api/platform/billing/checkout-callback?token=${encodeURIComponent(r.token)}&json=1`, {});
         setMessage({ type: 'ok', text: 'Abonelik aktifleştirildi (test modu).' });
         await load();
       } else if (r.checkoutFormContent) {
@@ -109,7 +109,7 @@ export default function Billing() {
     try {
       const r = await api.post('/api/platform/billing/addon-checkout', { addon: addonKey }, token!);
       if (r.simulated) {
-        await api.post(`/api/platform/billing/addon-callback?token=${encodeURIComponent(r.token)}`, {});
+        await api.post(`/api/platform/billing/addon-callback?token=${encodeURIComponent(r.token)}&json=1`, {});
         setMessage({ type: 'ok', text: 'Satın alım tamamlandı (test modu) — ekibimiz kurulum için ulaşacak.' });
         await load();
       } else if (r.checkoutFormContent) {

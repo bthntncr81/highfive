@@ -137,15 +137,20 @@ export default async function billingRoutes(server: FastifyInstance) {
   // Token'ı body'den (form) ya da query'den al; pendingCheckoutToken ile eşleştir.
   server.post('/billing/checkout-callback', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = (request.body ?? {}) as { token?: string };
-    const query = (request.query ?? {}) as { token?: string };
+    const query = (request.query ?? {}) as { token?: string; json?: string };
     const token = body.token || query.token;
-    if (!token) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+    // json=1: SPA'nın SIMULATION çağrısı — redirect yerine JSON (addon-callback ile aynı sebep)
+    const finish = (status: 'success' | 'failed' | 'notfound', returnUrl: string) =>
+      query.json === '1'
+        ? reply.send({ ok: status === 'success', status })
+        : reply.redirect(`${returnUrl}?billing=${status}`, 302);
+    if (!token) return finish('notfound', billingReturnUrl(null));
 
     const sub = await platformDb.subscription.findFirst({
       where: { pendingCheckoutToken: String(token) },
       include: { tenant: true, plan: true },
     });
-    if (!sub) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+    if (!sub) return finish('notfound', billingReturnUrl(null));
     const returnUrl = billingReturnUrl(sub.tenant);
 
     let result: Awaited<ReturnType<typeof retrieveCheckoutResult>>;
@@ -153,11 +158,11 @@ export default async function billingRoutes(server: FastifyInstance) {
       result = await retrieveCheckoutResult(String(token));
     } catch (e) {
       request.log.error(e, '[billing] checkout sonucu alınamadı');
-      return reply.redirect(`${returnUrl}?billing=failed`, 302);
+      return finish('failed', returnUrl);
     }
 
     if (result.subscriptionStatus !== 'ACTIVE') {
-      return reply.redirect(`${returnUrl}?billing=failed`, 302);
+      return finish('failed', returnUrl);
     }
 
     const planId = sub.pendingPlanId ?? sub.planId;
@@ -199,7 +204,7 @@ export default async function billingRoutes(server: FastifyInstance) {
     // P6 makbuz maili (fire-and-forget)
     sendBillingMail(platformDb, sub.tenantId, 'receipt', { planName: plan?.name, amount: price, periodEnd }).catch(() => {});
     invalidatePlanCache(sub.tenantId);
-    return reply.redirect(`${returnUrl}?billing=success`, 302);
+    return finish('success', returnUrl);
   });
 
   // Ekstra satın alımı checkout dönüşü — PUBLIC (iyzico form POST'u).
@@ -207,38 +212,44 @@ export default async function billingRoutes(server: FastifyInstance) {
   // sorgulanır (client verisine güvenilmez). Idempotent: token ikinci kez işlenmez.
   server.post('/billing/addon-callback', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = (request.body ?? {}) as { token?: string };
-    const query = (request.query ?? {}) as { token?: string };
+    const query = (request.query ?? {}) as { token?: string; json?: string };
     const token = String(body.token || query.token || '');
-    if (!token) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+    // json=1: SPA'nın SIMULATION çağrısı — redirect yerine JSON döner (fetch
+    // 302'yi takip edip HTML'i JSON diye parse etmeye çalışıyordu).
+    const finish = (status: 'addon-success' | 'addon-failed' | 'notfound', returnUrl: string) =>
+      query.json === '1'
+        ? reply.send({ ok: status === 'addon-success', status })
+        : reply.redirect(`${returnUrl}?billing=${status}`, 302);
+    if (!token) return finish('notfound', billingReturnUrl(null));
 
     const pending = await platformDb.settings.findFirst({
       where: { key: 'addonCheckout', value: { path: ['token'], equals: token } },
     });
-    if (!pending) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+    if (!pending) return finish('notfound', billingReturnUrl(null));
     const addonKey = String((pending.value as any)?.addon || '');
     const tenant = await platformDb.tenant.findUnique({ where: { id: pending.tenantId } });
     const returnUrl = billingReturnUrl(tenant);
-    if (!ADDONS[addonKey]) return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+    if (!ADDONS[addonKey]) return finish('addon-failed', returnUrl);
 
     // Idempotency — aynı token'la ikinci çağrı yeniden uygulamaz
     const existing = await platformDb.billingTransaction.findFirst({
       where: { iyzicoPaymentId: token },
       select: { id: true },
     });
-    if (existing) return reply.redirect(`${returnUrl}?billing=addon-success`, 302);
+    if (existing) return finish('addon-success', returnUrl);
 
     let result: Awaited<ReturnType<typeof retrievePaymentResult>>;
     try {
       result = await retrievePaymentResult(token);
     } catch (e) {
       request.log.error(e, '[billing] ekstra ödeme sonucu alınamadı');
-      return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+      return finish('addon-failed', returnUrl);
     }
-    if (!result.paid) return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+    if (!result.paid) return finish('addon-failed', returnUrl);
 
     await applyAddonPurchase(pending.tenantId, addonKey, token);
     await platformDb.settings.delete({ where: { id: pending.id } }).catch(() => {});
-    return reply.redirect(`${returnUrl}?billing=addon-success`, 302);
+    return finish('addon-success', returnUrl);
   });
 
   // iyzico abonelik webhook'u — PUBLIC. İmza geçersizse İŞLEME ama 200 dön
