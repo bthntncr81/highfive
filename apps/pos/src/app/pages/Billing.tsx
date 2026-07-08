@@ -219,7 +219,7 @@ export default function Billing() {
       {/* Ekstralar — her pakete eklenebilir */}
       <div className="card">
         <h2 className="font-semibold mb-1">Ekstralar</h2>
-        <p className="text-sm text-gray-500 mb-4">Her pakete eklenebilir: tek seferlik ₺25.000 ya da 12 ay taahhütle ₺4.999/ay (her modül ayrı).</p>
+        <p className="text-sm text-gray-500 mb-4">Her pakete eklenebilir — tek seferlik ödeme, abonelikten bağımsız.</p>
         <div className="grid gap-3 md:grid-cols-2">
           {[
             { icon: '🎨', t: 'Özel Tasarım Landing Page', d: 'Markana özel elle tasarlanmış tanıtım sitesi (örn. smashe.otorder.com).' },
@@ -228,10 +228,13 @@ export default function Billing() {
             <div key={x.t} className="rounded-xl border border-gray-200 p-4">
               <p className="font-semibold">{x.icon} {x.t}</p>
               <p className="mt-1 text-sm text-gray-500">{x.d}</p>
-              <p className="mt-2 text-sm"><b>₺25.000</b> tek seferlik · <b>₺4.999/ay</b> ×12</p>
+              <p className="mt-2 text-sm"><b>₺24.999</b> tek seferlik</p>
             </div>
           ))}
         </div>
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          🎁 İkisi birden <b>₺44.999</b> — üstüne <b>1 yıllık Pro paket hediye</b> (₺5.990 değerinde).
+        </p>
         <p className="mt-3 text-xs text-gray-400">Eklemek için: soft@haberbenim.com adresine yazman yeterli — kurulumden sonra faturana işlenir.</p>
       </div>
 

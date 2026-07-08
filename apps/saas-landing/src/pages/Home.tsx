@@ -125,14 +125,15 @@ function BrandedApp() {
           </div>
         </div>
         <div className="reveal">
-          <p className="font-mono text-[12px] font-semibold text-brand-700">Kurumsal paket</p>
+          <p className="font-mono text-[12px] font-semibold text-brand-700">Ekstra modül · Markalı Mobil Uygulama</p>
           <h2 className="mt-2 text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
             Aynı sipariş deneyimi, kendi adınızla App Store ve Google Play'de.
           </h2>
           <p className="mt-4 max-w-measure leading-relaxed text-ink-soft">
-            Kurumsal pakette sipariş siteniz, sizin adınızı, ikonunuzu ve renklerinizi taşıyan
-            markalı bir mobil uygulamaya dönüşür. Yayınlamayı biz yürütürüz; puanlar,
-            kampanyalar ve push bildirimleri uygulamada da aynı hesapla çalışır.
+            Sipariş siteniz, sizin adınızı, ikonunuzu ve renklerinizi taşıyan markalı bir
+            mobil uygulamaya dönüşür. Yayınlamayı biz yürütürüz; puanlar, kampanyalar ve
+            push bildirimleri uygulamada da aynı hesapla çalışır. Tek seferlik ₺24.999 —
+            özel tasarım landing ile birlikte alana ₺44.999 ve 1 yıllık Pro paket hediye.
           </p>
           <ul className="mt-6 space-y-2.5">
             {['Kendi uygulama adınız ve ikonunuz', 'Push bildirimiyle kampanya duyurusu', 'Sadakat puanları ve çark uygulamada da geçerli'].map((p) => (
@@ -144,9 +145,9 @@ function BrandedApp() {
               </li>
             ))}
           </ul>
-          <Link to="/signup?plan=ENTERPRISE" className="btn-primary mt-8">
-            Kurumsal ile başla
-          </Link>
+          <a href="#fiyatlar" className="btn-primary mt-8">
+            Fiyatları gör
+          </a>
         </div>
       </div>
     </section>
@@ -458,12 +459,13 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
           {plans.map((p, i) => (
             <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} order={i} />
           ))}
+          {plans.length > 0 && <BundleTicket order={plans.length} />}
         </div>
 
-        {/* Ekstralar: her pakete eklenebilen tek seferlik / taahhütlü modüller */}
+        {/* Ekstralar: her pakete eklenebilen tek seferlik modüller */}
         <div className="mt-16">
           <h3 className="text-center text-2xl font-bold text-ink">Ekstralar</h3>
-          <p className="mt-2 text-center text-ink-soft">Her pakete eklenebilir. İki ödeme seçeneği: tek seferlik ya da 12 ay taahhütle aylık.</p>
+          <p className="mt-2 text-center text-ink-soft">Her pakete eklenebilir — tek seferlik ödeme, abonelikten bağımsız.</p>
           <div className="mx-auto mt-8 grid max-w-3xl gap-6 md:grid-cols-2">
             {[
               { icon: '🎨', title: 'Özel Tasarım Landing Page', desc: 'Markanıza özel, elle tasarlanmış tanıtım sitesi. Örnekler: smashe.otorder.com, highfivepps.com' },
@@ -473,14 +475,16 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
                 <div className="text-3xl">{x.icon}</div>
                 <h4 className="mt-3 text-lg font-bold text-ink">{x.title}</h4>
                 <p className="mt-1.5 text-sm text-ink-soft">{x.desc}</p>
-                <div className="mt-4 space-y-1.5 border-t border-ink/10 pt-4 text-sm">
-                  <p><span className="font-bold text-ink">₺25.000</span> <span className="text-ink-muted">tek seferlik</span></p>
-                  <p className="text-ink-muted">ya da</p>
-                  <p><span className="font-bold text-ink">₺4.999/ay</span> <span className="text-ink-muted">12 ay taahhütle</span></p>
+                <div className="mt-4 border-t border-ink/10 pt-4 text-sm">
+                  <p><span className="font-bold text-ink">₺24.999</span> <span className="text-ink-muted">tek seferlik</span></p>
                 </div>
               </div>
             ))}
           </div>
+          <p className="mx-auto mt-6 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-6 py-4 text-center text-sm text-ink-soft">
+            🎁 İkisi birden <span className="font-bold text-ink">₺44.999</span> — üstüne{' '}
+            <span className="font-bold text-brand-700">1 yıllık Pro paket hediye</span> (₺5.990 değerinde).
+          </p>
         </div>
       </div>
     </section>
@@ -494,8 +498,9 @@ const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }>
   { label: 'Sadakat + kampanyalar', has: (p) => !!p.features.loyalty },
   { label: 'Analitik raporlar', has: (p) => !!p.features.analytics },
   { label: 'WhatsApp modülü bağlama', has: (p) => !!p.features.whatsappLink },
-  { label: 'Markalı mobil uygulama', has: (p) => !!p.features.brandedApp },
-  { label: 'Özel tasarım landing', has: (p) => !!p.features.customLanding },
+  // Landing ve mobil app plan özelliği değil, tek seferlik Ekstra modül
+  { label: 'Markalı mobil uygulama', has: () => 'ekstra' },
+  { label: 'Özel tasarım landing', has: () => 'ekstra' },
 ];
 
 function PlanTicket({ plan, annual, featured, order }: { plan: Plan; annual: boolean; featured: boolean; order: number }) {
@@ -555,6 +560,57 @@ function PlanTicket({ plan, annual, featured, order }: { plan: Plan; annual: boo
         </p>
       </div>
     </article>
+    </div>
+  );
+}
+
+// Kuruluş paketi — landing + mobil app birlikte, tek seferlik; 1 yıllık Pro hediye.
+function BundleTicket({ order }: { order: number }) {
+  return (
+    <div className="ticket-print" style={{ ['--i' as never]: order }}>
+      <article className="ticket p-7">
+        <header className="flex items-start justify-between">
+          <div>
+            <p className="font-mono text-[11px] text-ink-muted">otorder.com · adisyon</p>
+            <h3 className="mt-1 text-xl font-extrabold tracking-[-0.01em] text-ink">Kuruluş Paketi</h3>
+          </div>
+          <span className="stamp-in rotate-6 rounded border-2 border-brand-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700">
+            en iyi değer
+          </span>
+        </header>
+
+        <p className="mt-5 flex items-baseline gap-1.5">
+          <span className="font-mono text-4xl font-semibold tracking-tight text-ink">₺44.999</span>
+          <span className="text-sm text-ink-muted">tek seferlik</span>
+        </p>
+
+        <ul className="ticket-rule mt-5 space-y-2.5 pt-5 font-mono text-[13px]">
+          {[
+            'Özel tasarım landing page',
+            'Markalı mobil uygulama',
+            '1 yıllık Pro paket hediye (₺5.990)',
+            'Kurulum ve yayına alma bizde',
+          ].map((label) => (
+            <li key={label} className="flex justify-between gap-3 text-ink-soft">
+              <span>{label}</span>
+              <span className="font-semibold text-brand-700">✓</span>
+            </li>
+          ))}
+          <li className="flex justify-between text-ink-muted/70">
+            <span>Ayrı ayrı alana göre ₺10.988 avantaj</span>
+            <span aria-hidden="true">🎁</span>
+          </li>
+        </ul>
+
+        <div className="ticket-rule mt-5 pt-5">
+          <Link to="/signup?plan=PRO" className="btn-ghost w-full">
+            Paketle başla
+          </Link>
+          <p className="mt-3 text-center font-mono text-[10px] text-ink-muted">
+            kayıttan sonra tasarım için biz ulaşırız
+          </p>
+        </div>
+      </article>
     </div>
   );
 }

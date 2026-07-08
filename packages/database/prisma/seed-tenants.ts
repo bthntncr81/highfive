@@ -9,12 +9,14 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Landing ve mobil app artık plan özelliği değil, tek seferlik Ekstra modül
+// (₺24.999/modül; ikisi birden ₺44.999 + 1 yıllık Pro hediye). ENTERPRISE pasif.
 const PLANS = [
-  { key: 'STARTER', name: 'Başlangıç', monthlyPrice: 990, annualPrice: 9900, maxLocations: -1, maxUsers: -1, sortOrder: 1,
+  { key: 'STARTER', name: 'Başlangıç', monthlyPrice: 299, annualPrice: 2990, maxLocations: -1, maxUsers: -1, sortOrder: 1,
     features: { loyalty: false, campaigns: false, analytics: false, whatsappLink: false, brandedApp: false, customLanding: false, marketplace: false } },
-  { key: 'PRO', name: 'Pro', monthlyPrice: 1990, annualPrice: 19900, maxLocations: -1, maxUsers: -1, sortOrder: 2,
+  { key: 'PRO', name: 'Pro', monthlyPrice: 599, annualPrice: 5990, maxLocations: -1, maxUsers: -1, sortOrder: 2,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: false, customLanding: false, marketplace: true } },
-  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 4990, annualPrice: 49900, maxLocations: -1, maxUsers: -1, sortOrder: 3,
+  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 4990, annualPrice: 49900, maxLocations: -1, maxUsers: -1, sortOrder: 3, active: false,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: true, customLanding: true, marketplace: true } },
 ];
 
