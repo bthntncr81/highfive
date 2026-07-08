@@ -19,6 +19,7 @@ export default function Home() {
       <Gallery />
       <FeatureMenu />
       <WhatsappBand />
+      <Showcase />
       <Pricing plans={plans} annual={annual} onToggle={() => setAnnual((a) => !a)} />
       <BrandedApp />
       <FinalCta />
@@ -584,6 +585,53 @@ function FinalCta() {
         </p>
         <div className="reveal mt-8">
           <Link to="/signup" className="btn-primary text-base">Restoranımı oluştur</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Örnek siteler — özel tasarım landing vitrinleri (Ekstralar modülünün kanıtı).
+// Her kart canlı bir *.otorder.com sitesine gider.
+const SHOWCASE_SITES: Array<{ name: string; cuisine: string; url: string; bg: string; fg: string; note: string }> = [
+  { name: 'smashè club', cuisine: 'Smash burger & matcha', url: 'https://smashe.otorder.com', bg: '#1747D1', fg: '#ffffff', note: 'Royal mavi + pöti kare' },
+  { name: 'USTA DÖNER', cuisine: 'Dönerci', url: 'https://ustadoner.otorder.com', bg: '#141210', fg: '#ff5a1c', note: 'İs karası + ateş turuncusu' },
+  { name: 'Sushisel', cuisine: 'Sushi teslimatı', url: 'https://sushisel.otorder.com', bg: '#ffffff', fg: '#E23D28', note: 'Zen beyaz + vermilyon mühür' },
+  { name: 'Pidem Karadeniz', cuisine: 'Taş fırın pide', url: 'https://pidem.otorder.com', bg: '#1E3B2E', fg: '#F3C64E', note: 'Yosun yeşili + tereyağı' },
+  { name: 'MOKKA', cuisine: 'Kahve & brunch', url: 'https://mokka.otorder.com', bg: '#2B1D16', fg: '#F6EFE5', note: 'Espresso + süt köpüğü' },
+  { name: 'Şerbet', cuisine: 'Baklava & künefe', url: 'https://serbet.otorder.com', bg: '#173325', fg: '#B87333', note: 'Fıstık + bakır' },
+  { name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#bb1e10', fg: '#ffffff', note: 'Canlı müşteri: Akçakoca' },
+];
+
+function Showcase() {
+  return (
+    <section className="border-t border-ink/10 bg-white py-20 md:py-28" id="ornekler">
+      <div className="container-x">
+        <h2 className="text-center text-3xl font-bold text-ink md:text-4xl">Örnek siteler</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-ink-soft">
+          Özel Tasarım Landing modülüyle her marka kendi dünyasına kavuşur. Hepsi canlı, tıkla ve gez:
+        </p>
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {SHOWCASE_SITES.map((x, i) => (
+            <a
+              key={x.url}
+              href={x.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`group block overflow-hidden rounded-2xl border border-ink/10 transition-transform hover:-translate-y-1 ${i === 0 ? 'sm:col-span-2' : ''}`}
+            >
+              <div className="flex h-36 items-center justify-center px-4" style={{ background: x.bg }}>
+                <span className="text-center text-2xl font-extrabold tracking-tight" style={{ color: x.fg }}>{x.name}</span>
+              </div>
+              <div className="flex items-center justify-between bg-white px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">{x.cuisine}</p>
+                  <p className="text-xs text-ink-muted">{x.note}</p>
+                </div>
+                <span className="text-ink-muted transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
     </section>
