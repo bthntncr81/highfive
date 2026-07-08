@@ -74,6 +74,30 @@ export function applyTheme(theme: TenantTheme): void {
     root.style.setProperty('--color-accent-light', rgb(mix(accent, [255, 255, 255], 0.2)));
   }
   if (theme.name) document.title = `${theme.name} · POS`;
+  applyFavicon(theme);
+}
+
+// Sekme ikonu: özel faviconUrl ya da marka renginde baş harfli SVG (HighFive statiklerinin yerine).
+export function applyFavicon(theme: TenantTheme): void {
+  if (typeof document === 'undefined') return;
+  let href: string | null = null;
+  let type = 'image/svg+xml';
+  const favUrl = (theme as any).faviconUrl as string | undefined;
+  if (favUrl) {
+    href = favUrl.startsWith('http') ? favUrl : `${API_BASE}${favUrl}`;
+    type = favUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+  } else if (theme.name) {
+    const primary = toRgbTriplet(theme.colors?.primary) || [187, 30, 16];
+    const fill = `rgb(${primary[0]},${primary[1]},${primary[2]})`;
+    const letter = theme.name.trim().charAt(0).toLocaleUpperCase('tr-TR');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${fill}"/><text x="32" y="44" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="800" fill="#ffffff" text-anchor="middle">${letter}</text></svg>`;
+    href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  }
+  if (!href) return;
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="shortcut icon"]').forEach((el) => el.remove());
+  const link = document.createElement('link');
+  link.rel = 'icon'; link.type = type; link.href = href;
+  document.head.appendChild(link);
 }
 
 export async function bootstrapTheme(): Promise<TenantTheme | null> {

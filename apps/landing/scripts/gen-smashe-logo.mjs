@@ -37,6 +37,14 @@ const jobs = [
   { file: 'logo-blue.png', color: SMASHE_BLUE, club: true, h: 300 },
   { file: 'wordmark-white.png', color: '#ffffff', club: false, h: 220 },
 ];
+
+// Favicon: mavi yuvarlak kare zemin + beyaz Pacifico "s" (256px)
+const favHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+html,body{margin:0;background:transparent}
+.f{width:256px;height:256px;border-radius:56px;background:${SMASHE_BLUE};display:grid;place-items:center}
+.f span{font-family:'Pacifico',cursive;font-size:170px;color:#fff;line-height:1;margin-top:-22px}
+</style></head><body><div class="f"><span>s</span></div></body></html>`;
 for (const j of jobs) {
   await page.setViewport({ width: 800, height: j.h, deviceScaleFactor: 2 });
   await page.setContent(html(j.color, j.club), { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -45,5 +53,12 @@ for (const j of jobs) {
   await page.screenshot({ path: `${outDir}/${j.file}`, omitBackground: true });
   console.log('✓', j.file);
 }
+await page.setViewport({ width: 256, height: 256, deviceScaleFactor: 1 });
+await page.setContent(favHtml, { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.evaluate(() => document.fonts.ready);
+await new Promise((r) => setTimeout(r, 900));
+await page.screenshot({ path: `${outDir}/favicon.png`, omitBackground: true });
+console.log('✓ favicon.png');
+
 await browser.close();
 console.log('out:', outDir);

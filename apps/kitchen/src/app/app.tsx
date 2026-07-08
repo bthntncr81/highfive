@@ -84,7 +84,29 @@ export default function App() {
   useEffect(() => {
     fetch(`${API_URL}/api/settings/public/theme`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((t) => { if (t?.name) setBrandName(t.name); })
+      .then((t) => {
+        if (!t?.name) return;
+        setBrandName(t.name);
+        // Sekme ikonu: özel faviconUrl ya da marka renginde baş harfli SVG
+        // (statik HighFive ikonlarının yerine geçer).
+        let href = '';
+        if (t.faviconUrl) {
+          href = String(t.faviconUrl).startsWith('http') ? t.faviconUrl : `${API_URL}${t.faviconUrl}`;
+        } else {
+          const p = String(t.colors?.primary || '220 38 38');
+          const m = p.match(/^(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})$/);
+          const hex = p.startsWith('#') ? p : null;
+          const fill = hex || (m ? `rgb(${m[1]},${m[2]},${m[3]})` : 'rgb(220,38,38)');
+          const letter = t.name.trim().charAt(0).toLocaleUpperCase('tr-TR');
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${fill}"/><text x="32" y="44" font-family="Arial,sans-serif" font-size="36" font-weight="800" fill="#fff" text-anchor="middle">${letter}</text></svg>`;
+          href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+        }
+        document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((el) => el.remove());
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = href;
+        document.head.appendChild(link);
+      })
       .catch(() => { /* varsayılan başlık kalır */ });
   }, []);
 

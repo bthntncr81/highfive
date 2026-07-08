@@ -121,6 +121,8 @@ export default async function settingsRoutes(server: FastifyInstance) {
       // Premium: elle kodlanmış özel landing anahtarı (custom/ registry'sinde).
       // published=true iken kök '/' bu bileşenle render edilir (ör. "smashe").
       customLanding: typeof t.customLanding === 'string' && t.customLanding ? t.customLanding : null,
+      // Özel favicon (yoksa frontend marka renginde baş harfli ikon üretir)
+      faviconUrl: typeof t.faviconUrl === 'string' && t.faviconUrl ? t.faviconUrl : null,
     };
   });
 

@@ -14,6 +14,33 @@ export interface TenantTheme {
   menuTemplate?: number; // 1-20 menü tasarımı
   published?: boolean;   // tanıtım landing'i yayında mı
   customLanding?: string | null; // premium elle kodlanmış landing anahtarı (custom/ registry)
+  faviconUrl?: string | null; // özel favicon; yoksa marka renginde baş harfli ikon üretilir
+}
+
+// Sekme ikonu: özel faviconUrl varsa o; yoksa marka renginde yuvarlak-köşeli
+// kare + adın baş harfi (SVG data-URI). HighFive statik ikonlarının yerine geçer.
+export function applyFavicon(theme: TenantTheme): void {
+  if (typeof document === 'undefined') return;
+  let href: string | null = null;
+  let type = 'image/svg+xml';
+  if (theme.faviconUrl) {
+    href = theme.faviconUrl;
+    type = theme.faviconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+  } else if (theme.name) {
+    const primary = toRgbTriplet(theme.colors?.primary) || [187, 30, 16];
+    const fill = `rgb(${primary[0]},${primary[1]},${primary[2]})`;
+    const letter = theme.name.trim().charAt(0).toLocaleUpperCase('tr-TR');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${fill}"/><text x="32" y="44" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="800" fill="#ffffff" text-anchor="middle">${letter}</text></svg>`;
+    href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  }
+  if (!href) return;
+  // Statik HighFive ikon linklerini kaldır, tenant ikonunu tak
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="shortcut icon"]').forEach((el) => el.remove());
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = type;
+  link.href = href;
+  document.head.appendChild(link);
 }
 
 let cached: TenantTheme | null = null;
@@ -96,6 +123,7 @@ export function applyTheme(theme: TenantTheme): void {
   }
   // Özel landing kendi title/SEO'sunu yönetir — ezme.
   if (theme.name && !theme.customLanding) document.title = theme.name;
+  applyFavicon(theme);
 }
 
 // Açılış bootstrap'ı. Cache anahtarı subdomain → çapraz tenant sızmaz.
