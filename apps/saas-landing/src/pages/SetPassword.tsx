@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Check, Loader2, KeyRound, X } from 'lucide-react';
 import { api } from '../lib/api';
 

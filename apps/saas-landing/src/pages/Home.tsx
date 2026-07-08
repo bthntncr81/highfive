@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Plan } from '../lib/api';
 import { PosMockup, KdsMockup, PhoneMockup, QrChip } from '../components/mockups';
@@ -591,46 +591,167 @@ function FinalCta() {
   );
 }
 
-// Örnek siteler — özel tasarım landing vitrinleri (Ekstralar modülünün kanıtı).
-// Her kart canlı bir *.otorder.com sitesine gider.
-const SHOWCASE_SITES: Array<{ name: string; cuisine: string; url: string; bg: string; fg: string; note: string }> = [
-  { name: 'smashè club', cuisine: 'Smash burger & matcha', url: 'https://smashe.otorder.com', bg: '#1747D1', fg: '#ffffff', note: 'Royal mavi + pöti kare' },
-  { name: 'USTA DÖNER', cuisine: 'Dönerci', url: 'https://ustadoner.otorder.com', bg: '#141210', fg: '#ff5a1c', note: 'İs karası + ateş turuncusu' },
-  { name: 'Sushisel', cuisine: 'Sushi teslimatı', url: 'https://sushisel.otorder.com', bg: '#ffffff', fg: '#E23D28', note: 'Zen beyaz + vermilyon mühür' },
-  { name: 'Pidem Karadeniz', cuisine: 'Taş fırın pide', url: 'https://pidem.otorder.com', bg: '#1E3B2E', fg: '#F3C64E', note: 'Yosun yeşili + tereyağı' },
-  { name: 'MOKKA', cuisine: 'Kahve & brunch', url: 'https://mokka.otorder.com', bg: '#2B1D16', fg: '#F6EFE5', note: 'Espresso + süt köpüğü' },
-  { name: 'Şerbet', cuisine: 'Baklava & künefe', url: 'https://serbet.otorder.com', bg: '#173325', fg: '#B87333', note: 'Fıstık + bakır' },
-  { name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#bb1e10', fg: '#ffffff', note: 'Canlı müşteri: Akçakoca' },
+// Örnek siteler — vitrin carouseli (Ekstralar modülünün kanıtı). Kartlar eşit
+// boyda; şerit sağa doğru otomatik akar; ortaya gelen kartta sitenin gerçek
+// ekran görüntüsü yavaşça kayarak önizlenir. Logolar/screenshot'lar
+// scripts/gen-showcase-assets.mjs ile üretilir (public/showcase/).
+const SHOWCASE_SITES: Array<{ key: string; name: string; cuisine: string; url: string; bg: string; accent: string; note: string; logoH: number }> = [
+  { key: 'smashe', name: 'smashè club', cuisine: 'Smash burger & matcha', url: 'https://smashe.otorder.com', bg: '#1747D1', accent: '#ffffff', note: 'Royal mavi + pöti kare', logoH: 72 },
+  { key: 'ustadoner', name: 'USTA DÖNER', cuisine: 'Dönerci', url: 'https://ustadoner.otorder.com', bg: '#141210', accent: '#ff5a1c', note: 'İs karası + ateş turuncusu', logoH: 40 },
+  { key: 'sushisel', name: 'Sushisel', cuisine: 'Sushi teslimatı', url: 'https://sushisel.otorder.com', bg: '#ffffff', accent: '#E23D28', note: 'Zen beyaz + vermilyon mühür', logoH: 44 },
+  { key: 'pidem', name: 'Pidem Karadeniz', cuisine: 'Taş fırın pide', url: 'https://pidem.otorder.com', bg: '#1E3B2E', accent: '#F3C64E', note: 'Yosun yeşili + tereyağı', logoH: 40 },
+  { key: 'mokka', name: 'MOKKA', cuisine: 'Kahve & brunch', url: 'https://mokka.otorder.com', bg: '#2B1D16', accent: '#C57B45', note: 'Espresso + süt köpüğü', logoH: 36 },
+  { key: 'serbet', name: 'Şerbet', cuisine: 'Baklava & künefe', url: 'https://serbet.otorder.com', bg: '#0C1F17', accent: '#93C572', note: 'Fıstık + bakır', logoH: 52 },
+  { key: 'highfive', name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#bb1e10', accent: '#ffffff', note: 'Canlı müşteri: Akçakoca', logoH: 84 },
 ];
 
+const SHOT_H = 208; // önizleme alanı yüksekliği (px) — pan animasyonu bununla hesaplanır
+
 function Showcase() {
+  const N = SHOWCASE_SITES.length;
+  // Sonsuz şerit: liste 3 kez dizilir, index orta blokta gezer; uçlara yaklaşınca
+  // animasyonsuz bir "snap" ile orta bloğa geri taşınır (görsel olarak fark edilmez).
+  const EXT = useMemo(() => [...SHOWCASE_SITES, ...SHOWCASE_SITES, ...SHOWCASE_SITES], []);
+  const [idx, setIdx] = useState(N);
+  const [anim, setAnim] = useState(true);
+  const [hover, setHover] = useState(false);
+  const [inView, setInView] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setW(el.clientWidth));
+    ro.observe(el);
+    setW(el.clientWidth);
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.25 });
+    io.observe(el);
+    return () => { ro.disconnect(); io.disconnect(); };
+  }, []);
+
+  // Otomatik akış: index azalır → şerit sağa kayar (yeni kart soldan ortaya gelir).
+  useEffect(() => {
+    if (hover || !inView) return;
+    const t = setInterval(() => setIdx((i) => i - 1), 4600);
+    return () => clearInterval(t);
+  }, [hover, inView]);
+
+  // Sessiz sarma: geçiş bittikten sonra orta bloğa geri ışınlan.
+  useEffect(() => {
+    if (idx >= N && idx < 2 * N) return;
+    const t = setTimeout(() => {
+      setAnim(false);
+      setIdx((i) => (i < N ? i + N : i - N));
+      requestAnimationFrame(() => requestAnimationFrame(() => setAnim(true)));
+    }, 720);
+    return () => clearTimeout(t);
+  }, [idx, N]);
+
+  // Ekran görüntülerini arka planda ısıt (ilk geçişte boş kart görünmesin).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      for (const s of SHOWCASE_SITES) { const im = new Image(); im.src = `/showcase/shot-${s.key}.jpg`; }
+    }, 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const CARD = w > 0 && w < 640 ? Math.round(w * 0.76) : 340;
+  const GAP = w > 0 && w < 640 ? 14 : 24;
+  const tx = w / 2 - (idx * (CARD + GAP) + CARD / 2);
+  const activeDot = ((idx % N) + N) % N;
+
   return (
-    <section className="border-t border-ink/10 bg-white py-20 md:py-28" id="ornekler">
+    <section className="overflow-hidden border-t border-ink/10 bg-white py-20 md:py-28" id="ornekler">
+      <style>{`
+        @keyframes ot-shotpan { from { transform: translateY(0) } to { transform: translateY(calc(-100% + ${SHOT_H}px)) } }
+        .ot-shot { animation: ot-shotpan 12s ease-in-out infinite alternate; will-change: transform; }
+        @media (prefers-reduced-motion: reduce) { .ot-shot { animation: none } }
+      `}</style>
       <div className="container-x">
         <h2 className="text-center text-3xl font-bold text-ink md:text-4xl">Örnek siteler</h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-ink-soft">
-          Özel Tasarım Landing modülüyle her marka kendi dünyasına kavuşur. Hepsi canlı, tıkla ve gez:
+          Özel Tasarım Landing modülüyle her marka kendi dünyasına kavuşur. Hepsi canlı — ortadaki kart siteyi otomatik önizler, tıkla ve gez:
         </p>
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {SHOWCASE_SITES.map((x, i) => (
-            <a
-              key={x.url}
-              href={x.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`group block overflow-hidden rounded-2xl border border-ink/10 transition-transform hover:-translate-y-1 ${i === 0 ? 'sm:col-span-2' : ''}`}
-            >
-              <div className="flex h-36 items-center justify-center px-4" style={{ background: x.bg }}>
-                <span className="text-center text-2xl font-extrabold tracking-tight" style={{ color: x.fg }}>{x.name}</span>
-              </div>
-              <div className="flex items-center justify-between bg-white px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold text-ink">{x.cuisine}</p>
-                  <p className="text-xs text-ink-muted">{x.note}</p>
+      </div>
+      <div
+        ref={wrapRef}
+        className="relative mt-12"
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        {/* Kenar sisleri — şeridin sonsuz aktığı hissi */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-white to-transparent md:w-40" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent md:w-40" />
+        <div
+          className="flex"
+          style={{
+            gap: GAP,
+            transform: `translateX(${tx}px)`,
+            transition: anim ? 'transform 680ms cubic-bezier(0.22, 0.61, 0.21, 1)' : 'none',
+          }}
+        >
+          {EXT.map((x, k) => {
+            const active = k === idx;
+            const inner = (
+              <>
+                <div className="relative grid place-items-center overflow-hidden" style={{ height: SHOT_H, background: x.bg }}>
+                  {/* Logo her durumda zeminde — screenshot yüklenene dek de görünür */}
+                  <img src={`/showcase/${x.key}.png`} alt={x.name} className="max-w-[74%]" style={{ height: x.logoH, objectFit: 'contain' }} loading="lazy" decoding="async" />
+                  {active && (
+                    <>
+                      <img src={`/showcase/shot-${x.key}.jpg`} alt={`${x.name} — canlı site`} className="ot-shot absolute inset-x-0 top-0 w-full" decoding="async" />
+                      <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-ink/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+                        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                        CANLI
+                      </span>
+                    </>
+                  )}
                 </div>
-                <span className="text-ink-muted transition-transform group-hover:translate-x-1">→</span>
-              </div>
-            </a>
+                <div
+                  className="flex items-center justify-between gap-3 px-4"
+                  style={{ height: 64, background: active ? x.bg : '#ffffff', borderTop: '1px solid rgba(15,23,42,0.08)' }}
+                >
+                  {active ? (
+                    <>
+                      <img src={`/showcase/${x.key}.png`} alt="" className="max-w-[55%]" style={{ height: Math.min(x.logoH * 0.55, 30), objectFit: 'contain' }} />
+                      <span className="whitespace-nowrap text-sm font-bold" style={{ color: x.accent }}>Siteyi gez ↗</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ink">{x.cuisine}</p>
+                        <p className="truncate text-xs text-ink-muted">{x.note}</p>
+                      </div>
+                      <span className="text-ink-muted">→</span>
+                    </>
+                  )}
+                </div>
+              </>
+            );
+            const cls = `block shrink-0 overflow-hidden rounded-2xl border text-left transition-shadow duration-500 ${active ? 'border-ink/15 shadow-2xl shadow-ink/15' : 'border-ink/10'}`;
+            return active ? (
+              <a key={`${x.key}-${k}`} href={x.url} target="_blank" rel="noopener noreferrer" className={cls} style={{ width: CARD }}>
+                {inner}
+              </a>
+            ) : (
+              <button key={`${x.key}-${k}`} type="button" onClick={() => setIdx(k)} aria-label={`${x.name} önizle`} className={cls} style={{ width: CARD }}>
+                {inner}
+              </button>
+            );
+          })}
+        </div>
+        {/* Nokta navigasyonu */}
+        <div className="mt-7 flex items-center justify-center gap-2">
+          {SHOWCASE_SITES.map((x, d) => (
+            <button
+              key={x.key}
+              type="button"
+              aria-label={`${x.name} göster`}
+              onClick={() => setIdx((i) => i + (d - ((i % N) + N) % N))}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{ width: d === activeDot ? 22 : 8, background: d === activeDot ? '#0f172a' : 'rgba(15,23,42,0.2)' }}
+            />
           ))}
         </div>
       </div>
