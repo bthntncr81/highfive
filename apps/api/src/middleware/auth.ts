@@ -1,4 +1,5 @@
 import { UserRole } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
 
@@ -13,7 +14,9 @@ export interface JWTPayload {
 }
 
 export function signStaffToken(payload: JWTPayload, expiresIn: string | number = '7d'): string {
-  return jwt.sign(payload as object, JWT_SECRET, { expiresIn } as jwt.SignOptions);
+  // jti: aynı kullanıcı aynı saniyede iki kez giriş yaparsa (iat saniyelik)
+  // birebir aynı token üretilir ve Session.token unique kısıtına takılırdı.
+  return jwt.sign({ ...payload, jti: randomUUID() } as object, JWT_SECRET, { expiresIn } as jwt.SignOptions);
 }
 
 // Ortak çözümleme: token doğrula + tenant bağlamıyla eşleştir.
