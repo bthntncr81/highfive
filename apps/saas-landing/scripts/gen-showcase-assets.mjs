@@ -5,7 +5,7 @@
 //     yavaşça kayan "otomatik site önizlemesi" olarak kullanılır.
 // Çalıştır: node apps/saas-landing/scripts/gen-showcase-assets.mjs [--logos] [--shots]
 import puppeteer from 'puppeteer-core';
-import { mkdirSync, copyFileSync } from 'fs';
+import { mkdirSync, copyFileSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -71,10 +71,18 @@ html,body{margin:0;background:transparent}
     await el.screenshot({ path: `${outDir}/${m.file}`, omitBackground: true });
     console.log('✓ logo', m.file);
   }
-  // Hazır logolar: smashè (gerçek marka) + HighFive (beyaz el logosu)
+  // Hazır logo: smashè (gerçek marka)
   copyFileSync(resolve(here, '../../landing/public/smashe/logo-white.png'), `${outDir}/smashe.png`);
-  copyFileSync(resolve(here, '../../landing/public/logow.png'), `${outDir}/highfive.png`);
-  console.log('✓ logo smashe.png + highfive.png (kopya)');
+  console.log('✓ logo smashe.png (kopya)');
+  // HighFive gerçek wordmark'ı — kırmızı HIGH + kırmızı konturlu beyaz FIVE
+  // (kullanıcının verdiği SVG; açık zemin için tasarlandı → kart zemini beyaz).
+  const hfSvg = readFileSync(resolve(here, 'highfive-logo.svg'), 'utf8');
+  const hfDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}#w{display:inline-block;width:1200px}#w svg{display:block;width:100%;height:auto}</style></head><body><div id="w">${hfSvg}</div></body></html>`;
+  await page.setViewport({ width: 1240, height: 520, deviceScaleFactor: 2 });
+  await page.setContent(hfDoc, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const hfEl = await page.$('#w');
+  await hfEl.screenshot({ path: `${outDir}/highfive.png`, omitBackground: true });
+  console.log('✓ logo highfive.png (SVG render)');
 }
 
 // ── 2) Canlı site ekran görüntüleri ─────────────────────────────────────────

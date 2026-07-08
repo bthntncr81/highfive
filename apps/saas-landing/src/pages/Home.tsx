@@ -602,7 +602,7 @@ const SHOWCASE_SITES: Array<{ key: string; name: string; cuisine: string; url: s
   { key: 'pidem', name: 'Pidem Karadeniz', cuisine: 'Taş fırın pide', url: 'https://pidem.otorder.com', bg: '#1E3B2E', accent: '#F3C64E', note: 'Yosun yeşili + tereyağı', logoH: 40 },
   { key: 'mokka', name: 'MOKKA', cuisine: 'Kahve & brunch', url: 'https://mokka.otorder.com', bg: '#2B1D16', accent: '#C57B45', note: 'Espresso + süt köpüğü', logoH: 36 },
   { key: 'serbet', name: 'Şerbet', cuisine: 'Baklava & künefe', url: 'https://serbet.otorder.com', bg: '#0C1F17', accent: '#93C572', note: 'Fıstık + bakır', logoH: 52 },
-  { key: 'highfive', name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#bb1e10', accent: '#ffffff', note: 'Canlı müşteri: Akçakoca', logoH: 84 },
+  { key: 'highfive', name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#ffffff', accent: '#CF1D00', note: 'Canlı müşteri: Akçakoca', logoH: 60 },
 ];
 
 const SHOT_H = 208; // önizleme alanı yüksekliği (px) — pan animasyonu bununla hesaplanır
