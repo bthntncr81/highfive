@@ -2,6 +2,7 @@
 // Token alır, backend'e register eder, foreground/background bildirim handler'ları kurar.
 // Yönetim (gönderim) YOK — bu sadece alıcı.
 
+import { BRAND_PRIMARY } from "./brand";
 import { Platform, Alert, Linking } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
@@ -30,14 +31,14 @@ export async function ensureAndroidChannel() {
     name: "HighFive",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#bb1e10",
+    lightColor: BRAND_PRIMARY,
     sound: "default",
   });
   await Notifications.setNotificationChannelAsync("campaigns", {
     name: "Kampanyalar",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#bb1e10",
+    lightColor: BRAND_PRIMARY,
     sound: "default",
   });
 }

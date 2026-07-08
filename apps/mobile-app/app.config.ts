@@ -20,12 +20,43 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const bundleId = pick('OTORDER_BUNDLE_ID', config.ios?.bundleIdentifier);
   const androidPkg = pick('OTORDER_ANDROID_PACKAGE', pick('OTORDER_BUNDLE_ID', config.android?.package));
 
+  // Görsel yolları — env verilmişse override, yoksa baz app.json değerleri aynen kalır.
+  const icon = pick('OTORDER_ICON', undefined);
+  const splashImage = pick('OTORDER_SPLASH', undefined);
+  const adaptiveIconImage = pick('OTORDER_ADAPTIVE_ICON', undefined);
+  const notificationIcon = pick('OTORDER_NOTIFICATION_ICON', undefined);
+
+  // expo-splash-screen / expo-notifications plugin config'leri de (görsel + renk)
+  // yalnız ilgili env varsa patch'lenir; env yoksa plugins listesine dokunulmaz.
+  const patchPlugins = !!(splashImage || notificationIcon || primary);
+  const plugins = patchPlugins && Array.isArray(config.plugins)
+    ? (config.plugins.map((p) => {
+        if (Array.isArray(p) && p[0] === 'expo-splash-screen') {
+          return [p[0], {
+            ...(p[1] ?? {}),
+            ...(splashImage ? { image: splashImage } : {}),
+            ...(primary ? { backgroundColor: primary } : {}),
+          }];
+        }
+        if (Array.isArray(p) && p[0] === 'expo-notifications') {
+          return [p[0], {
+            ...(p[1] ?? {}),
+            ...(notificationIcon ? { icon: notificationIcon } : {}),
+            ...(primary ? { color: primary } : {}),
+          }];
+        }
+        return p;
+      }) as ExpoConfig['plugins'])
+    : config.plugins;
+
   const merged: ExpoConfig = {
     ...(config as ExpoConfig),
     name: pick('OTORDER_APP_NAME', config.name)!,
     slug: pick('OTORDER_SLUG', config.slug)!,
     scheme: pick('OTORDER_SCHEME', config.scheme as string),
     owner: pick('OTORDER_OWNER', config.owner),
+    icon: icon ?? config.icon,
+    plugins,
     ios: {
       ...config.ios,
       bundleIdentifier: bundleId,
@@ -35,16 +66,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       package: androidPkg,
       adaptiveIcon: {
         ...config.android?.adaptiveIcon,
-        foregroundImage: config.android?.adaptiveIcon?.foregroundImage ?? './assets/adaptive-icon.png',
+        foregroundImage: adaptiveIconImage ?? config.android?.adaptiveIcon?.foregroundImage ?? './assets/adaptive-icon.png',
         backgroundColor: primary ?? config.android?.adaptiveIcon?.backgroundColor ?? '#bb1e10',
       },
     },
     splash: {
       ...config.splash,
+      image: splashImage ?? config.splash?.image,
       backgroundColor: primary ?? config.splash?.backgroundColor ?? '#bb1e10',
     },
     extra: {
       ...config.extra,
+      primaryColor: pick('OTORDER_PRIMARY_COLOR', (config.extra as any)?.primaryColor ?? '#bb1e10'),
       apiUrl: pick('OTORDER_API_URL', (config.extra as any)?.apiUrl),
       wsUrl: pick('OTORDER_WS_URL', (config.extra as any)?.wsUrl),
       tenantId: pick('OTORDER_TENANT_ID', (config.extra as any)?.tenantId),

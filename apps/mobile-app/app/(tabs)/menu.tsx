@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useMemo, useState } from "react";
 import {
   View,
@@ -71,7 +72,7 @@ export default function MenuScreen() {
 
       {menu.loading && !menu.data ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#bb1e10" size="large" />
+          <ActivityIndicator color={BRAND_PRIMARY} size="large" />
           <Text className="mt-3 text-sm text-foreground-muted">
             Menü yükleniyor…
           </Text>
@@ -101,7 +102,7 @@ export default function MenuScreen() {
             <RefreshControl
               refreshing={menu.loading}
               onRefresh={menu.refresh}
-              tintColor="#bb1e10"
+              tintColor={BRAND_PRIMARY}
             />
           }
         >

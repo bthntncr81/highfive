@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -87,12 +88,12 @@ export default function AddressesScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#bb1e10" />
+          <ActivityIndicator color={BRAND_PRIMARY} />
         </View>
       ) : items.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
           <View className="h-24 w-24 items-center justify-center rounded-full bg-primary-50">
-            <Ionicons name="location-outline" size={48} color="#bb1e10" />
+            <Ionicons name="location-outline" size={48} color={BRAND_PRIMARY} />
           </View>
           <Text className="mt-4 text-lg font-bold text-foreground">
             Kayıtlı adres yok
@@ -117,7 +118,7 @@ export default function AddressesScreen() {
                 <Ionicons
                   name="location"
                   size={20}
-                  color={a.isDefault ? "#bb1e10" : "#6b6b6b"}
+                  color={a.isDefault ? BRAND_PRIMARY : "#6b6b6b"}
                 />
                 <View className="ml-2 flex-1">
                   <View className="flex-row items-center">

@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import {
   View,
@@ -53,7 +54,7 @@ export default function NotificationSettings() {
   if (loading || !prefs) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" />
+        <ActivityIndicator color={BRAND_PRIMARY} />
       </SafeAreaView>
     );
   }
@@ -163,7 +164,7 @@ function PrefRow({
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
       <View className="h-10 w-10 items-center justify-center rounded-full bg-surface">
-        <Ionicons name={icon} size={18} color="#bb1e10" />
+        <Ionicons name={icon} size={18} color={BRAND_PRIMARY} />
       </View>
       <View className="ml-3 flex-1">
         <Text className="text-sm font-bold text-foreground">{label}</Text>
@@ -175,7 +176,7 @@ function PrefRow({
         value={value}
         onValueChange={onChange}
         disabled={disabled}
-        trackColor={{ false: "#e5e7eb", true: "#bb1e10" }}
+        trackColor={{ false: "#e5e7eb", true: BRAND_PRIMARY }}
         thumbColor="#fff"
       />
     </View>

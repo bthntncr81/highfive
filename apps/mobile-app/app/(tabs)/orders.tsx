@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -109,7 +110,7 @@ export default function OrdersScreen() {
         </View>
         <View className="flex-1 items-center justify-center px-10">
           <View className="h-24 w-24 items-center justify-center rounded-full bg-primary-50">
-            <Ionicons name="receipt-outline" size={48} color="#bb1e10" />
+            <Ionicons name="receipt-outline" size={48} color={BRAND_PRIMARY} />
           </View>
           <Text className="mt-4 text-lg font-bold text-foreground">
             Önce giriş yap
@@ -163,13 +164,13 @@ export default function OrdersScreen() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refresh}
-            tintColor="#bb1e10"
+            tintColor={BRAND_PRIMARY}
           />
         }
       >
         {loading && orders.length === 0 ? (
           <View className="items-center py-12">
-            <ActivityIndicator color="#bb1e10" />
+            <ActivityIndicator color={BRAND_PRIMARY} />
           </View>
         ) : error ? (
           <View className="items-center rounded-3xl bg-surface px-6 py-10">
@@ -187,7 +188,7 @@ export default function OrdersScreen() {
         ) : filtered.length === 0 ? (
           <View className="items-center rounded-3xl bg-surface px-6 py-12">
             <View className="h-20 w-20 items-center justify-center rounded-full bg-white">
-              <Ionicons name="receipt-outline" size={40} color="#bb1e10" />
+              <Ionicons name="receipt-outline" size={40} color={BRAND_PRIMARY} />
             </View>
             <Text className="mt-3 text-base font-bold text-foreground">
               {tab === "active"

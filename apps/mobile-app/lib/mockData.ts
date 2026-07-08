@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY, BRAND_PRIMARY_DARK } from "./brand";
 // Mock data — Faz 7'de gerçek API ile değiştirilecek
 
 export type MockCampaign = {
@@ -37,8 +38,8 @@ export const CAMPAIGNS: MockCampaign[] = [
     subtitle: "Kaçırma — Bu hafta sonuna kadar",
     badge: "Bu hafta",
     price: "269 ₺",
-    bgFrom: "#bb1e10", // primary
-    bgTo: "#8a1610",
+    bgFrom: BRAND_PRIMARY, // primary
+    bgTo: BRAND_PRIMARY_DARK,
     emoji: "🍕",
   },
   {
@@ -57,7 +58,7 @@ export const CAMPAIGNS: MockCampaign[] = [
     subtitle: "İçecek bizden ikram",
     badge: "Yeni",
     price: "189 ₺",
-    bgFrom: "#8a1610", // primary-dark
+    bgFrom: BRAND_PRIMARY_DARK, // primary-dark
     bgTo: "#5a0f0b",
     emoji: "🍔",
   },

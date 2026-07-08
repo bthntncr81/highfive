@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY, BRAND_PRIMARY_DARK } from "@/lib/brand";
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,7 +8,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCampaigns } from "@/lib/hooks";
 import { imageUrl } from "@/lib/api";
 
-const PALETTE = ["#bb1e10", "#005387", "#8a1610", "#003d63"];
+const PALETTE = [BRAND_PRIMARY, "#005387", BRAND_PRIMARY_DARK, "#003d63"];
 
 export default function CampaignDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,7 +17,7 @@ export default function CampaignDetail() {
   if (campaigns.loading && !campaigns.data) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" />
+        <ActivityIndicator color={BRAND_PRIMARY} />
       </SafeAreaView>
     );
   }

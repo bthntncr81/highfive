@@ -1,6 +1,7 @@
 // Sepete uçan ürün animasyonu — root layout'a mount edilir
 // ProductCard / BundleCard "Sepete ekle" basıldığında ürün ikonu sepete uçar.
 
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect } from "react";
 import { Dimensions, View, Text, Platform } from "react-native";
 import Animated, {
@@ -104,13 +105,13 @@ function FlyingDot({ item }: { item: FlyingItem }) {
           borderRadius: 32,
           overflow: "hidden",
           backgroundColor: "#fff",
-          shadowColor: "#bb1e10",
+          shadowColor: BRAND_PRIMARY,
           shadowOpacity: 0.5,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: 4 },
           elevation: 12,
           borderWidth: 3,
-          borderColor: "#bb1e10",
+          borderColor: BRAND_PRIMARY,
           alignItems: "center",
           justifyContent: "center",
         },

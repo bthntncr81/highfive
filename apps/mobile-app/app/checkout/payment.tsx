@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -276,7 +277,7 @@ export default function PaymentScreen() {
           mixedContentMode="always"
           renderLoading={() => (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator color="#bb1e10" size="large" />
+              <ActivityIndicator color={BRAND_PRIMARY} size="large" />
             </View>
           )}
         />
@@ -288,7 +289,7 @@ export default function PaymentScreen() {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center px-10">
-          <ActivityIndicator color="#bb1e10" size="large" />
+          <ActivityIndicator color={BRAND_PRIMARY} size="large" />
           <Text className="mt-4 text-base font-bold text-foreground">
             Ödeme tamamlanıyor...
           </Text>

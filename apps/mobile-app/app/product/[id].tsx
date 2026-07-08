@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,7 +24,7 @@ export default function ProductDetail() {
   if (menu.loading && !menu.data) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" />
+        <ActivityIndicator color={BRAND_PRIMARY} />
       </SafeAreaView>
     );
   }

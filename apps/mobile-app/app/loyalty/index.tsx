@@ -1,6 +1,7 @@
 // Mobile Loyalty Hub — Domino's / McDonald's tarzı zengin sadakat ekranı
 // Aktif programları gradient kart deck olarak gösterir, her tipte özel UI.
 
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import {
   View,
@@ -62,7 +63,7 @@ export default function LoyaltyHub() {
   if (loading && !data) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" size="large" />
+        <ActivityIndicator color={BRAND_PRIMARY} size="large" />
       </SafeAreaView>
     );
   }
@@ -113,7 +114,7 @@ export default function LoyaltyHub() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refresh}
-            tintColor="#bb1e10"
+            tintColor={BRAND_PRIMARY}
           />
         }
       >
@@ -160,7 +161,7 @@ function HeroCard({ customer: c }: { customer: any }) {
   return (
     <View className="overflow-hidden rounded-3xl">
       <View
-        style={{ backgroundColor: tier?.color ?? "#bb1e10" }}
+        style={{ backgroundColor: tier?.color ?? BRAND_PRIMARY }}
         className="p-5"
       >
         <View className="flex-row items-center justify-between">
@@ -222,7 +223,7 @@ function ProgramCard({
   onChanged: () => void;
 }) {
   const type = program.type as ProgramType;
-  const color = program.color ?? "#bb1e10";
+  const color = program.color ?? BRAND_PRIMARY;
 
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <View
@@ -302,7 +303,7 @@ function StampCard({ program, progress }: any) {
   const target = Math.max(2, Number(program.config?.stampsRequired ?? 10));
   const count = Math.min(target, Number(progress?.count ?? 0));
   const remaining = Math.max(0, target - count);
-  const color = program.color ?? "#bb1e10";
+  const color = program.color ?? BRAND_PRIMARY;
   const ready = remaining === 0;
   const pctText = Math.round((count / target) * 100);
   const visualStyle = program.config?.visualStyle ?? "auto";

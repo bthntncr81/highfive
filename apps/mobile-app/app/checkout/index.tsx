@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -294,7 +295,7 @@ export default function Checkout() {
           {isGuest && (
             <View className="mb-5 rounded-2xl border-2 border-primary-100 bg-primary-50 p-4">
               <View className="flex-row items-center">
-                <Ionicons name="information-circle" size={20} color="#bb1e10" />
+                <Ionicons name="information-circle" size={20} color={BRAND_PRIMARY} />
                 <Text className="ml-2 flex-1 text-sm font-bold text-primary-700">
                   Misafir olarak sipariş veriyorsun
                 </Text>
@@ -365,7 +366,7 @@ export default function Checkout() {
                   <Ionicons
                     name={t === "DELIVERY" ? "bicycle" : "bag-handle"}
                     size={20}
-                    color={orderType === t ? "#bb1e10" : "#6b6b6b"}
+                    color={orderType === t ? BRAND_PRIMARY : "#6b6b6b"}
                   />
                   <Text
                     className={`ml-2 text-sm font-bold ${
@@ -420,7 +421,7 @@ export default function Checkout() {
                       <Ionicons
                         name="location"
                         size={18}
-                        color={addressId === a.id ? "#bb1e10" : "#6b6b6b"}
+                        color={addressId === a.id ? BRAND_PRIMARY : "#6b6b6b"}
                       />
                       <View className="ml-2 flex-1">
                         <View className="flex-row items-center">
@@ -482,13 +483,13 @@ export default function Checkout() {
                     } py-2.5`}
                   >
                     {locating ? (
-                      <ActivityIndicator color="#bb1e10" />
+                      <ActivityIndicator color={BRAND_PRIMARY} />
                     ) : (
                       <>
                         <Ionicons
                           name={manualLat ? "checkmark-circle" : "navigate"}
                           size={18}
-                          color={manualLat ? "#10b981" : "#bb1e10"}
+                          color={manualLat ? "#10b981" : BRAND_PRIMARY}
                         />
                         <Text
                           className={`ml-2 text-sm font-bold ${
@@ -573,7 +574,7 @@ export default function Checkout() {
                 <Ionicons
                   name={usePoints ? "checkbox" : "square-outline"}
                   size={22}
-                  color={usePoints ? "#bb1e10" : "#9a9a9a"}
+                  color={usePoints ? BRAND_PRIMARY : "#9a9a9a"}
                 />
                 <View className="ml-2 flex-1">
                   <Text className="text-sm font-bold text-foreground">
@@ -707,7 +708,7 @@ export default function Checkout() {
                   <Ionicons
                     name={p.icon as any}
                     size={20}
-                    color={paymentMethod === p.v ? "#bb1e10" : "#6b6b6b"}
+                    color={paymentMethod === p.v ? BRAND_PRIMARY : "#6b6b6b"}
                   />
                   <View className="ml-2 flex-1">
                     <Text

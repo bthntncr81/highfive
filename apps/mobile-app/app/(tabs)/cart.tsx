@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { View, Text, ScrollView, Pressable, Alert } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -31,7 +32,7 @@ export default function CartScreen() {
         </View>
         <View className="flex-1 items-center justify-center px-10">
           <View className="h-24 w-24 items-center justify-center rounded-full bg-primary-50">
-            <Ionicons name="cart-outline" size={48} color="#bb1e10" />
+            <Ionicons name="cart-outline" size={48} color={BRAND_PRIMARY} />
           </View>
           <Text className="mt-4 text-lg font-bold text-foreground">
             Sepetin boş

@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useRef } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
@@ -120,7 +121,7 @@ export function ProductCard({ product, variant = "list" }: Props) {
                 <Ionicons
                   name={isFav ? "heart" : "heart-outline"}
                   size={16}
-                  color={isFav ? "#bb1e10" : "#6b6b6b"}
+                  color={isFav ? BRAND_PRIMARY : "#6b6b6b"}
                 />
               </Pressable>
             )}
@@ -186,7 +187,7 @@ export function ProductCard({ product, variant = "list" }: Props) {
               <Ionicons
                 name={isFav ? "heart" : "heart-outline"}
                 size={14}
-                color={isFav ? "#bb1e10" : "#6b6b6b"}
+                color={isFav ? BRAND_PRIMARY : "#6b6b6b"}
               />
             </Pressable>
           )}

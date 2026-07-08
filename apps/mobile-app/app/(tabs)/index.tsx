@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useMemo, useState } from "react";
 import {
   ScrollView,
@@ -53,7 +54,7 @@ export default function Home() {
               menu.refresh();
               campaigns.refresh();
             }}
-            tintColor="#bb1e10"
+            tintColor={BRAND_PRIMARY}
           />
         }
       >
@@ -72,7 +73,7 @@ export default function Home() {
 
         {/* Adres barı */}
         <Pressable className="mx-5 mt-1 flex-row items-center rounded-2xl border border-border-light bg-white px-4 py-3">
-          <Ionicons name="location" size={20} color="#bb1e10" />
+          <Ionicons name="location" size={20} color={BRAND_PRIMARY} />
           <View className="ml-2 flex-1">
             <Text className="text-[10px] uppercase tracking-wide text-foreground-muted">
               Teslimat adresi
@@ -88,7 +89,7 @@ export default function Home() {
         <View className="mt-5 min-h-[140px]">
           {campaigns.loading && !campaigns.data ? (
             <View className="mx-5 items-center justify-center rounded-3xl bg-surface py-12">
-              <ActivityIndicator color="#bb1e10" />
+              <ActivityIndicator color={BRAND_PRIMARY} />
             </View>
           ) : campaigns.data?.campaigns?.length ? (
             <CampaignCarousel campaigns={campaigns.data.campaigns} />
@@ -156,7 +157,7 @@ export default function Home() {
         <View className="px-5">
           {menu.loading && !menu.data ? (
             <View className="items-center py-12">
-              <ActivityIndicator color="#bb1e10" />
+              <ActivityIndicator color={BRAND_PRIMARY} />
             </View>
           ) : menu.error ? (
             <View className="items-center rounded-3xl bg-surface px-6 py-10">

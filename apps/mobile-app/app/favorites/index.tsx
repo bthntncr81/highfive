@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect } from "react";
 import {
   View,
@@ -47,18 +48,18 @@ export default function FavoritesScreen() {
           <RefreshControl
             refreshing={loading}
             onRefresh={load}
-            tintColor="#bb1e10"
+            tintColor={BRAND_PRIMARY}
           />
         }
       >
         {loading && items.length === 0 ? (
           <View className="items-center py-12">
-            <ActivityIndicator color="#bb1e10" />
+            <ActivityIndicator color={BRAND_PRIMARY} />
           </View>
         ) : items.length === 0 ? (
           <View className="items-center rounded-3xl bg-surface px-6 py-12">
             <View className="h-20 w-20 items-center justify-center rounded-full bg-white">
-              <Ionicons name="heart-outline" size={40} color="#bb1e10" />
+              <Ionicons name="heart-outline" size={40} color={BRAND_PRIMARY} />
             </View>
             <Text className="mt-3 text-base font-bold text-foreground">
               Favori ürünün yok

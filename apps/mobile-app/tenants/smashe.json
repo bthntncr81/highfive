@@ -1,0 +1,20 @@
+{
+  "_comment": "Smashé (Kadıköy smash burger) — koyu lacivert + beyaz + pöti kare (gingham) kimliği. Landing: apps/landing/src/custom/SmasheLanding.tsx",
+  "_note": "EAS projesi Smashé için ayrıca açılacak",
+  "tenantId": "cmrb0o8m0000413pgjf01bop6",
+  "subdomain": "smashe",
+  "appName": "Smashé",
+  "slug": "smashe-mobile",
+  "scheme": "smashe",
+  "bundleId": "com.smashe.mobile",
+  "androidPackage": "com.smashe.mobile",
+  "primaryColor": "#122a5c",
+  "accentColor": "#0c1d42",
+  "bgColor": "#f4f6fb",
+  "apiUrl": "https://smashe.otorder.com",
+  "wsUrl": "wss://smashe.otorder.com/ws",
+  "assetsDir": "assets-smashe",
+  "easProjectId": "",
+  "updatesUrl": "",
+  "owner": ""
+}

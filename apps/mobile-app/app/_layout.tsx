@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import "../global.css";
 import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
@@ -57,7 +58,7 @@ export default function RootLayout() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#bb1e10",
+          backgroundColor: BRAND_PRIMARY,
         }}
       >
         <Logo height={64} variant="white" />

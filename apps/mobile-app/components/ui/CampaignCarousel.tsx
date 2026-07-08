@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY, BRAND_PRIMARY_DARK } from "@/lib/brand";
 import { useRef, useState } from "react";
 import {
   View,
@@ -17,9 +18,9 @@ const CARD_WIDTH = SCREEN_WIDTH - 40;
 
 // Marka paletinden cycle eden arka plan renkleri
 const BG_PALETTE = [
-  { from: "#bb1e10", emoji: "🍕" }, // primary
+  { from: BRAND_PRIMARY, emoji: "🍕" }, // primary
   { from: "#005387", emoji: "🍝" }, // accent
-  { from: "#8a1610", emoji: "🍔" }, // primary-dark
+  { from: BRAND_PRIMARY_DARK, emoji: "🍔" }, // primary-dark
   { from: "#003d63", emoji: "🥤" }, // accent-dark
 ];
 

@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import {
   View,
@@ -108,7 +109,7 @@ export default function EditAddress() {
   if (loading) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" />
+        <ActivityIndicator color={BRAND_PRIMARY} />
       </SafeAreaView>
     );
   }
@@ -176,13 +177,13 @@ export default function EditAddress() {
             } py-3.5`}
           >
             {locating ? (
-              <ActivityIndicator color="#bb1e10" />
+              <ActivityIndicator color={BRAND_PRIMARY} />
             ) : (
               <>
                 <Ionicons
                   name={latitude ? "checkmark-circle" : "navigate"}
                   size={20}
-                  color={latitude ? "#10b981" : "#bb1e10"}
+                  color={latitude ? "#10b981" : BRAND_PRIMARY}
                 />
                 <Text
                   className={`ml-2 text-sm font-bold ${
@@ -246,7 +247,7 @@ export default function EditAddress() {
             <Ionicons
               name={isDefault ? "checkbox" : "square-outline"}
               size={22}
-              color={isDefault ? "#bb1e10" : "#9a9a9a"}
+              color={isDefault ? BRAND_PRIMARY : "#9a9a9a"}
             />
             <Text className="ml-2 text-sm text-foreground">
               Varsayılan adres yap

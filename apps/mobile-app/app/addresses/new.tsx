@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useState } from "react";
 import {
   View,
@@ -139,13 +140,13 @@ export default function NewAddress() {
             } py-3.5`}
           >
             {locating ? (
-              <ActivityIndicator color="#bb1e10" />
+              <ActivityIndicator color={BRAND_PRIMARY} />
             ) : (
               <>
                 <Ionicons
                   name={latitude ? "checkmark-circle" : "navigate"}
                   size={20}
-                  color={latitude ? "#10b981" : "#bb1e10"}
+                  color={latitude ? "#10b981" : BRAND_PRIMARY}
                 />
                 <Text
                   className={`ml-2 text-sm font-bold ${
@@ -226,7 +227,7 @@ export default function NewAddress() {
             <Ionicons
               name={isDefault ? "checkbox" : "square-outline"}
               size={22}
-              color={isDefault ? "#bb1e10" : "#9a9a9a"}
+              color={isDefault ? BRAND_PRIMARY : "#9a9a9a"}
             />
             <Text className="ml-2 text-sm text-foreground">
               Varsayılan adres yap

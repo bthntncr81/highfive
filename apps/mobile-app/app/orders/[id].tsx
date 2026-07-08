@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -107,7 +108,7 @@ export default function OrderDetail() {
   if (loading && !order) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator color="#bb1e10" size="large" />
+        <ActivityIndicator color={BRAND_PRIMARY} size="large" />
       </SafeAreaView>
     );
   }
@@ -166,7 +167,7 @@ export default function OrderDetail() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refresh}
-            tintColor="#bb1e10"
+            tintColor={BRAND_PRIMARY}
           />
         }
       >
@@ -285,7 +286,7 @@ export default function OrderDetail() {
               Teslimat adresi
             </Text>
             <View className="mt-2 flex-row items-start">
-              <Ionicons name="location" size={16} color="#bb1e10" />
+              <Ionicons name="location" size={16} color={BRAND_PRIMARY} />
               <Text className="ml-2 flex-1 text-sm text-foreground">
                 {order.customerAddress}
               </Text>
@@ -370,7 +371,7 @@ export default function OrderDetail() {
         {((order.pointsEarned ?? 0) > 0 || (order.pointsSpent ?? 0) > 0) && (
           <View className="mt-3 rounded-2xl border border-primary-100 bg-primary-50 p-4">
             <View className="flex-row items-center">
-              <Ionicons name="star" size={18} color="#bb1e10" />
+              <Ionicons name="star" size={18} color={BRAND_PRIMARY} />
               <Text className="ml-2 flex-1 text-sm font-bold text-primary-700">
                 Puanlar
               </Text>

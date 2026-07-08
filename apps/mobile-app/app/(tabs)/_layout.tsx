@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text } from "react-native";
@@ -22,7 +23,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#bb1e10",
+        tabBarActiveTintColor: BRAND_PRIMARY,
         tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: {
           borderTopWidth: 0.5,

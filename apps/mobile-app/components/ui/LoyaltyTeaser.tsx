@@ -2,6 +2,7 @@
 // Aktif programları (12 türde) gösterir, basıldığında /loyalty'ye yönlendirir.
 // Login ise: kullanıcının her programdaki gerçek progress'ini çeker.
 
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { router } from "expo-router";
@@ -13,7 +14,7 @@ import { endpoints } from "@/lib/api";
 import { StampVisual } from "@/components/loyalty/StampVisuals";
 
 const TYPE_BADGES: Record<string, { label: string; color: string; emoji: string }> = {
-  STAMP_CARD: { label: "Damga Kartı", color: "#bb1e10", emoji: "🎫" },
+  STAMP_CARD: { label: "Damga Kartı", color: BRAND_PRIMARY, emoji: "🎫" },
   CASHBACK: { label: "Cashback", color: "#22c55e", emoji: "💰" },
   BIRTHDAY: { label: "Doğum Günü", color: "#a855f7", emoji: "🎂" },
   WELCOME: { label: "Hoş Geldin", color: "#3b82f6", emoji: "👋" },
@@ -82,7 +83,7 @@ export function LoyaltyTeaser() {
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-primary-500">Tümünü gör</Text>
-          <Ionicons name="chevron-forward" size={14} color="#bb1e10" />
+          <Ionicons name="chevron-forward" size={14} color={BRAND_PRIMARY} />
         </Pressable>
       </View>
       <ScrollView

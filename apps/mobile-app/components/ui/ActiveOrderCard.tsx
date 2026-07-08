@@ -1,5 +1,6 @@
 // Anasayfa'da aktif (henüz tamamlanmamış) müşteri siparişi kartı
 // Yoksa null döner. WS yok ama 10sn polling ile güncellenir.
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -115,7 +116,7 @@ export function ActiveOrderCard() {
     if (loading) {
       return (
         <View className="mx-5 mt-3 rounded-3xl bg-surface p-4">
-          <ActivityIndicator color="#bb1e10" />
+          <ActivityIndicator color={BRAND_PRIMARY} />
         </View>
       );
     }
@@ -177,7 +178,7 @@ export function ActiveOrderCard() {
           <View
             style={{
               width: `${meta.progress}%`,
-              backgroundColor: "#bb1e10",
+              backgroundColor: BRAND_PRIMARY,
             }}
             className="h-full rounded-full"
           />
@@ -187,7 +188,7 @@ export function ActiveOrderCard() {
       {/* CTA */}
       <View className="mt-3 flex-row items-center justify-between border-t border-primary-100 bg-white/60 px-4 py-2.5">
         <View className="flex-row items-center">
-          <Ionicons name="time-outline" size={14} color="#bb1e10" />
+          <Ionicons name="time-outline" size={14} color={BRAND_PRIMARY} />
           <Text className="ml-1.5 text-[11px] font-semibold text-primary-700">
             Canlı takip
           </Text>
@@ -199,7 +200,7 @@ export function ActiveOrderCard() {
           <Ionicons
             name="chevron-forward"
             size={14}
-            color="#bb1e10"
+            color={BRAND_PRIMARY}
             style={{ marginLeft: 2 }}
           />
         </View>

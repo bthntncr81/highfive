@@ -1,3 +1,4 @@
+import { BRAND_PRIMARY } from "@/lib/brand";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -111,7 +112,7 @@ function Feature({
   return (
     <View className="flex-row items-start">
       <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary-50">
-        <Ionicons name={icon} size={22} color="#bb1e10" />
+        <Ionicons name={icon} size={22} color={BRAND_PRIMARY} />
       </View>
       <View className="ml-3 flex-1">
         <Text className="text-base font-bold text-foreground">{title}</Text>
