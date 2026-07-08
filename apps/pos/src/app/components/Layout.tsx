@@ -82,6 +82,7 @@ export default function Layout() {
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },
     { to: '/settings', icon: Settings, label: 'Ayarlar', emoji: '⚙️' },
+    { to: '/set-pin', icon: Settings, label: "Giriş PIN'i", emoji: '🔢' },
     { to: '/billing', icon: Wallet, label: 'Abonelik', emoji: '💳' },
   ];
 

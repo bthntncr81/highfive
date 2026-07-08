@@ -6,6 +6,7 @@ import { WebSocketProvider } from './context/WebSocketContext';
 // Pages
 import Login from './pages/Login';
 import PinLogin from './pages/PinLogin';
+import SetPin from './pages/SetPin';
 import Dashboard from './pages/Dashboard';
 import Tables from './pages/Tables';
 import Menu from './pages/Menu';
@@ -109,10 +110,19 @@ export default function App() {
       <WebSocketProvider>
         <CartProvider>
           <Routes>
-            {/* Auth routes — giriş 6 haneli şifre ile */}
+            {/* Auth routes — PIN (personel) veya e-posta+şifre (ilk giriş/sahip) */}
             <Route path="/login" element={<PinLogin />} />
             <Route path="/pin" element={<PinLogin />} />
             <Route path="/login-email" element={<Login />} />
+            {/* Hızlı-giriş PIN'i belirle/değiştir — ilk e-posta girişinden sonra önerilir */}
+            <Route
+              path="/set-pin"
+              element={
+                <ProtectedRoute>
+                  <SetPin />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Courier route - standalone page */}
             <Route

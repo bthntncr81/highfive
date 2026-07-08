@@ -29,9 +29,12 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      const u = await login(email, password);
       // Askıdaki hesapta doğrudan ödemeye götür (diğer sayfalar zaten 402'yle buraya yönlenir)
-      navigate(params.get('suspended') === '1' ? '/billing' : '/');
+      if (params.get('suspended') === '1') navigate('/billing');
+      // İlk giriş: PIN'i yoksa kolay bir 6 haneli PIN belirlesin (atlanabilir)
+      else if (u.hasPin === false) navigate('/set-pin?ilk=1');
+      else navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş başarısız');
     } finally {
@@ -199,15 +202,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Demo credentials */}
-        <div className="mt-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white/90 text-sm">
-            <span className="font-semibold">Demo:</span>
-            <code className="bg-white/20 px-2 py-0.5 rounded">admin@highfive.com</code>
-            <span>/</span>
-            <code className="bg-white/20 px-2 py-0.5 rounded">admin123</code>
-          </div>
-        </div>
       </div>
     </div>
   );

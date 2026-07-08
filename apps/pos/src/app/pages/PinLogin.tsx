@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle, Delete } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
@@ -104,7 +104,7 @@ export default function PinLogin() {
               <h1 className="font-display text-3xl text-white tracking-wider">
                 {brandName || 'GİRİŞ'}
               </h1>
-              <p className="text-white/70 text-sm mt-1">6 haneli şifrenizi girin</p>
+              <p className="text-white/70 text-sm mt-1">6 haneli PIN'inizi girin</p>
             </div>
           </div>
 
@@ -188,6 +188,13 @@ export default function PinLogin() {
                 <p className="text-gray-500 font-medium">Giriş yapılıyor...</p>
               </div>
             )}
+
+            {/* İlk giriş / PIN'i olmayanlar: e-posta+şifre girişi */}
+            <div className="mt-6 border-t border-gray-100 pt-4 text-center">
+              <Link to="/login-email" className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
+                PIN'in yok mu? E-posta ve şifreyle giriş yap →
+              </Link>
+            </div>
           </div>
         </div>
 

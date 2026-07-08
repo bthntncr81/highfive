@@ -8,6 +8,7 @@ interface User {
   name: string;
   role: string;
   avatar?: string;
+  hasPin?: boolean; // e-posta girişinde döner — false ise ilk girişte PIN belirleme önerilir
 }
 
 interface AuthContextType {
@@ -15,7 +16,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   pinLogin: (pin: string) => Promise<void>;
   logout: () => void;
 }
@@ -58,11 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await api.post('/api/auth/login', { email, password });
-    
+
     if (response.token && response.user) {
       storage.set('token', response.token);
       setToken(response.token);
       setUser(response.user);
+      return response.user as User;
     } else {
       throw new Error(response.error || 'Giriş başarısız');
     }

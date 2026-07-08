@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
 import { sendTenantMail, renderTenantEmail, TenantMailBrand } from '../lib/mailer';
-import { signStaffToken } from '../middleware/auth';
+import { signStaffToken, verifyAuth, JWTPayload } from '../middleware/auth';
 import { dbFor, platformDb } from '../lib/tenant-db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -177,9 +177,44 @@ export default async function authRoutes(server: FastifyInstance) {
           role: selected.role,
           avatar: user.avatar,
           locationId: selected.locationId,
+          // PIN'i yoksa POS ilk girişte "kendi PIN'ini belirle" ekranına yönlendirir
+          hasPin: !!selected.pin,
           tenant: membershipSummary(selected),
         },
       };
+    },
+  );
+
+  // -----------------------------------------------------------------
+  // Kendi hızlı-giriş PIN'ini belirle/değiştir (girişli kullanıcı).
+  // E-postayla ilk girişten sonra kullanıcı kolay bir 6 haneli PIN seçer;
+  // sonrasında dilediği yöntemle (PIN ya da e-posta+şifre) girer.
+  // -----------------------------------------------------------------
+  server.post(
+    '/set-pin',
+    { preHandler: verifyAuth },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { pin } = request.body as { pin?: string };
+      if (!pin || !/^\d{6}$/.test(pin)) {
+        return reply.status(400).send({ error: 'PIN 6 haneli rakamlardan oluşmalı' });
+      }
+      const auth = (request as any).user as JWTPayload;
+      const mine = await request.db.membership.findFirst({ where: { userId: auth.userId } });
+      if (!mine) {
+        return reply.status(404).send({ error: 'Üyelik bulunamadı' });
+      }
+      // PIN tenant içinde benzersiz — başka bir çalışanla çakışmasın
+      const clash = await request.db.membership.findFirst({
+        where: { pin, id: { not: mine.id } },
+      });
+      if (clash) {
+        return reply.status(409).send({ error: 'Bu PIN başka bir kullanıcıda kayıtlı — farklı bir PIN seç' });
+      }
+      await request.db.membership.update({ where: { id: mine.id }, data: { pin } });
+      await request.db.activityLog.create({
+        data: { userId: auth.userId, action: 'PIN_SET', details: {}, ipAddress: request.ip },
+      });
+      return { success: true };
     },
   );
 

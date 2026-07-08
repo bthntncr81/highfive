@@ -55,7 +55,9 @@ export default async function passwordRoutes(server: FastifyInstance) {
     const baseDomain = process.env.PLATFORM_BASE_DOMAIN || 'otorder.com';
     return {
       ok: true,
-      loginUrl: membership ? `https://${membership.tenant.subdomain}.${baseDomain}/pos/` : `https://${baseDomain}`,
+      // Doğrudan e-posta+şifre giriş ekranına — POS kökü PIN ekranı açar, yeni
+      // kullanıcının henüz PIN'i yoktur (ilk girişten sonra kendisi belirler).
+      loginUrl: membership ? `https://${membership.tenant.subdomain}.${baseDomain}/pos/login-email` : `https://${baseDomain}`,
     };
   });
 
