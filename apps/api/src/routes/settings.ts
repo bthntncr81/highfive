@@ -29,9 +29,16 @@ export default async function settingsRoutes(server: FastifyInstance) {
     return { settings: result };
   });
 
-  // Get specific setting (tenant-scoped)
+  // Get specific setting (tenant-scoped).
+  // GÜVENLİK: yalnız sır içermeyen anahtarlar public; gerisi admin ister.
+  // ('services' iyzico secret taşır — eskiden bu endpoint'ten sızıyordu.)
+  const PUBLIC_SETTING_KEYS = ['restaurant', 'whatsapp', 'theme', 'siteContent', 'smasheContent'];
   server.get('/:key', async (request: FastifyRequest, reply: FastifyReply) => {
     const { key } = request.params as { key: string };
+    if (!PUBLIC_SETTING_KEYS.includes(key)) {
+      await verifyAdmin(request, reply);
+      if (reply.sent) return;
+    }
     const setting = await request.db.settings.findFirst({ where: { key } });
     if (!setting) {
       return reply.status(404).send({ error: 'Ayar bulunamadı' });

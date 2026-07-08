@@ -12,6 +12,7 @@ import { useTheme } from "./hooks/useTheme";
 import { ComingSoon } from "./pages/ComingSoon";
 import { StaffHub } from "./pages/StaffHub";
 import { CUSTOM_LANDINGS } from "./custom";
+import { SmasheAdmin } from "./custom/SmasheAdmin";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
 
@@ -149,6 +150,8 @@ const AnimatedRoutes = () => {
   const theme = useTheme();
   const isAdmin = location.pathname === "/admin";
   const isStaffHub = location.pathname === "/panel" || location.pathname === "/isletme";
+  // Özel landing'in kendi içerik editörü (ör. /smashe-admin) — tam sayfa.
+  const isCustomAdmin = location.pathname === "/smashe-admin";
   // Yayınlanmamış tenant'ın kök "site hazırlanıyor" sayfası tam ekran — navbar/footer gizli.
   const isComingSoon = location.pathname === "/" && theme !== null && !theme.published;
   // Özel kodlanmış premium landing kendi nav/footer'ını taşır — paylaşılan chrome gizli.
@@ -158,7 +161,7 @@ const AnimatedRoutes = () => {
     theme.published === true &&
     !!theme.customLanding &&
     !!CUSTOM_LANDINGS[theme.customLanding];
-  const hideChrome = isAdmin || isComingSoon || isStaffHub || isCustomRoot;
+  const hideChrome = isAdmin || isComingSoon || isStaffHub || isCustomRoot || isCustomAdmin;
   const { services, isWithinOrderHours } = useSettings();
 
   return (
@@ -220,6 +223,11 @@ const AnimatedRoutes = () => {
           {/* İşletme paneli — personeli POS/Mutfak/Yönetim'e tek tuşla götürür */}
           <Route path="/panel" element={<StaffHub />} />
           <Route path="/isletme" element={<StaffHub />} />
+          {/* Smashé özel landing editörü — yalnız bu özel tasarım aktifken */}
+          <Route
+            path="/smashe-admin"
+            element={theme?.customLanding === "smashe" ? <SmasheAdmin /> : <NotFound />}
+          />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/qr" element={<QRCodes />} />
           <Route

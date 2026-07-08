@@ -1,80 +1,29 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SMASHE_DEFAULTS, mergeSmashe, type SmasheContent } from './smasheContent'
 
 // ─────────────────────────────────────────────────────────────────────
 // SMASHÉ — premium elle kodlanmış tenant landing'i (customLanding: "smashe").
 //
 // Design read (impeccable brand register + taste): İstanbul smash burgerci,
-// retro-piknik dili. Renk stratejisi COMMITTED NAVY (burger-kırmızı klişesi
-// bilinçli reddedildi): koyu lacivert + beyaz + pöti kare (gingham) imza dokusu.
+// retro-piknik dili. COMMITTED NAVY + beyaz + pöti kare (gingham) imza dokusu.
 // Tip: Alfa Slab One (Americana tabela slab'ı) + Archivo (grotesk gövde).
 //
-// Motion: framer YOK — reveal'lar saf CSS. Hero yükte oynar; scroll bölümleri
-// animation-timeline: view() ile (destek yoksa İÇERİK GÖRÜNÜR kalır — impeccable
-// kuralı: reveal görünür bir varsayılanı zenginleştirir, gizlemez). Fotoğraflar
-// Unsplash, tek tek indirilip gözle doğrulandı (burger içerikli).
+// İçerik: SMASHE_DEFAULTS + tenant'ın 'smasheContent' ayarı (varsa) üstüne biner;
+// /smashe-admin editörü bu ayarı yazar. Motion: saf CSS (framer YOK) — hero yükte,
+// scroll bölümleri animation-timeline: view() ile SADECE hafif kayma (opacity
+// gate yok; içerik her koşulda görünür).
 // ─────────────────────────────────────────────────────────────────────
 
 const NAVY = '#122a5c'
 const NAVY_DEEP = '#0c1d42'
+const API_BASE = (import.meta as any).env?.VITE_API_URL || ''
 
-const img = (id: string, w = 1200) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
-
-const PHOTOS = {
-  hero: img('photo-1568901346375-23c9450c58cd', 1400), // çift köfte, akan cheddar, ahşap tabla
-  klasik: img('photo-1542574271-7f3b92e6c821', 900), // çift cheddar + karamelize soğan, koyu fon
-  brisket: img('photo-1553979459-d2229ba7433b', 900), // pastırmalı üç katlı kule
-  mantar: img('photo-1552526881-721ce8509abb', 900), // açık fon (kart ritmi: koyu-koyu-açık)
-  sac: img('photo-1607013251379-e6eecfffe234', 1200), // sacdan yeni inmiş çift smash
-  patates: img('photo-1594212699903-ec8a3eca50f5', 900), // çelik kupada patates + burger
-  sepet: img('photo-1550547660-d9450f859349', 1200), // ahşap tablada iki burger + gazoz
-}
-
-const MENU = [
-  {
-    name: 'Klasik Smashé',
-    desc: 'Çift smash köfte, iki kat eritme cheddar, turşu, çiğ soğan, Smashé sos.',
-    price: 340,
-    photo: PHOTOS.klasik,
-    alt: 'Klasik Smashé: çift köfte, iki kat cheddar, karamelize soğanla',
-    tag: 'Çok satan',
-    tilt: '-1.2deg',
-  },
-  {
-    name: 'Brisket Smashé',
-    desc: 'Dana döş kırığı köfte, isli cheddar, karamelize soğan, hardallı mayo.',
-    price: 420,
-    photo: PHOTOS.brisket,
-    alt: 'Brisket Smashé: üç katlı kule, döş kırığı ve isli cheddar',
-    tag: "Şefin smash'i",
-    tilt: '1.2deg',
-    down: true,
-  },
-  {
-    name: 'Trüflü Mantar',
-    desc: 'Izgara portobello, trüf mayonez, rokfor krema, çıtır soğan.',
-    price: 390,
-    photo: PHOTOS.mantar,
-    alt: 'Trüflü Mantar: susamlı bun arasında portobello, açık fonda',
-    tag: 'Vejetaryen',
-    tilt: '-1.2deg',
-  },
-]
-
-const STEPS = [
-  { n: '1', title: 'Topla', body: 'Dana döş her sabah kasaptan gelir, kendi çekeriz. 90 gramlık toplar, buz gibi bekler.' },
-  { n: '2', title: "Smash'le", body: '230 derece sacda 10 saniye tam baskı. Köfte inceldikçe yüzey büyür, yüzey büyüdükçe kabuk artar.' },
-  { n: '3', title: 'Kızart', body: 'Kenarlar dantel gibi çıtırlayınca cheddar kapanır, brioche sacdan geçer, paket 90 saniyede çıkar.' },
-]
-
-const HOURS = [
-  { d: 'Pazartesi · Perşembe', h: '11.30 · 23.00' },
-  { d: 'Cuma · Cumartesi', h: '11.30 · 01.00' },
-  { d: 'Pazar', h: '12.00 · 23.00' },
-]
+const TILTS = ['-1.2deg', '1.2deg', '-1.2deg']
 
 export const SmasheLanding = () => {
+  const [c, setC] = useState<SmasheContent>(SMASHE_DEFAULTS)
+
   useEffect(() => {
     document.title = 'Smashé · İstanbul smash burger'
     document
@@ -83,6 +32,11 @@ export const SmasheLanding = () => {
         'content',
         "Smashé, Kadıköy. Sacda smash'lenmiş çıtır kenarlı burger, günlük brioche, el yapımı sos. Gel al ya da online sipariş ver."
       )
+    // Tenant'ın düzenlenmiş içeriği (varsa) varsayılanların üstüne biner.
+    fetch(`${API_BASE}/api/settings/smasheContent`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.smasheContent) setC(mergeSmashe(SMASHE_DEFAULTS, d.smasheContent)) })
+      .catch(() => { /* varsayılan kopya kalır */ })
   }, [])
 
   return (
@@ -121,15 +75,13 @@ export const SmasheLanding = () => {
         .smx-photo  { animation: smx-photo 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
         .smx-stkr   { animation: smx-stkr 0.5s 0.6s cubic-bezier(0.16,1,0.3,1) both; }
 
-        /* Scroll reveal — İÇERİK HER ZAMAN GÖRÜNÜR (opacity gate YOK). Yalnızca hafif
-           bir yukarı-kayma; animation-timeline yoksa veya range dışındaysa en kötü
-           ihtimalle 30px ötelenir, ASLA kaybolmaz (impeccable: görünür varsayılanı zenginleştir). */
+        /* Scroll reveal — İÇERİK HER ZAMAN GÖRÜNÜR (opacity gate YOK); sadece hafif kayma. */
         @keyframes smx-in { from { transform: translateY(30px); } to { transform: none; } }
         @supports (animation-timeline: view()) {
           .smx-reveal { animation: smx-in linear both; animation-timeline: view(); animation-range: entry 5% entry 95%; }
         }
 
-        /* Eğik menü kartı — hover'da düzelir + kalkar (rotate/translate bağımsız özellikler) */
+        /* Eğik menü kartı — hover'da düzelir + kalkar */
         .smx-card { transition: rotate .35s cubic-bezier(.16,1,.3,1), translate .35s cubic-bezier(.16,1,.3,1); }
         .smx-card:hover { rotate: 0deg !important; translate: 0 -6px; }
 
@@ -160,13 +112,13 @@ export const SmasheLanding = () => {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-20 pt-14 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:pb-28 md:pt-20">
           <div>
             <p className="smx-rise mb-5 inline-block rounded-full border-2 border-white/25 px-4 py-1.5 text-sm font-bold text-white/85">
-              Kadıköy, İstanbul
+              {c.hero.chip}
             </p>
             <h1 className="smx-display smx-rise smx-rise-1 text-white" style={{ fontSize: 'clamp(2.9rem, 8vw, 5.5rem)', lineHeight: 1.02, textWrap: 'balance' }}>
-              Sacda smash'lenir,<br />kenarında çıtırlar.
+              {c.hero.h1a}<br />{c.hero.h1b}
             </h1>
             <p className="smx-rise smx-rise-2 mt-6 max-w-md text-lg leading-relaxed text-white/80">
-              90 gramlık dana toplar 230 derece sacda smash'lenir. On saniyede kabuk, doksan saniyede paket. Smashé bu kadar.
+              {c.hero.p}
             </p>
             <div className="smx-rise smx-rise-3 mt-9 flex flex-wrap items-center gap-4">
               <Link to="/menu" className="rounded-full bg-white px-8 py-4 text-base font-extrabold transition-transform hover:-translate-y-0.5" style={{ color: NAVY }}>
@@ -181,13 +133,13 @@ export const SmasheLanding = () => {
           <div className="smx-photo relative mx-auto w-full max-w-md">
             <div className="smx-gingham absolute -bottom-4 -right-4 h-full w-full rounded-2xl" aria-hidden="true" />
             <img
-              src={PHOTOS.hero}
+              src={c.hero.photo}
               alt="Akan cheddar'lı çift köfteli Smashé, brioche ekmek arasında"
               className="relative aspect-[4/5] w-full rounded-2xl border-[10px] border-white object-cover shadow-2xl"
               loading="eager"
             />
             <div className="smx-stkr smx-display absolute -left-6 -top-6 grid h-24 w-24 place-items-center rounded-full bg-white text-center text-sm leading-tight shadow-xl" style={{ color: NAVY }}>
-              180g<br />dana
+              {c.hero.stickerA}<br />{c.hero.stickerB}
             </div>
           </div>
         </div>
@@ -197,7 +149,7 @@ export const SmasheLanding = () => {
       <div className="smx-marquee bg-white py-4" style={{ borderBottom: `3px solid ${NAVY}` }} aria-hidden="true">
         {[0, 1].map((i) => (
           <div key={i} className="smx-display gap-10 pr-10 text-xl" style={{ color: NAVY }}>
-            {["Elle smash'lenir", 'Günlük brioche', 'Çift cheddar', 'Kendi sosumuz', 'Çıtır kenar'].map((t) => (
+            {c.marquee.map((t) => (
               <span key={t} className="flex items-center gap-10 whitespace-nowrap">{t} <span className="text-2xl">✕</span></span>
             ))}
           </div>
@@ -208,25 +160,27 @@ export const SmasheLanding = () => {
       <section id="menu" className="bg-white py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 className="smx-display smx-reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', textWrap: 'balance' }}>
-            En çok smash'lenenler
+            {c.menu.title}
           </h2>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {MENU.map((item) => (
+            {c.menu.items.map((item, i) => (
               <article
-                key={item.name}
-                className={`smx-reveal smx-card ${item.down ? 'md:translate-y-8' : ''}`}
-                style={{ rotate: item.tilt }}
+                key={`${item.name}-${i}`}
+                className={`smx-reveal smx-card ${i === 1 ? 'md:translate-y-8' : ''}`}
+                style={{ rotate: TILTS[i % TILTS.length] }}
               >
                 <div className="relative">
-                  <img src={item.photo} alt={item.alt} loading="lazy" className="aspect-square w-full rounded-2xl object-cover" style={{ border: `4px solid ${NAVY}` }} />
+                  <img src={item.photo} alt={item.alt || item.name} loading="lazy" className="aspect-square w-full rounded-2xl object-cover" style={{ border: `4px solid ${NAVY}` }} />
                   <div className="smx-display absolute -right-3 -top-3 grid h-20 w-20 place-items-center rounded-full text-lg text-white shadow-lg" style={{ background: NAVY, rotate: '8deg' }}>
                     ₺{item.price}
                   </div>
                 </div>
                 <div className="mt-5 flex items-baseline justify-between gap-3">
                   <h3 className="smx-display text-2xl">{item.name}</h3>
-                  <span className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold text-white" style={{ background: NAVY_DEEP }}>{item.tag}</span>
+                  {item.tag && (
+                    <span className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold text-white" style={{ background: NAVY_DEEP }}>{item.tag}</span>
+                  )}
                 </div>
                 <p className="mt-2 leading-relaxed" style={{ color: 'rgba(18,42,92,0.75)' }}>{item.desc}</p>
               </article>
@@ -241,21 +195,21 @@ export const SmasheLanding = () => {
         </div>
       </section>
 
-      {/* ── Nasıl smash'lenir: gerçek 3 adım ─────────────────────────────── */}
+      {/* ── Nasıl smash'lenir: gerçek 3 adım ───────────────────────── */}
       <section id="nasil" className="smx-gingham-dark py-20 text-white md:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid items-end gap-8 md:grid-cols-[1fr_auto]">
             <h2 className="smx-display smx-reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', textWrap: 'balance' }}>
-              Doksan saniyede sacdan pakete
+              {c.steps.title}
             </h2>
-            <p className="smx-reveal max-w-xs text-white/70 md:text-right">Smash bir tarif değil, bir sıra. Sırayı bozmayız.</p>
+            <p className="smx-reveal max-w-xs text-white/70 md:text-right">{c.steps.note}</p>
           </div>
 
           <div className="mt-14 grid gap-10 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="smx-reveal border-t-2 border-white/25 pt-6">
+            {c.steps.items.map((s, i) => (
+              <div key={`${s.title}-${i}`} className="smx-reveal border-t-2 border-white/25 pt-6">
                 <div className="flex items-baseline gap-4">
-                  <span className="smx-display text-6xl" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.9)', color: 'transparent' }}>{s.n}</span>
+                  <span className="smx-display text-6xl" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.9)', color: 'transparent' }}>{i + 1}</span>
                   <h3 className="smx-display text-2xl">{s.title}</h3>
                 </div>
                 <p className="mt-4 leading-relaxed text-white/75">{s.body}</p>
@@ -264,7 +218,7 @@ export const SmasheLanding = () => {
           </div>
 
           <img
-            src={PHOTOS.sac}
+            src={c.steps.photo}
             alt="Sacdan yeni inmiş çift smash, cheddar akıyor, turşusu üstünde"
             loading="lazy"
             className="smx-reveal mt-14 h-64 w-full rounded-2xl border-[6px] border-white object-cover md:h-96"
@@ -277,17 +231,13 @@ export const SmasheLanding = () => {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
           <div className="smx-reveal rounded-3xl bg-white p-8 md:p-12" style={{ border: `3px dashed ${NAVY}` }}>
             <h2 className="smx-display" style={{ fontSize: 'clamp(1.9rem, 4vw, 2.9rem)', textWrap: 'balance' }}>
-              Masamız pöti kare, işimiz net
+              {c.picnic.title}
             </h2>
-            <p className="mt-5 text-lg leading-relaxed" style={{ color: 'rgba(18,42,92,0.8)' }}>
-              Döşü her sabah kasaptan alır, kendimiz çekeriz. Brioche fırından günlük gelir, turşuyu kavanozda biz kurarız. Sos mu? Tarifi yok, alışkanlığı var.
-            </p>
-            <p className="mt-4 text-lg leading-relaxed" style={{ color: 'rgba(18,42,92,0.8)' }}>
-              Masa örtüsü neden pöti kare diye soranlara: burger elle yenir, piknikte utanılmaz.
-            </p>
+            <p className="mt-5 text-lg leading-relaxed" style={{ color: 'rgba(18,42,92,0.8)' }}>{c.picnic.p1}</p>
+            <p className="mt-4 text-lg leading-relaxed" style={{ color: 'rgba(18,42,92,0.8)' }}>{c.picnic.p2}</p>
           </div>
           <img
-            src={PHOTOS.patates}
+            src={c.picnic.photo}
             alt="Çelik kupada çıtır patates, yanında klasik burger"
             loading="lazy"
             className="smx-reveal aspect-[4/3] w-full rounded-2xl border-[10px] border-white object-cover shadow-xl"
@@ -300,13 +250,13 @@ export const SmasheLanding = () => {
       <section id="konum" className="bg-white py-20 md:py-28">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 md:grid-cols-2">
           <div>
-            <h2 className="smx-display smx-reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)' }}>Kadıköy'deyiz</h2>
+            <h2 className="smx-display smx-reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)' }}>{c.konum.title}</h2>
             <p className="mt-5 text-lg leading-relaxed" style={{ color: 'rgba(18,42,92,0.8)' }}>
-              Caferağa Mahallesi, Moda Caddesi 61/A<br />Kadıköy, İstanbul
+              {c.konum.addr1}<br />{c.konum.addr2}
             </p>
             <dl className="mt-8 max-w-sm">
-              {HOURS.map((r) => (
-                <div key={r.d} className="flex items-baseline justify-between border-t py-3" style={{ borderColor: 'rgba(18,42,92,0.2)' }}>
+              {c.konum.hours.map((r, i) => (
+                <div key={`${r.d}-${i}`} className="flex items-baseline justify-between border-t py-3" style={{ borderColor: 'rgba(18,42,92,0.2)' }}>
                   <dt className="font-semibold">{r.d}</dt>
                   <dd className="smx-display">{r.h}</dd>
                 </div>
@@ -316,13 +266,13 @@ export const SmasheLanding = () => {
               <Link to="/menu" className="rounded-full px-8 py-4 text-base font-extrabold text-white transition-transform hover:-translate-y-0.5" style={{ background: NAVY }}>
                 Gel al siparişi ver
               </Link>
-              <a href="https://maps.google.com/?q=Moda+Caddesi+Kadıköy" target="_blank" rel="noopener noreferrer" className="rounded-full border-2 px-8 py-4 text-base font-bold transition-colors hover:bg-black/5" style={{ borderColor: NAVY, color: NAVY }}>
+              <a href={c.konum.mapsUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border-2 px-8 py-4 text-base font-bold transition-colors hover:bg-black/5" style={{ borderColor: NAVY, color: NAVY }}>
                 Yol tarifi al
               </a>
             </div>
           </div>
           <img
-            src={PHOTOS.sepet}
+            src={c.konum.photo}
             alt="Ahşap tablada iki Smashé, yanında soğuk gazoz"
             loading="lazy"
             className="smx-reveal aspect-[4/3] w-full self-center rounded-2xl object-cover"
@@ -344,7 +294,7 @@ export const SmasheLanding = () => {
           <p className="text-sm text-white/60">© {new Date().getFullYear()} Smashé · Kadıköy, İstanbul</p>
           <div className="flex items-center gap-6 text-sm font-semibold">
             <Link to="/menu" className="hover:text-white/70">Menü</Link>
-            <a href="https://instagram.com/smashegang" target="_blank" rel="noopener noreferrer" className="hover:text-white/70">Instagram</a>
+            <a href={c.footer.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">Instagram</a>
             <Link to="/panel" className="text-white/50 hover:text-white/70">İşletme girişi</Link>
           </div>
         </div>
