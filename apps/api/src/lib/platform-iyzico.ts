@@ -284,6 +284,92 @@ export async function upgradeIyzicoSubscription(
   return { referenceCode: d.referenceCode ?? ref };
 }
 
+// ============================================================================
+// Tek seferlik ödeme (Ekstralar: özel landing / mobil app / kuruluş paketi) —
+// iyzico CheckoutForm (v1). Abonelik API'sinden bağımsız tek çekim.
+// SIMÜLASYON'da deterministik sahte token; retrieve daima ödendi döner.
+// ============================================================================
+
+export interface OneTimeBuyerInput {
+  id: string; // tenantId
+  name: string;
+  surname: string;
+  email: string;
+  gsmNumber: string;
+  address: string;
+  city: string;
+}
+
+export async function initializePaymentCheckout(params: {
+  conversationId: string;
+  price: number;
+  basketItemName: string;
+  callbackUrl: string;
+  buyer: OneTimeBuyerInput;
+}): Promise<{ token: string; checkoutFormContent: string }> {
+  if (isSimulated()) {
+    return {
+      token: fakeRef('pchk', params.conversationId),
+      checkoutFormContent: '<div data-simulated-checkout>SIMULATED</div>',
+    };
+  }
+  const priceStr = params.price.toFixed(2);
+  const r = await iyzicoRequest('/payment/iyzipos/checkoutform/initialize/auth/ecom', {
+    locale: 'tr',
+    conversationId: params.conversationId,
+    price: priceStr,
+    paidPrice: priceStr,
+    currency: 'TRY',
+    basketId: params.conversationId,
+    paymentGroup: 'PRODUCT',
+    callbackUrl: params.callbackUrl,
+    enabledInstallments: [1],
+    buyer: {
+      id: params.buyer.id,
+      name: params.buyer.name,
+      surname: params.buyer.surname,
+      email: params.buyer.email,
+      gsmNumber: params.buyer.gsmNumber,
+      identityNumber: '11111111111',
+      registrationAddress: params.buyer.address,
+      city: params.buyer.city,
+      country: 'Turkey',
+    },
+    billingAddress: {
+      contactName: `${params.buyer.name} ${params.buyer.surname}`,
+      city: params.buyer.city,
+      country: 'Turkey',
+      address: params.buyer.address,
+    },
+    basketItems: [
+      { id: 'addon', name: params.basketItemName, category1: 'Ekstra', itemType: 'VIRTUAL', price: priceStr },
+    ],
+  });
+  if (r.status !== 'success') {
+    throw new Error(r.errorMessage || 'iyzico ödeme başlatılamadı');
+  }
+  return { token: r.token, checkoutFormContent: r.checkoutFormContent };
+}
+
+// Checkout sonucunu sorgula (callback'te; client verisine güvenilmez).
+export async function retrievePaymentResult(token: string): Promise<{
+  paid: boolean;
+  paymentId?: string;
+  conversationId?: string;
+  raw?: any;
+}> {
+  if (isSimulated()) {
+    return { paid: true, paymentId: fakeRef('pay', token) };
+  }
+  const r = await iyzicoRequest('/payment/iyzipos/checkoutform/auth/ecom/detail', { locale: 'tr', token });
+  return {
+    paid: r.status === 'success' && r.paymentStatus === 'SUCCESS',
+    paymentId: r.paymentId,
+    conversationId: r.conversationId,
+    raw: r,
+  };
+}
+
 // Webhook imza doğrulaması (x-iyz-signature-v3):
 //   beklenen = HMACSHA256(merchantId + secretKey + iyziEventType +
 //     subscriptionReferenceCode + orderReferenceCode + customerReferenceCode, secretKey) hex

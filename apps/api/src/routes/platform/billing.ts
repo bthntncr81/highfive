@@ -18,6 +18,8 @@ import {
   cancelIyzicoSubscription,
   upgradeIyzicoSubscription,
   verifyWebhookSignatureV3,
+  initializePaymentCheckout,
+  retrievePaymentResult,
 } from '../../lib/platform-iyzico';
 import {
   activateSubscription,
@@ -43,6 +45,72 @@ function billingReturnUrl(tenant?: { subdomain: string } | null): string {
   if (process.env.PLATFORM_BILLING_RETURN_URL) return process.env.PLATFORM_BILLING_RETURN_URL;
   if (tenant?.subdomain) return `https://${tenant.subdomain}.otorder.com/pos/billing`;
   return 'https://otorder.com';
+}
+
+// Ekstralar — tek seferlik satın alınan modüller. Fiyatın kaynağı BURASI
+// (frontend yalnız gösterir). bundle = ikisi + 1 yıllık Pro hediye.
+const ADDONS: Record<string, { title: string; price: number; grants: Array<'landing' | 'mobileApp'>; giftProYear?: boolean }> = {
+  landing: { title: 'Özel Tasarım Landing Page', price: 24999, grants: ['landing'] },
+  mobile: { title: 'Markalı Mobil Uygulama', price: 24999, grants: ['mobileApp'] },
+  bundle: { title: 'Kuruluş Paketi (Landing + Mobil App + 1 yıl Pro)', price: 44999, grants: ['landing', 'mobileApp'], giftProYear: true },
+};
+
+async function getAddonState(tenantId: string): Promise<Record<string, any>> {
+  const row = await platformDb.settings.findFirst({ where: { tenantId, key: 'addons' } });
+  return (row?.value as Record<string, any>) ?? {};
+}
+
+// Satın alımı uygula: addons Settings'ine işle, işlem kaydı yaz, bundle ise
+// 1 yıllık Pro hediyesini aktive et, makbuz mailini gönder.
+async function applyAddonPurchase(tenantId: string, addonKey: string, token: string): Promise<void> {
+  const addon = ADDONS[addonKey];
+  const now = new Date();
+  const state = await getAddonState(tenantId);
+  for (const g of addon.grants) {
+    if (!state[g]) state[g] = { purchasedAt: now.toISOString(), via: addonKey };
+  }
+  await platformDb.settings.upsert({
+    where: { tenantId_key: { tenantId, key: 'addons' } },
+    update: { value: state },
+    create: { tenantId, key: 'addons', value: state },
+  });
+
+  let periodEnd: Date | null = null;
+  if (addon.giftProYear) {
+    const pro = await platformDb.plan.findUnique({ where: { key: 'PRO' } });
+    if (pro) {
+      periodEnd = new Date(now);
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      await platformDb.subscription.update({
+        where: { tenantId },
+        data: {
+          planId: pro.id,
+          cycle: BillingCycle.ANNUAL,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          failedAttempts: 0,
+          lastFailedAt: null,
+        },
+      });
+      await platformDb.tenant.update({ where: { id: tenantId }, data: { status: TenantStatus.ACTIVE } });
+      invalidatePlanCache(tenantId);
+    }
+  }
+
+  await platformDb.billingTransaction.create({
+    data: {
+      tenantId,
+      type: BillingTransactionType.SUBSCRIPTION_PAYMENT,
+      amount: addon.price,
+      success: true,
+      iyzicoPaymentId: token,
+      iyzicoConversationId: `addon:${addonKey}`,
+      periodStart: now,
+      periodEnd,
+    },
+  });
+  sendBillingMail(platformDb, tenantId, 'receipt', { planName: addon.title, amount: addon.price, periodEnd }).catch(() => {});
 }
 
 export default async function billingRoutes(server: FastifyInstance) {
@@ -134,6 +202,45 @@ export default async function billingRoutes(server: FastifyInstance) {
     return reply.redirect(`${returnUrl}?billing=success`, 302);
   });
 
+  // Ekstra satın alımı checkout dönüşü — PUBLIC (iyzico form POST'u).
+  // Bekleyen kayıt Settings['addonCheckout'] ile eşleştirilir; sonuç iyzico'dan
+  // sorgulanır (client verisine güvenilmez). Idempotent: token ikinci kez işlenmez.
+  server.post('/billing/addon-callback', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = (request.body ?? {}) as { token?: string };
+    const query = (request.query ?? {}) as { token?: string };
+    const token = String(body.token || query.token || '');
+    if (!token) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+
+    const pending = await platformDb.settings.findFirst({
+      where: { key: 'addonCheckout', value: { path: ['token'], equals: token } },
+    });
+    if (!pending) return reply.redirect(`${billingReturnUrl(null)}?billing=notfound`, 302);
+    const addonKey = String((pending.value as any)?.addon || '');
+    const tenant = await platformDb.tenant.findUnique({ where: { id: pending.tenantId } });
+    const returnUrl = billingReturnUrl(tenant);
+    if (!ADDONS[addonKey]) return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+
+    // Idempotency — aynı token'la ikinci çağrı yeniden uygulamaz
+    const existing = await platformDb.billingTransaction.findFirst({
+      where: { iyzicoPaymentId: token },
+      select: { id: true },
+    });
+    if (existing) return reply.redirect(`${returnUrl}?billing=addon-success`, 302);
+
+    let result: Awaited<ReturnType<typeof retrievePaymentResult>>;
+    try {
+      result = await retrievePaymentResult(token);
+    } catch (e) {
+      request.log.error(e, '[billing] ekstra ödeme sonucu alınamadı');
+      return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+    }
+    if (!result.paid) return reply.redirect(`${returnUrl}?billing=addon-failed`, 302);
+
+    await applyAddonPurchase(pending.tenantId, addonKey, token);
+    await platformDb.settings.delete({ where: { id: pending.id } }).catch(() => {});
+    return reply.redirect(`${returnUrl}?billing=addon-success`, 302);
+  });
+
   // iyzico abonelik webhook'u — PUBLIC. İmza geçersizse İŞLEME ama 200 dön
   // (iyzico'nun retry'ını tüketme). Idempotency: orderReferenceCode zaten
   // işlenmişse tekrar işlem yaratma.
@@ -212,6 +319,7 @@ export default async function billingRoutes(server: FastifyInstance) {
         where: { id: owner.tenantId },
         select: { status: true, trialEndsAt: true },
       });
+      const addons = await getAddonState(owner.tenantId);
       return {
         subscription: sub && {
           status: sub.status,
@@ -223,7 +331,62 @@ export default async function billingRoutes(server: FastifyInstance) {
         },
         tenant,
         cards,
+        addons,
       };
+    });
+
+    // Ekstra satın alma checkout'u başlat (landing | mobile | bundle) —
+    // tek seferlik iyzico ödemesi; dönüş addon-callback'e POST'lanır.
+    authed.post('/billing/addon-checkout', async (request: FastifyRequest, reply: FastifyReply) => {
+      const owner = (request as any).platformOwner as OwnerToken;
+      const { addon } = request.body as { addon?: string };
+      const def = addon ? ADDONS[addon] : undefined;
+      if (!addon || !def) return reply.status(400).send({ error: 'Geçersiz ekstra' });
+
+      const state = await getAddonState(owner.tenantId);
+      if (def.grants.every((g) => !!state[g])) {
+        return reply.status(409).send({ error: 'Bu ekstra zaten satın alınmış', code: 'ALREADY_OWNED' });
+      }
+
+      const [membership, tenant] = await Promise.all([
+        platformDb.membership.findFirst({ where: { tenantId: owner.tenantId, role: 'OWNER' }, include: { user: true } }),
+        platformDb.tenant.findUnique({ where: { id: owner.tenantId } }),
+      ]);
+      if (!membership || !tenant) return reply.status(404).send({ error: 'Tenant bulunamadı' });
+      const user = membership.user;
+      const nameParts = (user.name || 'Owner').trim().split(/\s+/);
+      const surname = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+      const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : nameParts[0];
+
+      const callbackUrl = `${process.env.PLATFORM_PUBLIC_API_URL || 'https://api.otorder.com'}/api/platform/billing/addon-callback`;
+      let checkout: Awaited<ReturnType<typeof initializePaymentCheckout>>;
+      try {
+        checkout = await initializePaymentCheckout({
+          conversationId: `addon-${addon}-${owner.tenantId}-${Date.now()}`,
+          price: def.price,
+          basketItemName: `OtOrder ${def.title}`,
+          callbackUrl,
+          buyer: {
+            id: owner.tenantId,
+            name: firstName,
+            surname,
+            email: user.email,
+            gsmNumber: user.phone || '+905000000000',
+            address: tenant.name,
+            city: 'İstanbul',
+          },
+        });
+      } catch (e: any) {
+        return reply.status(502).send({ error: e?.message || 'iyzico ödeme başlatılamadı' });
+      }
+
+      // Bekleyen satın alım — callback token'la bulur (tenant başına tek bekleyen)
+      await platformDb.settings.upsert({
+        where: { tenantId_key: { tenantId: owner.tenantId, key: 'addonCheckout' } },
+        update: { value: { token: checkout.token, addon, at: new Date().toISOString() } },
+        create: { tenantId: owner.tenantId, key: 'addonCheckout', value: { token: checkout.token, addon, at: new Date().toISOString() } },
+      });
+      return { checkoutFormContent: checkout.checkoutFormContent, token: checkout.token, simulated: isSimulated() };
     });
 
     authed.get('/billing/transactions', async (request: FastifyRequest) => {

@@ -34,6 +34,7 @@ export default function Billing() {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cycle, setCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
   const [busyPlan, setBusyPlan] = useState('');
+  const [addons, setAddons] = useState<Record<string, { purchasedAt: string } | undefined>>({});
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [checkoutHtml, setCheckoutHtml] = useState('');
   const checkoutRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ export default function Billing() {
       setPlans(p.plans || []);
       setSub(s.subscription || null);
       setTenant(s.tenant || null);
+      setAddons(s.addons || {});
       if (s.subscription?.cycle) setCycle(s.subscription.cycle);
       setTxs((t.transactions || []).slice(0, 10));
     } catch (e: any) {
@@ -57,13 +59,15 @@ export default function Billing() {
 
   useEffect(() => { load(); }, [load]);
 
-  // iyzico checkout dönüşü (?billing=success|failed)
+  // iyzico checkout dönüşü (?billing=success|failed|addon-success|addon-failed)
   useEffect(() => {
     const r = params.get('billing');
     if (!r) return;
-    setMessage(r === 'success'
-      ? { type: 'ok', text: '🎉 Ödemen alındı — aboneliğin aktif!' }
-      : { type: 'err', text: 'Ödeme tamamlanamadı. Tekrar deneyebilirsin.' });
+    const texts: Record<string, { type: 'ok' | 'err'; text: string }> = {
+      'success': { type: 'ok', text: '🎉 Ödemen alındı — aboneliğin aktif!' },
+      'addon-success': { type: 'ok', text: '🎉 Ödemen alındı! Tasarım ve yayına alma için ekibimiz en kısa sürede seninle iletişime geçecek.' },
+    };
+    setMessage(texts[r] ?? { type: 'err', text: 'Ödeme tamamlanamadı. Tekrar deneyebilirsin.' });
     params.delete('billing');
     setParams(params, { replace: true });
     load();
@@ -93,6 +97,26 @@ export default function Billing() {
       }
     } catch (e: any) {
       setMessage({ type: 'err', text: e.message || 'Abonelik başlatılamadı' });
+    } finally {
+      setBusyPlan('');
+    }
+  };
+
+  // Ekstra satın al (landing | mobile | bundle) — abonelik checkout'uyla aynı desen
+  const buyAddon = async (addonKey: string) => {
+    setBusyPlan(`addon:${addonKey}`);
+    setMessage(null);
+    try {
+      const r = await api.post('/api/platform/billing/addon-checkout', { addon: addonKey }, token!);
+      if (r.simulated) {
+        await api.post(`/api/platform/billing/addon-callback?token=${encodeURIComponent(r.token)}`, {});
+        setMessage({ type: 'ok', text: 'Satın alım tamamlandı (test modu) — ekibimiz kurulum için ulaşacak.' });
+        await load();
+      } else if (r.checkoutFormContent) {
+        setCheckoutHtml(r.checkoutFormContent);
+      }
+    } catch (e: any) {
+      setMessage({ type: 'err', text: e.message || 'Satın alım başlatılamadı' });
     } finally {
       setBusyPlan('');
     }
@@ -222,20 +246,43 @@ export default function Billing() {
         <p className="text-sm text-gray-500 mb-4">Her pakete eklenebilir — tek seferlik ödeme, abonelikten bağımsız.</p>
         <div className="grid gap-3 md:grid-cols-2">
           {[
-            { icon: '🎨', t: 'Özel Tasarım Landing Page', d: 'Markana özel elle tasarlanmış tanıtım sitesi (örn. smashe.otorder.com).' },
-            { icon: '📱', t: 'Markalı Mobil Uygulama', d: 'App Store + Google Play\'de kendi adınla; push bildirim ve sadakat dahil.' },
+            { key: 'landing', owned: !!addons.landing, icon: '🎨', t: 'Özel Tasarım Landing Page', d: 'Markana özel elle tasarlanmış tanıtım sitesi (örn. smashe.otorder.com).' },
+            { key: 'mobile', owned: !!addons.mobileApp, icon: '📱', t: 'Markalı Mobil Uygulama', d: 'App Store + Google Play\'de kendi adınla; push bildirim ve sadakat dahil.' },
           ].map((x) => (
-            <div key={x.t} className="rounded-xl border border-gray-200 p-4">
+            <div key={x.key} className="rounded-xl border border-gray-200 p-4 flex flex-col">
               <p className="font-semibold">{x.icon} {x.t}</p>
-              <p className="mt-1 text-sm text-gray-500">{x.d}</p>
-              <p className="mt-2 text-sm"><b>₺24.999</b> tek seferlik</p>
+              <p className="mt-1 text-sm text-gray-500 flex-1">{x.d}</p>
+              {x.owned ? (
+                <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
+                  ✓ Satın alındı — kurulum için ekibimiz seninle iletişime geçecek
+                </p>
+              ) : (
+                <button
+                  onClick={() => buyAddon(x.key)}
+                  disabled={!!busyPlan}
+                  className="mt-3 w-full rounded-xl bg-primary-500 py-2.5 font-bold text-white transition hover:bg-primary-600 disabled:opacity-60"
+                >
+                  {busyPlan === `addon:${x.key}` ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Satın al — ₺24.999'}
+                </button>
+              )}
             </div>
           ))}
         </div>
-        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          🎁 İkisi birden <b>₺44.999</b> — üstüne <b>1 yıllık Pro paket hediye</b> (₺5.990 değerinde).
-        </p>
-        <p className="mt-3 text-xs text-gray-400">Eklemek için: soft@haberbenim.com adresine yazman yeterli — kurulumden sonra faturana işlenir.</p>
+        {!(addons.landing && addons.mobileApp) && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm text-amber-900">
+              🎁 İkisi birden <b>₺44.999</b> — üstüne <b>1 yıllık Pro paket hediye</b> (₺5.990 değerinde).
+            </p>
+            <button
+              onClick={() => buyAddon('bundle')}
+              disabled={!!busyPlan || !!addons.landing || !!addons.mobileApp}
+              className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-600 disabled:opacity-50"
+            >
+              {busyPlan === 'addon:bundle' ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Paketi al — ₺44.999'}
+            </button>
+          </div>
+        )}
+        <p className="mt-3 text-xs text-gray-400">Ödeme sonrası tasarım ve yayına alma sürecini ekibimiz seninle birlikte yürütür.</p>
       </div>
 
       <p className="flex items-center gap-2 text-xs text-gray-400">
