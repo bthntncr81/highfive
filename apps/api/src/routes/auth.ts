@@ -1,7 +1,8 @@
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import * as jwt from 'jsonwebtoken';
-import { sendMail, emailOtpTemplate, welcomeTemplate } from '../lib/mailer';
+import { sendTenantMail, renderTenantEmail, TenantMailBrand } from '../lib/mailer';
 import { signStaffToken } from '../middleware/auth';
 import { dbFor, platformDb } from '../lib/tenant-db';
 
@@ -16,6 +17,59 @@ function generateOtp(): string {
 
 function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// -----------------------------------------------------------------
+// Pazarlama e-postası çıkış (unsubscribe) token'ı.
+// token = base64url("<customerId>.<HMAC-SHA256(customerId, JWT_SECRET) hex ilk 32>")
+// Stateless — DB'de saklanmaz; imza customerId'yi doğrular.
+// (campaigns e-posta yayını List-Unsubscribe başlığında kullanır.)
+// -----------------------------------------------------------------
+
+function unsubscribeSignature(customerId: string): string {
+  return crypto.createHmac('sha256', JWT_SECRET).update(customerId).digest('hex').slice(0, 32);
+}
+
+export function makeUnsubscribeToken(customerId: string): string {
+  return Buffer.from(`${customerId}.${unsubscribeSignature(customerId)}`, 'utf8').toString('base64url');
+}
+
+/** Geçerliyse customerId, değilse null döner. */
+export function verifyUnsubscribeToken(token: string): string | null {
+  try {
+    const raw = Buffer.from(token, 'base64url').toString('utf8');
+    const dot = raw.lastIndexOf('.');
+    if (dot <= 0) return null;
+    const customerId = raw.slice(0, dot);
+    const sig = raw.slice(dot + 1);
+    const expected = unsubscribeSignature(customerId);
+    if (sig.length !== expected.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'utf8'), Buffer.from(expected, 'utf8'))) return null;
+    return customerId;
+  } catch {
+    return null;
+  }
+}
+
+// Unsubscribe yanıtı — mail istemcisinden tıklanan bağlantı için mini HTML sayfa
+function unsubscribePage(title: string, message: string): string {
+  return `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head>
+<body style="margin:0;padding:48px 16px;background:#f5f5f2;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:36px 32px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.06);">
+    <div style="font-size:40px;margin-bottom:12px;">✉️</div>
+    <h1 style="font-size:20px;font-weight:700;margin:0 0 10px;">${escapeHtml(title)}</h1>
+    <p style="font-size:14px;line-height:1.6;color:#4a4a4a;margin:0;">${escapeHtml(message)}</p>
+  </div>
+</body></html>`;
 }
 
 // Membership + tenant bilgisini istemciye dönecek şekle indirger
@@ -446,12 +500,32 @@ export default async function authRoutes(server: FastifyInstance) {
       });
     }
 
-    const html = emailOtpTemplate(code);
-    const sendResult = await sendMail({
+    // Tenant markalı OTP maili — bu endpoint tenant-scoped (subdomain / X-Tenant-ID)
+    const tenantId = ((request as any).tenant?.id as string | undefined) || customer.tenantId;
+    const sendResult = await sendTenantMail(request.db, tenantId, {
       to: cleaned,
-      subject: `High Five — Giriş Kodun: ${code}`,
-      html,
-      text: `High Five giriş kodun: ${code}\n\n10 dakika geçerli. Bu kodu paylaşma.`,
+      subject: (brand) => `${brand.tenantName} — Giriş kodun: ${code}`,
+      template: 'customer-otp',
+      render: (brand) =>
+        renderTenantEmail(brand, {
+          preheader: `Giriş kodun: ${code} — 10 dakika geçerli`,
+          title: 'Giriş Kodu',
+          body: `
+    <h1 style="font-size:22px;font-weight:700;margin:0 0 12px;color:#1a1a1a;">
+      Giriş kodun geldi 👋
+    </h1>
+    <p style="font-size:15px;line-height:1.6;color:#4a4a4a;margin:0 0 24px;">
+      ${escapeHtml(brand.tenantName)} hesabına giriş yapmak için aşağıdaki 6 haneli kodu kullan. Bu kod <b>10 dakika</b> geçerli — kimseyle paylaşma.
+    </p>
+    <div style="background:#f5f5f2;border:2px dashed ${brand.accent};border-radius:12px;padding:24px;text-align:center;margin:24px 0;">
+      <div style="font-family:'SF Mono',Menlo,monospace;font-size:36px;font-weight:800;letter-spacing:8px;color:${brand.accent};">
+        ${escapeHtml(code)}
+      </div>
+    </div>
+    <p style="font-size:13px;color:#8a8a8a;margin:16px 0 0;">
+      Bu girişi sen başlatmadıysan bu e-postayı yok sayabilirsin — hiç kimse senin adına oturum açmadı.
+    </p>`,
+        }),
     });
 
     if (!sendResult.ok) {
@@ -501,10 +575,28 @@ export default async function authRoutes(server: FastifyInstance) {
 
     // First-time verification → fire welcome email (best-effort, ignore failure)
     if (!wasVerified) {
-      sendMail({
+      const welcomeTenantId = ((request as any).tenant?.id as string | undefined) || updated.tenantId;
+      const welcomeBody = (brand: TenantMailBrand) => `
+    <h1 style="font-size:22px;font-weight:700;margin:0 0 12px;color:#1a1a1a;">
+      Aramıza hoş geldin${updated.name ? ', ' + escapeHtml(updated.name) : ''} 🎉
+    </h1>
+    <p style="font-size:15px;line-height:1.6;color:#4a4a4a;margin:0 0 16px;">
+      ${escapeHtml(brand.tenantName)} sadakat programına kayıt olduğun için teşekkürler.
+      Bundan sonra her siparişinde puan biriktireceksin ve sana özel kampanyalardan
+      ilk sen haberdar olacaksın.
+    </p>`;
+      sendTenantMail(request.db, welcomeTenantId, {
         to: cleaned,
-        subject: 'High Five sadakat programına hoş geldin!',
-        html: welcomeTemplate(updated.name || 'High Five üyesi'),
+        subject: (brand) => `${brand.tenantName} sadakat programına hoş geldin!`,
+        template: 'customer-welcome',
+        render: (brand) =>
+          renderTenantEmail(brand, {
+            preheader: `${brand.tenantName} ailesine hoş geldin — sadakat programın aktif`,
+            title: 'Hoş Geldin',
+            body: welcomeBody(brand),
+            ctaLabel: 'Menüye Göz At',
+            ctaUrl: `${brand.siteUrl}/menu`,
+          }),
       }).catch(() => { /* don't block login on welcome email */ });
     }
 
@@ -527,5 +619,41 @@ export default async function authRoutes(server: FastifyInstance) {
         loyaltyTier: updated.loyaltyTier,
       },
     };
+  });
+
+  // -----------------------------------------------------------------
+  // Pazarlama e-postalarından çık — maildeki List-Unsubscribe bağlantısı.
+  // Token stateless HMAC ile customerId'yi doğrular; tenant bağlamı
+  // gerektirmez (bağlantı herhangi bir yerden tıklanabilir), bu yüzden
+  // güncelleme benzersiz id ile platformDb üzerinden yapılır.
+  // -----------------------------------------------------------------
+  server.get('/customer/email/unsubscribe', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { token } = request.query as { token?: string };
+    const customerId = token ? verifyUnsubscribeToken(token) : null;
+    reply.type('text/html; charset=utf-8');
+
+    if (!customerId) {
+      return reply
+        .status(400)
+        .send(unsubscribePage('Bağlantı geçersiz', 'Bu çıkış bağlantısı geçersiz veya eksik. Lütfen maildeki bağlantıyı değiştirmeden kullan.'));
+    }
+
+    try {
+      await platformDb.customer.update({
+        where: { id: customerId },
+        data: { emailConsent: false },
+      });
+    } catch {
+      return reply
+        .status(400)
+        .send(unsubscribePage('Bağlantı geçersiz', 'Üyelik bulunamadı — bağlantının süresi geçmiş olabilir.'));
+    }
+
+    return reply.send(
+      unsubscribePage(
+        'Pazarlama e-postalarından çıkarıldın',
+        'Artık kampanya ve duyuru e-postası almayacaksın. Sipariş durumu gibi işlem e-postaların etkilenmez. Fikrini değiştirirsen sipariş sayfasındaki hesabından tekrar izin verebilirsin.',
+      ),
+    );
   });
 }

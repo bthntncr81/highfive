@@ -13,6 +13,7 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Billing from './pages/Billing';
 import Users from './pages/Users';
 import StockManagement from './pages/StockManagement';
 import MenuManagement from './pages/MenuManagement';
@@ -249,6 +250,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <Settings />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="billing"
+                element={
+                  <AdminRoute>
+                    <Billing />
                   </AdminRoute>
                 }
               />

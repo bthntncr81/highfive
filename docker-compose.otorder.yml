@@ -16,6 +16,18 @@ services:
       SUPERADMIN_EMAILS: soft@haberbenim.com
       PLATFORM_BASE_DOMAIN: otorder.com
       API_URL: https://api.otorder.com
+      # Mail (Resend) — .env.otorder'dan
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      PLATFORM_MAIL_FROM: ${PLATFORM_MAIL_FROM:-noreply@otorder.com}
+      PLATFORM_MAIL_FROM_NAME: ${PLATFORM_MAIL_FROM_NAME:-OtOrder}
+      PLATFORM_MAIL_DOMAIN: ${PLATFORM_MAIL_DOMAIN:-otorder.com}
+      # iyzico Abonelik API (boşsa SIMULATION)
+      PLATFORM_IYZICO_API_KEY: ${PLATFORM_IYZICO_API_KEY:-}
+      PLATFORM_IYZICO_SECRET_KEY: ${PLATFORM_IYZICO_SECRET_KEY:-}
+      PLATFORM_IYZICO_BASE_URL: ${PLATFORM_IYZICO_BASE_URL:-https://sandbox-api.iyzipay.com}
+      PLATFORM_IYZICO_MERCHANT_ID: ${PLATFORM_IYZICO_MERCHANT_ID:-}
+      PLATFORM_PUBLIC_API_URL: ${PLATFORM_PUBLIC_API_URL:-https://api.otorder.com}
+      PLATFORM_BILLING_RETURN_URL: ${PLATFORM_BILLING_RETURN_URL:-}
       # ts-node ambient .d.ts yüklemesi (types/fastify.d.ts — request.db augmentasyonu).
       # Bunsuz boot TS2339 ile düşer; tam include type-check boot'u ~40-60 sn sürer.
       TS_NODE_FILES: "true"

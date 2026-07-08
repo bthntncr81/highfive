@@ -1,7 +1,7 @@
 // Campaigns, Bundles, Coupons Routes
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
-import { broadcastCampaignToMobile } from '../lib/auto-broadcast';
+import { broadcastCampaignToMobile, broadcastCampaignEmail } from '../lib/auto-broadcast';
 import { requireFeature } from '../lib/plan-limits';
 
 export default async function campaignsRoutes(server: FastifyInstance) {
@@ -75,6 +75,17 @@ export default async function campaignsRoutes(server: FastifyInstance) {
         body: data.notifyBody,
         imageUrl: data.notifyImageUrl,
       }).catch((err) => console.error('📱 Auto-broadcast error:', err));
+
+      // E-posta kanalı (push'un yanına) — emailConsent'li müşterilere tenant
+      // markalı kampanya maili. Fire-and-forget; sonuç loglanır.
+      const tenantId = (request as any).tenant?.id as string | undefined;
+      if (tenantId) {
+        broadcastCampaignEmail(request.db, tenantId, campaign)
+          .then(({ sent, skipped }) =>
+            console.log(`📧 campaign "${campaign.name}" email: sent=${sent} skipped=${skipped}`),
+          )
+          .catch((err) => console.error('📧 Campaign email broadcast error:', err));
+      }
     }
 
     return { campaign };

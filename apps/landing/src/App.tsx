@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
 
 import { Cart, CartButton } from "./components/Cart";
@@ -145,9 +145,37 @@ const Premium = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Animated routes component
+// Restoran askıda (deneme bitti / ödeme yok) — tam sayfa kilit ekranı.
+// api.ts 402 TENANT_SUSPENDED yakalayınca 'tenant-suspended' event'i atar.
+const SuspendedScreen = () => {
+  const theme = useTheme();
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#0f172a] px-6 text-center">
+      <div>
+        <div className="text-5xl">🍽️</div>
+        <h1 className="mt-6 text-2xl font-bold text-white md:text-3xl">
+          {theme?.name || "Bu restoran"} şu an sipariş alamıyor
+        </h1>
+        <p className="mx-auto mt-3 max-w-md text-white/60">
+          Kısa bir süre için hizmet veremiyoruz. Lütfen daha sonra tekrar dene.
+        </p>
+        <p className="mt-8 text-xs text-white/30">
+          İşletme sahibi misiniz? <a href="/panel" className="underline hover:text-white/60">İşletme paneli</a>
+        </p>
+      </div>
+    </main>
+  );
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const theme = useTheme();
+  const [suspended, setSuspended] = useState(false);
+  useEffect(() => {
+    const on = () => setSuspended(true);
+    window.addEventListener("tenant-suspended", on);
+    return () => window.removeEventListener("tenant-suspended", on);
+  }, []);
   const isAdmin = location.pathname === "/admin";
   const isStaffHub = location.pathname === "/panel" || location.pathname === "/isletme";
   // Özel landing'in kendi içerik editörü (ör. /smashe-admin) — tam sayfa.
@@ -163,6 +191,9 @@ const AnimatedRoutes = () => {
     !!CUSTOM_LANDINGS[theme.customLanding];
   const hideChrome = isAdmin || isComingSoon || isStaffHub || isCustomRoot || isCustomAdmin;
   const { services, isWithinOrderHours } = useSettings();
+
+  // Askıdaki restoran: personel giriş yolları hariç her şey kilit ekranı.
+  if (suspended && !isStaffHub) return <SuspendedScreen />;
 
   return (
     <>

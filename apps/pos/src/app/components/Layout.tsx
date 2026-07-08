@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../hooks/useTheme';
+import { api } from '../lib/api';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -81,6 +82,7 @@ export default function Layout() {
     { to: '/reports', icon: BarChart3, label: 'Raporlar', emoji: '📊' },
     { to: '/users', icon: Users, label: 'Kullanıcılar', emoji: '👥' },
     { to: '/settings', icon: Settings, label: 'Ayarlar', emoji: '⚙️' },
+    { to: '/billing', icon: Wallet, label: 'Abonelik', emoji: '💳' },
   ];
 
   const formatCurrency = (amount: number) => `${amount.toLocaleString('tr-TR')} ₺`;
@@ -331,6 +333,9 @@ export default function Layout() {
           </div>
         </div>
 
+        {/* Deneme / ödeme durumu bandı */}
+        <TrialBanner />
+
         {/* Page content */}
         <div className="p-4 lg:p-6 max-w-7xl mx-auto">
           <Outlet />
@@ -338,4 +343,44 @@ export default function Layout() {
       </main>
     </div>
   );
+}
+
+// Deneme geri sayımı / ödeme uyarısı — /api/platform/billing/subscription'dan.
+// TRIAL: amber bant + kalan gün; PAST_DUE: kırmızı bant. ACTIVE'de görünmez.
+function TrialBanner() {
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
+  const [info, setInfo] = useState<{ status: string; trialEndsAt: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!token || !user) return;
+    api.get('/api/platform/billing/subscription', token)
+      .then((r) => setInfo(r.tenant ? { status: r.tenant.status, trialEndsAt: r.tenant.trialEndsAt } : null))
+      .catch(() => setInfo(null));
+  }, [token, user]);
+
+  if (!info) return null;
+
+  if (info.status === 'TRIAL' && info.trialEndsAt) {
+    const days = Math.max(0, Math.ceil((new Date(info.trialEndsAt).getTime() - Date.now()) / 864e5));
+    return (
+      <button
+        onClick={() => navigate('/billing')}
+        className="block w-full bg-amber-400 px-4 py-2 text-center text-sm font-bold text-amber-950 hover:bg-amber-300 transition-colors"
+      >
+        ⏳ Ücretsiz deneme: {days} gün kaldı — planını seç, kesintisiz devam et →
+      </button>
+    );
+  }
+  if (info.status === 'PAST_DUE') {
+    return (
+      <button
+        onClick={() => navigate('/billing')}
+        className="block w-full bg-red-500 px-4 py-2 text-center text-sm font-bold text-white hover:bg-red-600 transition-colors"
+      >
+        ⚠️ Ödemen alınamadı — hesabın kilitlenmeden ödeme bilgini güncelle →
+      </button>
+    );
+  }
+  return null;
 }

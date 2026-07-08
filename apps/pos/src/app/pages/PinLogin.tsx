@@ -33,7 +33,13 @@ export default function PinLogin() {
     try {
       await pinLogin(pin);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
+      // Hesap askıda: PIN girişi kilitli — sahibi e-posta girişinden ödeyebilir.
+      if (err?.status === 402) {
+        setError('Hesap askıda. İşletme sahibi e-posta girişiyle ödeme yapabilir.');
+        navigate('/login-email?suspended=1');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Giriş başarısız');
       setPin('');
     } finally {

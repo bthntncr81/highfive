@@ -150,6 +150,47 @@ export default async function adminRoutes(server: FastifyInstance) {
       return { success: true, plan: plan.key, until: periodEnd, subscriptionId: sub.id };
     });
 
+    // Plan düzenleme — iyzico pricingPlanReferenceCode'ları + fiyatlar
+    // (iyzico panelinde plan oluşturulur, referans kodu buradan girilir; deploy yok).
+    authed.patch('/admin/plans/:key', async (request: FastifyRequest, reply: FastifyReply) => {
+      const { key } = request.params as { key: string };
+      const body = (request.body ?? {}) as {
+        iyzicoMonthlyRefCode?: string | null;
+        iyzicoAnnualRefCode?: string | null;
+        monthlyPrice?: number;
+        annualPrice?: number;
+      };
+      const plan = await platformDb.plan.findUnique({ where: { key: (key || '').toUpperCase() } });
+      if (!plan) return reply.status(404).send({ error: 'Geçersiz paket' });
+
+      const data: Record<string, unknown> = {};
+      if ('iyzicoMonthlyRefCode' in body) data.iyzicoMonthlyRefCode = body.iyzicoMonthlyRefCode || null;
+      if ('iyzicoAnnualRefCode' in body) data.iyzicoAnnualRefCode = body.iyzicoAnnualRefCode || null;
+      if (body.monthlyPrice !== undefined) {
+        const p = Number(body.monthlyPrice);
+        if (!Number.isFinite(p) || p < 0) return reply.status(400).send({ error: 'Geçersiz aylık fiyat' });
+        data.monthlyPrice = p;
+      }
+      if (body.annualPrice !== undefined) {
+        const p = Number(body.annualPrice);
+        if (!Number.isFinite(p) || p < 0) return reply.status(400).send({ error: 'Geçersiz yıllık fiyat' });
+        data.annualPrice = p;
+      }
+
+      const updated = await platformDb.plan.update({ where: { key: plan.key }, data });
+      return {
+        success: true,
+        plan: {
+          key: updated.key,
+          name: updated.name,
+          monthlyPrice: Number(updated.monthlyPrice),
+          annualPrice: Number(updated.annualPrice),
+          iyzicoMonthlyRefCode: updated.iyzicoMonthlyRefCode,
+          iyzicoAnnualRefCode: updated.iyzicoAnnualRefCode,
+        },
+      };
+    });
+
     // Impersonate — tenant'ın OWNER'ı gibi staff token üret (destek/hata ayıklama)
     authed.post('/admin/tenants/:id/impersonate', async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };

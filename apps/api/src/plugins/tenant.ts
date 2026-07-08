@@ -110,7 +110,14 @@ export default fp(async function tenantPlugin(server: FastifyInstance) {
     if (!tenant) return; // platform-level istek olabilir; req.db fail-closed kalır
 
     if (tenant.status === 'SUSPENDED') {
-      return reply.status(402).send({ error: 'Hesap askıda — ödeme gerekli', code: 'TENANT_SUSPENDED' });
+      // Sahibi ödemeye ULAŞABİLMELİ: e-posta+şifre girişi (owner token'ı alır,
+      // /api/platform/billing/* zaten skip'te) ve kilit ekranının marka bilgisi
+      // açık kalır. PIN girişi ve diğer her şey 402 (tam kilit).
+      const SUSPENDED_ALLOWED = ['/api/auth/login', '/api/settings/public/theme'];
+      const path = req.url.split('?')[0];
+      if (!SUSPENDED_ALLOWED.includes(path)) {
+        return reply.status(402).send({ error: 'Hesap askıda — ödeme gerekli', code: 'TENANT_SUSPENDED' });
+      }
     }
 
     (req as any).tenant = tenant;

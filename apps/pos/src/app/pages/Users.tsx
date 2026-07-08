@@ -26,7 +26,7 @@ export default function Users() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
-  const [formData, setFormData] = useState({ name: '', role: 'WAITER', pin: '' });
+  const [formData, setFormData] = useState({ name: '', role: 'WAITER', pin: '', email: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -46,7 +46,7 @@ export default function Users() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', role: 'WAITER', pin: '' });
+    setFormData({ name: '', role: 'WAITER', pin: '', email: '' });
     setEditingUser(null);
     setFormError('');
   };
@@ -68,6 +68,7 @@ export default function Users() {
     setIsSubmitting(true);
     try {
       const payload: Record<string, unknown> = { name: formData.name, role: formData.role };
+      if (formData.email.trim()) payload.email = formData.email.trim();
       if (formData.pin) payload.pin = formData.pin;
 
       if (editingUser) {
@@ -88,7 +89,7 @@ export default function Users() {
 
   const handleEdit = (user: UserData) => {
     setEditingUser(user);
-    setFormData({ name: user.name, role: user.role, pin: '' });
+    setFormData({ name: user.name, role: user.role, pin: '', email: '' });
     setFormError('');
     setShowModal(true);
   };
@@ -251,6 +252,24 @@ export default function Users() {
                   Kullanıcı bu 6 haneli şifre ile giriş yapar (POS / mobil uygulamalar).
                 </p>
               </div>
+
+              {!editingUser && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    E-posta <span className="text-gray-400 font-normal">— opsiyonel</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="input"
+                    placeholder="personel@ornek.com"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Girilirse giriş şifresi bu adrese e-postayla gönderilir.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>

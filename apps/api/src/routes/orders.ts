@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { OrderStatus, OrderType, PaymentMethod, PaymentStatus, TableStatus } from '@prisma/client';
 import { verifyAuth, verifyAdmin } from '../middleware/auth';
 import { broadcastNewOrder, broadcastOrderUpdate, broadcastTableUpdate, broadcastKitchenNewItems } from '../websocket';
-import { notifyNewOrder } from '../lib/order-notify';
+import { notifyNewOrder, notifyOrderStatus } from '../lib/order-notify';
 import { webhookService } from '../services/webhook.service';
 import { sendOrderStatusPush } from '../lib/order-push';
 import { awardMobileOrderPoints } from '../lib/loyalty-award';
@@ -1035,6 +1035,11 @@ export default async function orderRoutes(server: FastifyInstance) {
       sendOrderStatusPush(request.db, updatedOrder, status).catch((err) => {
         console.error('📱 Mobile push error:', err);
       });
+      // Müşteri durum maili — DELIVERED→COMPLETED geçişi aynı "teslim"
+      // grubunda olduğundan ikinci bir mail atılmaz.
+      if (!(status === OrderStatus.COMPLETED && order.status === OrderStatus.DELIVERED)) {
+        notifyOrderStatus(request.db, id, status).catch(() => {});
+      }
     }
 
     // Puan kazanım + sadakat programları — status COMPLETED'a geçtiğinde
@@ -1557,6 +1562,9 @@ export default async function orderRoutes(server: FastifyInstance) {
       console.error('📱 Mobile push error:', err);
     });
 
+    // Müşteri iptal maili (toggle: statusEmails.cancelled)
+    notifyOrderStatus(request.db, id, 'CANCELLED').catch(() => {});
+
     // Dispatch webhook for external orders
     if (updatedOrder.externalOrderId) {
       webhookService.dispatchOrderStatusChanged(updatedOrder).catch((err) => {
@@ -1615,6 +1623,9 @@ export default async function orderRoutes(server: FastifyInstance) {
       console.error('📱 Mobile push error:', err);
     });
 
+    // Müşteri "yolda" maili (toggle: statusEmails.ready)
+    notifyOrderStatus(request.db, id, updatedOrder.status).catch(() => {});
+
     return { order: updatedOrder, message: 'Sipariş alındı' };
   });
 
@@ -1655,6 +1666,9 @@ export default async function orderRoutes(server: FastifyInstance) {
     sendOrderStatusPush(request.db, updatedOrder, updatedOrder.status).catch((err) => {
       console.error('📱 Mobile push error:', err);
     });
+
+    // Müşteri "teslim edildi" maili (toggle: statusEmails.delivered)
+    notifyOrderStatus(request.db, id, updatedOrder.status).catch(() => {});
 
     // Sipariş tamamlandığında puan + sadakat programları
     awardMobileOrderPoints(request.db, updatedOrder).catch((err) => {

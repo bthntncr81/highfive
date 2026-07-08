@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, Pizza } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { api } from '../lib/api';
 
 export default function Login() {
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState(
+    params.get('suspended') === '1'
+      ? 'Hesap askıda: giriş yaptıktan sonra Abonelik sayfasından ödeme yapabilirsin.'
+      : ''
+  );
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotBusy, setForgotBusy] = useState(false);
   const { brandName, brandLogo } = useTheme();
 
   const { login } = useAuth();
@@ -22,12 +30,25 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/');
+      // Askıdaki hesapta doğrudan ödemeye götür (diğer sayfalar zaten 402'yle buraya yönlenir)
+      navigate(params.get('suspended') === '1' ? '/billing' : '/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş başarısız');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Şifremi unuttum — platform forgot-password (her durumda başarılı görünür)
+  const handleForgot = async () => {
+    if (!email) { setError('Önce e-posta adresini yaz'); return; }
+    setForgotBusy(true);
+    setError('');
+    try {
+      await api.post('/api/platform/forgot-password', { email });
+    } catch { /* enumeration koruması — her durumda başarı göster */ }
+    setInfo(`Hesap varsa ${email} adresine sıfırlama bağlantısı gönderildi.`);
+    setForgotBusy(false);
   };
 
   return (
@@ -72,11 +93,16 @@ export default function Login() {
 
           {/* Form */}
           <div className="p-8">
-            {/* Error message */}
+            {/* Error / info messages */}
             {error && (
               <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-shake">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">{error}</span>
+              </div>
+            )}
+            {info && (
+              <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-amber-800 text-sm font-medium">
+                {info}
               </div>
             )}
 

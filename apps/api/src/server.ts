@@ -40,6 +40,7 @@ import campaignsRoutes from './routes/campaigns';
 import optionGroupsRoutes from './routes/option-groups';
 import gamesRoutes from './routes/games';
 import pizzaGameRoutes from './routes/pizza-game';
+import franchiseRoutes from './routes/franchise';
 import builderRoutes from './routes/builder';
 import googleReviewsRoutes from './routes/google-reviews';
 import rawMaterialRoutes from './routes/rawmaterials';
@@ -139,6 +140,7 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   server.register(orderRoutes, { prefix: '/api/orders' });
   server.register(reportRoutes, { prefix: '/api/reports' });
   server.register(settingsRoutes, { prefix: '/api/settings' });
+  server.register(franchiseRoutes, { prefix: '/api/franchise-application' });
   server.register(paymentRoutes, { prefix: '/api/payment' });
   server.register(stockRoutes, { prefix: '/api/stock' });
   server.register(upsellRoutes, { prefix: '/api' }); // /api/upsells, /api/crosssells

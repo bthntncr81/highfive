@@ -124,7 +124,7 @@ describe('dbFor extension — cross-tenant write isolation', () => {
 describe('coverage-gate — HER model sınıflandırılmış olmalı', () => {
   // Yeni bir model eklenip tenantId unutulursa (ve platform allowlist'e de
   // konmazsa) bu test FAIL eder → scoping kararı verilmeden model eklenemez.
-  const PLATFORM_ALLOWLIST = new Set(['User', 'Tenant', 'Plan']);
+  const PLATFORM_ALLOWLIST = new Set(['User', 'Tenant', 'Plan', 'PasswordToken']); // PasswordToken: platform kimliği (User) tokenı — bilinçli tenant'sız
 
   it('her DMMF modeli ya tenantId taşır ya da platform allowlist\'inde', () => {
     const unclassified: string[] = [];

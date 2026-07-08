@@ -172,7 +172,7 @@ function Hero() {
             <Link to="/signup" className="btn-primary text-base">Ücretsiz dene</Link>
             <a href="#fiyatlar" className="btn-ghost text-base">Planları gör</a>
           </div>
-          <p className="float-in mt-4 text-sm text-ink-muted [--d:540ms]">14 gün ücretsiz · kart gerekmez · dilediğinde iptal</p>
+          <p className="float-in mt-4 text-sm text-ink-muted [--d:540ms]">7 gün ücretsiz · kart gerekmez · dilediğinde iptal</p>
           <p className="float-in mt-8 flex items-center gap-2.5 text-sm text-ink-soft [--d:640ms]">
             <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-brand-600" aria-hidden="true" />
             High Five Pizza &amp; Makarna, Akçakoca: bu sistemle servis yapıyor.
@@ -431,7 +431,7 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="reveal">
             <h2 className="text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold tracking-[-0.02em] text-ink">Hesap, net.</h2>
-            <p className="mt-2 text-ink-soft">Komisyon yok, gizli kalem yok. Her pakette 14 gün ücretsiz deneme.</p>
+            <p className="mt-2 text-ink-soft">Komisyon yok, gizli kalem yok. Her pakette 7 gün ücretsiz deneme.</p>
           </div>
           <div className="reveal flex items-center gap-3 text-sm font-semibold">
             <span className={annual ? 'text-ink-muted' : 'text-ink'}>Aylık</span>
@@ -458,6 +458,29 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
             <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} order={i} />
           ))}
         </div>
+
+        {/* Ekstralar: her pakete eklenebilen tek seferlik / taahhütlü modüller */}
+        <div className="mt-16">
+          <h3 className="text-center text-2xl font-bold text-ink">Ekstralar</h3>
+          <p className="mt-2 text-center text-ink-soft">Her pakete eklenebilir. İki ödeme seçeneği: tek seferlik ya da 12 ay taahhütle aylık.</p>
+          <div className="mx-auto mt-8 grid max-w-3xl gap-6 md:grid-cols-2">
+            {[
+              { icon: '🎨', title: 'Özel Tasarım Landing Page', desc: 'Markanıza özel, elle tasarlanmış tanıtım sitesi. Örnekler: smashe.otorder.com, highfivepps.com' },
+              { icon: '📱', title: 'Markalı Mobil Uygulama', desc: 'App Store + Google Play\'de kendi adınızla; sadakat, push bildirim ve online sipariş dahil.' },
+            ].map((x) => (
+              <div key={x.title} className="card">
+                <div className="text-3xl">{x.icon}</div>
+                <h4 className="mt-3 text-lg font-bold text-ink">{x.title}</h4>
+                <p className="mt-1.5 text-sm text-ink-soft">{x.desc}</p>
+                <div className="mt-4 space-y-1.5 border-t border-ink/10 pt-4 text-sm">
+                  <p><span className="font-bold text-ink">₺25.000</span> <span className="text-ink-muted">tek seferlik</span></p>
+                  <p className="text-ink-muted">ya da</p>
+                  <p><span className="font-bold text-ink">₺4.999/ay</span> <span className="text-ink-muted">12 ay taahhütle</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -466,8 +489,7 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
 const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }> = [
   { label: 'POS + Mutfak ekranı', has: () => true },
   { label: 'Sipariş sitesi + QR menü', has: () => true },
-  { label: 'Şube', has: (p) => (p.maxLocations === -1 ? 'sınırsız' : String(p.maxLocations)) },
-  { label: 'Kullanıcı', has: (p) => (p.maxUsers === -1 ? 'sınırsız' : String(p.maxUsers)) },
+  { label: 'Sınırsız kullanıcı', has: () => true },
   { label: 'Sadakat + kampanyalar', has: (p) => !!p.features.loyalty },
   { label: 'Analitik raporlar', has: (p) => !!p.features.analytics },
   { label: 'WhatsApp modülü bağlama', has: (p) => !!p.features.whatsappLink },
@@ -528,7 +550,7 @@ function PlanTicket({ plan, annual, featured, order }: { plan: Plan; annual: boo
           {plan.name} ile başla
         </Link>
         <p className="mt-3 text-center font-mono text-[10px] text-ink-muted">
-          14 gün deneme · kart gerekmez · KDV dahil
+          7 gün deneme · kart gerekmez · KDV dahil
         </p>
       </div>
     </article>

@@ -2,6 +2,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
+import SetPassword from './pages/SetPassword';
 import { BASE_DOMAIN } from './lib/api';
 
 function Logo({ className = '' }: { className?: string }) {
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/sifre-belirle" element={<SetPassword />} />
         </Routes>
       </main>
       <Footer />

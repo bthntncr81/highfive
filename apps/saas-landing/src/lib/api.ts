@@ -34,12 +34,11 @@ export const api = {
   signup: (body: {
     name: string;
     email: string;
-    password: string;
     restaurantName: string;
     subdomain: string;
     planKey: string;
   }) =>
-    req<{ token: string; tenant: { subdomain: string }; loginUrl: string }>(
+    req<{ tenant: { subdomain: string }; loginUrl: string; emailSent: boolean }>(
       '/api/platform/signup',
       { method: 'POST', body: JSON.stringify(body) },
     ),
@@ -48,6 +47,22 @@ export const api = {
     req<any>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+
+  // Şifre belirleme / sıfırlama (mail linkindeki token ile)
+  checkPasswordToken: (token: string) =>
+    req<{ valid: boolean; purpose?: string; email?: string; name?: string }>(
+      `/api/platform/password-token/${encodeURIComponent(token)}`,
+    ),
+  setPassword: (token: string, password: string) =>
+    req<{ ok: boolean; loginUrl: string }>('/api/platform/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }),
+  forgotPassword: (email: string) =>
+    req<{ ok: boolean; message: string }>('/api/platform/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     }),
 };
 

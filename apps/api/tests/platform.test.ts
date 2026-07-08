@@ -7,9 +7,11 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { buildServer } from '../src/server';
 import { platformDb, dbFor } from '../src/lib/tenant-db';
 import { assertWithinUserLimit, hasFeature } from '../src/lib/plan-limits';
+import { signStaffToken } from '../src/middleware/auth';
 
 // Süper-admin allowlist'ini test için sabitle
 process.env.SUPERADMIN_EMAILS = 'super@otorder.test';
@@ -47,6 +49,7 @@ afterAll(async () => {
       try { await del(); } catch { /* yoksa geç */ }
     }
   }
+  try { await platformDb.emailLog.deleteMany({ where: { toEmail: { endsWith: `@${sub}.local` } } }); } catch { /* */ }
   try { await platformDb.user.deleteMany({ where: { email: { endsWith: `@${sub}.local` } } }); } catch { /* */ }
   await server.close();
   await platformDb.$disconnect();
@@ -54,15 +57,14 @@ afterAll(async () => {
 
 const auth = (t: string) => ({ authorization: `Bearer ${t}` });
 
-describe('signup', () => {
-  it('yeni restoran kaydı → OWNER token + TRIAL tenant', async () => {
+describe('signup (şifresiz)', () => {
+  it('yeni restoran kaydı → TRIAL tenant + SETUP token; auto-login token DÖNMEZ', async () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/platform/signup',
       payload: {
         name: 'Test Owner',
         email: `owner@${sub}.local`,
-        password: 'gizli123',
         restaurantName: 'Test Restoran',
         subdomain: sub,
         planKey: 'STARTER',
@@ -70,18 +72,71 @@ describe('signup', () => {
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.token).toBeTruthy();
+    expect(body.token).toBeUndefined(); // şifresiz akış: mail'deki linkle şifre kurulur
+    expect(body.emailSent).toBe(true);
     expect(body.tenant.subdomain).toBe(sub);
     expect(body.tenant.status).toBe('TRIAL');
-    ownerToken = body.token;
     tenantId = body.tenant.id;
+    // 7 günlük deneme
+    const days = Math.round((new Date(body.tenant.trialEndsAt).getTime() - Date.now()) / 864e5);
+    expect(days).toBe(7);
+    // SETUP token üretildi (mail içeriği)
+    const owner = await platformDb.user.findUnique({ where: { email: `owner@${sub}.local` } });
+    const setup = await platformDb.passwordToken.findFirst({ where: { userId: owner!.id, purpose: 'SETUP' } });
+    expect(setup).toBeTruthy();
+    // Testlerin geri kalanı için OWNER token'ı doğrudan üret
+    ownerToken = signStaffToken({ userId: owner!.id, tenantId, role: 'OWNER' as any });
+  });
+
+  it('set-password: SETUP token ile şifre kurulur, token tükenir', async () => {
+    const owner = await platformDb.user.findUnique({ where: { email: `owner@${sub}.local` } });
+    const setup = await platformDb.passwordToken.findFirst({ where: { userId: owner!.id, purpose: 'SETUP' } });
+    // token geçerliliği
+    const check = await server.inject({ method: 'GET', url: `/api/platform/password-token/${setup!.token}` });
+    expect(check.json().valid).toBe(true);
+    // şifre kur
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/set-password',
+      payload: { token: setup!.token, password: 'gizli123' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().loginUrl).toContain(sub);
+    // token tükendi
+    const again = await server.inject({
+      method: 'POST',
+      url: '/api/platform/set-password',
+      payload: { token: setup!.token, password: 'baska123' },
+    });
+    expect(again.statusCode).toBe(400);
+    // yeni şifre bcrypt'e yazıldı
+    const updated = await platformDb.user.findUnique({ where: { id: owner!.id } });
+    expect(bcrypt.compareSync('gizli123', updated!.password)).toBe(true);
+  });
+
+  it('forgot-password: her durumda 200; var olan kullanıcıya RESET token üretir', async () => {
+    const yok = await server.inject({
+      method: 'POST',
+      url: '/api/platform/forgot-password',
+      payload: { email: 'yok@boyle.biri' },
+    });
+    expect(yok.statusCode).toBe(200); // enumeration koruması
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/forgot-password',
+      payload: { email: `owner@${sub}.local` },
+    });
+    expect(res.statusCode).toBe(200);
+    const owner = await platformDb.user.findUnique({ where: { email: `owner@${sub}.local` } });
+    const reset = await platformDb.passwordToken.findFirst({ where: { userId: owner!.id, purpose: 'RESET' } });
+    expect(reset).toBeTruthy();
   });
 
   it('alınmış subdomain 409', async () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/platform/signup',
-      payload: { name: 'x', email: `x@${sub}.local`, password: 'gizli123', restaurantName: 'x', subdomain: sub },
+      payload: { name: 'x', email: `x@${sub}.local`, restaurantName: 'x', subdomain: sub },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -213,5 +268,232 @@ describe('plan limitleri (helper)', () => {
     // PRO maxUsers=15, tenant'ta 1 owner var → limit altı
     const blocked = await assertWithinUserLimit(tenantId, fakeReply);
     expect(blocked).toBe(false);
+  });
+});
+
+// ============================================================================
+// iyzico Abonelik API — checkout → callback → webhook → plan değişikliği
+// (SIMÜLASYON: PLATFORM_IYZICO_API_KEY yok; deterministik sahte referanslar).
+// ============================================================================
+describe('iyzico subscription', () => {
+  let checkoutToken = '';
+  let subscriptionRef = '';
+  let customerRef = '';
+
+  // Webhook imzası — verifyWebhookSignatureV3 ile aynı formül
+  // (SIMÜLASYON'da merchantId ve secretKey boş string).
+  const webhookSig = (p: {
+    iyziEventType: string;
+    subscriptionReferenceCode: string;
+    orderReferenceCode: string;
+    customerReferenceCode: string;
+  }) => {
+    const merchantId = process.env.PLATFORM_IYZICO_MERCHANT_ID || '';
+    const secret = process.env.PLATFORM_IYZICO_SECRET_KEY || '';
+    return crypto
+      .createHmac('sha256', secret)
+      .update(
+        merchantId + secret + p.iyziEventType + p.subscriptionReferenceCode + p.orderReferenceCode + p.customerReferenceCode,
+        'utf8',
+      )
+      .digest('hex');
+  };
+
+  beforeAll(async () => {
+    // Paralel geliştirme notu: signup artık token dönmüyorsa (şifre-maili akışı)
+    // tenant'ı subdomain'den bul, OWNER token'ı membership'ten doğrudan üret —
+    // bu testler signup yanıt şeklinden bağımsız çalışır.
+    if (!tenantId) {
+      const t = await platformDb.tenant.findUnique({ where: { subdomain: sub } });
+      if (t) tenantId = t.id;
+    }
+    if (!ownerToken && tenantId) {
+      const membership = await platformDb.membership.findFirst({ where: { tenantId, role: 'OWNER' } });
+      if (membership) {
+        ownerToken = signStaffToken({ userId: membership.userId, tenantId, role: 'OWNER' as any }, '1h');
+      }
+    }
+    // Ücretli test planları (active:false → public plan listesini etkilemez)
+    for (const [key, monthly, annual] of [
+      ['IYZTEST', 499, 4990],
+      ['IYZTEST2', 999, 9990],
+    ] as const) {
+      await platformDb.plan.upsert({
+        where: { key },
+        update: { monthlyPrice: monthly, annualPrice: annual, active: false },
+        create: { key, name: key, monthlyPrice: monthly, annualPrice: annual, maxLocations: 3, maxUsers: 15, features: {}, active: false },
+      });
+    }
+  });
+
+  afterAll(async () => {
+    // Abonelik test planına bağlı kaldıysa PRO'ya geri al (FK), sonra planları sil
+    const pro = await platformDb.plan.findUnique({ where: { key: 'PRO' } });
+    if (pro && tenantId) {
+      try {
+        await platformDb.subscription.update({
+          where: { tenantId },
+          data: { planId: pro.id, pendingPlanId: null, pendingCycle: null },
+        });
+      } catch { /* yoksa geç */ }
+    }
+    try { await platformDb.plan.deleteMany({ where: { key: { in: ['IYZTEST', 'IYZTEST2'] } } }); } catch { /* */ }
+  });
+
+  it('subscribe-checkout (SIMÜLASYON) → token + form; pendingCheckoutToken yazılır', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/subscribe-checkout',
+      headers: auth(ownerToken),
+      payload: { planKey: 'IYZTEST', cycle: 'MONTHLY' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.simulated).toBe(true);
+    expect(body.token).toBeTruthy();
+    expect(body.checkoutFormContent).toContain('SIMULATED');
+    checkoutToken = body.token;
+
+    const sub = await platformDb.subscription.findUnique({ where: { tenantId } });
+    expect(sub!.pendingCheckoutToken).toBe(checkoutToken);
+    expect(sub!.pendingCycle).toBe('MONTHLY');
+  });
+
+  it('checkout-callback → 302 success + abonelik ACTIVE + iyzico referansları + işlem kaydı', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/checkout-callback',
+      payload: { token: checkoutToken },
+    });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toContain('billing=success');
+
+    const sub = await platformDb.subscription.findUnique({ where: { tenantId }, include: { plan: true } });
+    expect(sub!.status).toBe('ACTIVE');
+    expect(sub!.plan.key).toBe('IYZTEST');
+    expect(sub!.iyzicoSubscriptionReferenceCode).toBeTruthy();
+    expect(sub!.iyzicoCustomerReferenceCode).toBeTruthy();
+    expect(sub!.pendingCheckoutToken).toBeNull();
+    subscriptionRef = sub!.iyzicoSubscriptionReferenceCode!;
+    customerRef = sub!.iyzicoCustomerReferenceCode!;
+
+    const tx = await platformDb.billingTransaction.findFirst({
+      where: { tenantId, iyzicoConversationId: checkoutToken },
+    });
+    expect(tx).toBeTruthy();
+    expect(tx!.success).toBe(true);
+    expect(Number(tx!.amount)).toBe(499);
+  });
+
+  it('bilinmeyen token → 302 billing=notfound', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/checkout-callback',
+      payload: { token: 'yok-boyle-token' },
+    });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toContain('billing=notfound');
+  });
+
+  it('webhook success → dönem uzar; aynı orderReferenceCode idempotent', async () => {
+    const before = await platformDb.subscription.findUnique({ where: { tenantId } });
+    const orderRef = 'order-' + Math.random().toString(36).slice(2, 10);
+    const payload = {
+      iyziEventType: 'subscription.order.success',
+      subscriptionReferenceCode: subscriptionRef,
+      orderReferenceCode: orderRef,
+      customerReferenceCode: customerRef,
+      iyziEventTime: Date.now(),
+    };
+    const headers = { 'x-iyz-signature-v3': webhookSig(payload) };
+
+    const res = await server.inject({ method: 'POST', url: '/api/platform/billing/iyzico-webhook', headers, payload });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().received).toBe(true);
+
+    const after = await platformDb.subscription.findUnique({ where: { tenantId } });
+    expect(after!.status).toBe('ACTIVE');
+    expect(after!.currentPeriodEnd!.getTime()).toBeGreaterThan(before!.currentPeriodEnd!.getTime());
+    const tx = await platformDb.billingTransaction.findFirst({ where: { tenantId, iyzicoPaymentId: orderRef } });
+    expect(tx!.success).toBe(true);
+
+    // Idempotency: aynı orderReferenceCode ikinci kez → işlem sayısı artmaz
+    const count1 = await platformDb.billingTransaction.count({ where: { tenantId } });
+    const res2 = await server.inject({ method: 'POST', url: '/api/platform/billing/iyzico-webhook', headers, payload });
+    expect(res2.statusCode).toBe(200);
+    expect(res2.json().received).toBe(true);
+    const count2 = await platformDb.billingTransaction.count({ where: { tenantId } });
+    expect(count2).toBe(count1);
+  });
+
+  it('geçersiz imzalı webhook işlenmez (yine de 200)', async () => {
+    const before = await platformDb.billingTransaction.count({ where: { tenantId } });
+    const payload = {
+      iyziEventType: 'subscription.order.success',
+      subscriptionReferenceCode: subscriptionRef,
+      orderReferenceCode: 'order-' + Math.random().toString(36).slice(2, 10),
+      customerReferenceCode: customerRef,
+    };
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/iyzico-webhook',
+      headers: { 'x-iyz-signature-v3': 'gecersiz-imza' },
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().received).toBe(true);
+    const after = await platformDb.billingTransaction.count({ where: { tenantId } });
+    expect(after).toBe(before);
+  });
+
+  it('webhook failure → failedAttempts artar + PAST_DUE + başarısız işlem kaydı', async () => {
+    const orderRef = 'order-' + Math.random().toString(36).slice(2, 10);
+    const payload = {
+      iyziEventType: 'subscription.order.failure',
+      subscriptionReferenceCode: subscriptionRef,
+      orderReferenceCode: orderRef,
+      customerReferenceCode: customerRef,
+    };
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/iyzico-webhook',
+      headers: { 'x-iyz-signature-v3': webhookSig(payload) },
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+
+    const sub = await platformDb.subscription.findUnique({ where: { tenantId } });
+    expect(sub!.failedAttempts).toBe(1);
+    expect(sub!.status).toBe('PAST_DUE');
+    const tx = await platformDb.billingTransaction.findFirst({ where: { tenantId, iyzicoPaymentId: orderRef } });
+    expect(tx).toBeTruthy();
+    expect(tx!.success).toBe(false);
+  });
+
+  it('change-plan (SIMÜLASYON, upgrade) → yeni iyzico referansı + plan hemen değişir', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/platform/billing/change-plan',
+      headers: auth(ownerToken),
+      payload: { planKey: 'IYZTEST2', cycle: 'MONTHLY' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.upgradePeriod).toBe('NOW'); // 999 > 499 → hemen uygula
+    expect(body.subscription.plan.key).toBe('IYZTEST2');
+
+    const sub = await platformDb.subscription.findUnique({ where: { tenantId }, include: { plan: true } });
+    expect(sub!.plan.key).toBe('IYZTEST2');
+    expect(sub!.status).toBe('ACTIVE');
+    expect(sub!.iyzicoSubscriptionReferenceCode).toBeTruthy();
+    expect(sub!.iyzicoSubscriptionReferenceCode).not.toBe(subscriptionRef);
+
+    const tx = await platformDb.billingTransaction.findFirst({
+      where: { tenantId, type: 'SUBSCRIPTION_UPGRADE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(tx).toBeTruthy();
+    expect(tx!.success).toBe(true);
   });
 });

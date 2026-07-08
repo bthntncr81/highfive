@@ -154,6 +154,15 @@ const defaultWeeklyHours = (start = '11:00', end = '23:00'): WeeklyHours => {
   return out;
 };
 
+type StatusEmailKey = 'preparing' | 'ready' | 'delivered' | 'cancelled';
+
+const STATUS_EMAIL_TOGGLES: { key: StatusEmailKey; label: string; hint: string }[] = [
+  { key: 'preparing', label: 'Hazırlanıyor maili', hint: 'Sipariş mutfağa alındığında' },
+  { key: 'ready', label: 'Hazır/Yolda maili', hint: 'Gel-al hazır / kurye yola çıktığında' },
+  { key: 'delivered', label: 'Teslim maili', hint: 'Sipariş teslim edildiğinde' },
+  { key: 'cancelled', label: 'İptal maili', hint: 'Sipariş iptal edildiğinde' },
+];
+
 interface IntegrationPartner {
   id: string;
   name: string;
@@ -227,6 +236,13 @@ export default function Settings() {
   });
   const [orderNotifyEnabled, setOrderNotifyEnabled] = useState(false);
   const [orderNotifyEmails, setOrderNotifyEmails] = useState('');
+  // Müşteriye giden sipariş durumu mailleri — varsayılan hepsi açık
+  const [statusEmails, setStatusEmails] = useState<Record<StatusEmailKey, boolean>>({
+    preparing: true,
+    ready: true,
+    delivered: true,
+    cancelled: true,
+  });
   const [theme, setTheme] = useState<BrandTheme>(DEFAULT_BRAND_THEME);
   const [logoUploading, setLogoUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -268,6 +284,14 @@ export default function Settings() {
         const on = response.settings.orderNotifications;
         setOrderNotifyEnabled(!!on.enabled);
         setOrderNotifyEmails(Array.isArray(on.emails) ? on.emails.join('\n') : '');
+        // Anahtar yoksa varsayılan AÇIK (backend de aynı varsayımla çalışır)
+        const se = on.statusEmails || {};
+        setStatusEmails({
+          preparing: se.preparing !== false,
+          ready: se.ready !== false,
+          delivered: se.delivered !== false,
+          cancelled: se.cancelled !== false,
+        });
       }
       if (response.settings?.theme) {
         setTheme((t) => ({ ...t, ...response.settings.theme }));
@@ -430,6 +454,7 @@ export default function Settings() {
               .split(/[\n,;]+/)
               .map((e) => e.trim())
               .filter((e) => e.includes('@')),
+            statusEmails,
           },
         },
         token!,
@@ -1317,6 +1342,35 @@ export default function Settings() {
               tümüne sipariş detayı + adres + harita linki gönderilir. Müşteri e-posta
               girdiyse ona da sipariş onayı gider.
             </p>
+          </div>
+
+          {/* Müşteriye giden sipariş durumu mailleri */}
+          <div className="pt-4 border-t border-gray-100">
+            <p className="font-medium mb-1">Müşteri Durum Mailleri</p>
+            <p className="text-sm text-gray-500 mb-3">
+              E-posta bırakan müşteriye sipariş durumu değiştikçe bilgilendirme maili gönderilir.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {STATUS_EMAIL_TOGGLES.map(({ key, label, hint }) => (
+                <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-gray-500">{hint}</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={statusEmails[key]}
+                      onChange={(e) =>
+                        setStatusEmails({ ...statusEmails, [key]: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

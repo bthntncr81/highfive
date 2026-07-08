@@ -1,24 +1,29 @@
 import type { DbLike } from './tenant-db';
-// Order arrival email alerts. When a new DELIVERY or TAKEAWAY order comes in from
-// an external channel (web, WhatsApp, mobile), email the full order — items,
-// customer, address + Google Maps link, total — to the recipients configured in
-// Settings (`orderNotifications` key, edited on the POS Ayarlar page).
+// Order email notifications — tenant-branded (OtOrder multi-tenant).
 //
+// T1  notifyNewOrder    → customer confirmation + admin alert on every new order
+//                         (recipients from Settings `orderNotifications`, POS Ayarlar).
+// T2  notifyOrderStatus → customer status mails (hazırlanıyor / hazır-yolda /
+//                         teslim / iptal) gated by Settings
+//                         `orderNotifications.statusEmails` toggles (default ON).
+//
+// All mails go through sendTenantMail: From "<Restoran>" <subdomain@otorder.com>,
+// Reply-To the restaurant's real address, tenant-branded shell, EmailLog audit.
 // Fire-and-forget: every path is wrapped so a mail failure can never affect order
-// creation or payment processing. Delivery goes through Resend (mailer.ts), the
-// only channel that works from this host (ISP blocks outbound SMTP).
+// creation or payment processing.
 
-import { sendMail } from './mailer';
-
-const ACCENT = '#bb1e10';
-const LOGO_URL =
-  process.env.HIGHFIVE_MAIL_LOGO_URL || 'https://order.highfivepps.com/logow.png';
-const POS_ORDER_BASE =
-  process.env.POS_ORDER_URL || 'https://pos.highfivepps.com/orders';
+import { sendTenantMail, renderTenantEmail, TenantMailBrand } from './mailer';
 
 interface NotifyConfig {
   enabled?: boolean;
   emails?: string[];
+  // Per-status müşteri maili anahtarları — anahtar YOKSA varsayılan AÇIK (true)
+  statusEmails?: {
+    preparing?: boolean;
+    ready?: boolean;
+    delivered?: boolean;
+    cancelled?: boolean;
+  };
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -98,9 +103,15 @@ function mapsUrl(
   )}`;
 }
 
-function buildHtml(order: any, forCustomer = false): string {
-  const orderNo = '#' + String(order.orderNumber).padStart(4, '0');
-  const typeLabel = TYPE_LABELS[order.type] || order.type;
+function orderNumberOf(order: any): string {
+  return '#' + String(order.orderNumber).padStart(4, '0');
+}
+
+// Sipariş detay bloğu — renderTenantEmail kabuğunun İÇİNE giren HTML.
+// (Eski standalone buildHtml'den uyarlandı; renk artık tenant accent'i.)
+function buildOrderBody(order: any, brand: TenantMailBrand, forCustomer: boolean): string {
+  const accent = brand.accent;
+  const orderNo = orderNumberOf(order);
   const sourceLabel =
     SOURCE_LABELS[String(order.source || '').toUpperCase()] ||
     order.source ||
@@ -131,10 +142,10 @@ function buildHtml(order: any, forCustomer = false): string {
            order.customerAddress,
          )}</div>
          ${
-           link
+           link && !forCustomer
              ? `<a href="${esc(
                  link,
-               )}" style="display:inline-block;margin-top:10px;background:${ACCENT};color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Haritada Aç →</a>`
+               )}" style="display:inline-block;margin-top:10px;background:${accent};color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Haritada Aç →</a>`
              : ''
          }
        </div>`
@@ -143,60 +154,37 @@ function buildHtml(order: any, forCustomer = false): string {
   const info = (label: string, val: string) =>
     `<tr><td style="padding:3px 0;color:#8a8a8a;font-size:13px;width:90px;vertical-align:top;">${label}</td><td style="padding:3px 0;color:#1a1a1a;font-size:14px;font-weight:600;">${val}</td></tr>`;
 
-  return `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f5f5f2;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f2;padding:28px 14px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.06);">
-        <tr><td style="background:${ACCENT};padding:22px 28px;">
-          <img src="${LOGO_URL}" alt="High Five" width="130" style="display:block;border:0;">
-          <div style="color:#fff;font-size:18px;font-weight:800;margin-top:10px;">${
-            forCustomer ? 'Siparişin Alındı 🎉' : '🔔 Yeni ' + esc(typeLabel) + ' Siparişi'
-          }</div>
-        </td></tr>
-        <tr><td style="padding:26px 28px;">
-          <div style="display:inline-block;background:#1a1a1a;color:#fff;font-size:20px;font-weight:800;padding:6px 14px;border-radius:8px;">${orderNo}</div>
-          <span style="margin-left:10px;font-size:14px;color:#666;">${esc(
-            sourceLabel,
-          )} • ${esc(when)}</span>
+  return `
+    <div style="display:inline-block;background:#1a1a1a;color:#fff;font-size:20px;font-weight:800;padding:6px 14px;border-radius:8px;">${orderNo}</div>
+    <span style="margin-left:10px;font-size:14px;color:#666;">${esc(
+      sourceLabel,
+    )} • ${esc(when)}</span>
 
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;">
-            ${info('Müşteri', esc(order.customerName || '-'))}
-            ${info(
-              'Telefon',
-              order.customerPhone
-                ? `<a href="tel:${esc(
-                    order.customerPhone,
-                  )}" style="color:${ACCENT};text-decoration:none;">${esc(
-                    order.customerPhone,
-                  )}</a>`
-                : '-',
-            )}
-            ${order.notes ? info('Not', esc(order.notes)) : ''}
-            ${info('Ödeme', esc(paymentLabel(order)))}
-          </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;">
+      ${info('Müşteri', esc(order.customerName || '-'))}
+      ${info(
+        'Telefon',
+        order.customerPhone
+          ? `<a href="tel:${esc(
+              order.customerPhone,
+            )}" style="color:${accent};text-decoration:none;">${esc(
+              order.customerPhone,
+            )}</a>`
+          : '-',
+      )}
+      ${order.notes ? info('Not', esc(order.notes)) : ''}
+      ${info('Ödeme', esc(paymentLabel(order)))}
+    </table>
 
-          ${addressBlock}
+    ${addressBlock}
 
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:2px solid #1a1a1a;">
-            ${rows}
-            <tr><td style="padding:12px 0 0;font-size:17px;font-weight:800;color:#1a1a1a;">Toplam</td>
-                <td style="padding:12px 0 0;font-size:17px;font-weight:800;color:${ACCENT};text-align:right;">${money(
-                  order.total,
-                )}</td></tr>
-          </table>
-
-          ${forCustomer ? '' : `<div style="text-align:center;margin-top:28px;">
-            <a href="${POS_ORDER_BASE}/${order.id}" style="display:inline-block;background:${ACCENT};color:#fff;padding:13px 28px;border-radius:10px;font-weight:700;text-decoration:none;">Siparişi POS'ta Aç</a>
-          </div>`}
-        </td></tr>
-        <tr><td style="background:#fafaf8;padding:16px 28px;border-top:1px solid #ecece7;text-align:center;font-size:11px;color:#9a9a9a;">
-          ${forCustomer ? 'High Five — siparişin için teşekkürler 🍕' : 'High Five — otomatik sipariş bildirimi'}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:2px solid #1a1a1a;">
+      ${rows}
+      <tr><td style="padding:12px 0 0;font-size:17px;font-weight:800;color:#1a1a1a;">Toplam</td>
+          <td style="padding:12px 0 0;font-size:17px;font-weight:800;color:${accent};text-align:right;">${money(
+            order.total,
+          )}</td></tr>
+    </table>`;
 }
 
 export async function notifyNewOrder(
@@ -204,8 +192,16 @@ export async function notifyNewOrder(
   orderId: string,
 ): Promise<void> {
   try {
+    const order: any = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { menuItem: true } }, table: true },
+    });
+    if (!order || !order.tenantId) return;
+
+    // Ayar tenant'a AÇIKÇA filtrelenir — platformDb ile çağrılsa da doğru
+    // tenant'ın ayarı okunur (request.db ile filtre zaten örtüşür).
     const setting = await prisma.settings.findFirst({
-      where: { key: 'orderNotifications' },
+      where: { tenantId: order.tenantId, key: 'orderNotifications' },
     });
     const cfg = (setting?.value as NotifyConfig) || {};
     if (!cfg.enabled) return; // ana açma/kapama (POS Ayarlar)
@@ -214,14 +210,8 @@ export async function notifyNewOrder(
       .map((e) => String(e || '').trim())
       .filter((e) => e.includes('@'));
 
-    const order: any = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: { include: { menuItem: true } }, table: true },
-    });
-    if (!order) return;
-
     // Tüm sipariş türleri ve tüm kaynaklar (POS dahil) bildirilir.
-    const orderNo = '#' + String(order.orderNumber).padStart(4, '0');
+    const orderNo = orderNumberOf(order);
     const typeLabel = TYPE_LABELS[order.type] || order.type;
 
     // Alıcıları topla: yönetici(ler) staff şablonu, müşteri onay şablonu. Tekille.
@@ -232,12 +222,26 @@ export async function notifyNewOrder(
       const adminSubject = `🔔 Yeni ${typeLabel} Siparişi ${orderNo}${
         order.customerName ? ' — ' + order.customerName : ''
       }`;
-      const adminHtml = buildHtml(order, false);
       for (const to of adminEmails) {
         const k = to.toLowerCase();
         if (seen.has(k)) continue;
         seen.add(k);
-        tasks.push(sendMail({ to, subject: adminSubject, html: adminHtml }).catch(() => {}));
+        tasks.push(
+          sendTenantMail(prisma, order.tenantId, {
+            to,
+            subject: adminSubject,
+            template: 'order-new-admin',
+            render: (brand) =>
+              renderTenantEmail(brand, {
+                preheader: `${orderNo} • ${typeLabel} • ${money(order.total)}`,
+                title: `Yeni ${typeLabel} Siparişi`,
+                body: buildOrderBody(order, brand, false),
+                ctaLabel: "Siparişi POS'ta Aç",
+                ctaUrl: `${brand.siteUrl}/pos/orders`,
+                footerNote: `${brand.tenantName} — otomatik sipariş bildirimi. Alıcıları POS → Ayarlar'dan yönetebilirsin.`,
+              }),
+          }).catch(() => {}),
+        );
       }
     }
 
@@ -245,10 +249,17 @@ export async function notifyNewOrder(
     if (customerEmail.includes('@') && !seen.has(customerEmail.toLowerCase())) {
       seen.add(customerEmail.toLowerCase());
       tasks.push(
-        sendMail({
+        sendTenantMail(prisma, order.tenantId, {
           to: customerEmail,
-          subject: `Siparişin alındı ${orderNo} — High Five`,
-          html: buildHtml(order, true),
+          subject: (brand) => `Siparişin alındı ${orderNo} — ${brand.tenantName}`,
+          template: 'order-new-customer',
+          render: (brand) =>
+            renderTenantEmail(brand, {
+              preheader: `Siparişin alındı — ${orderNo}`,
+              title: 'Siparişin Alındı 🎉',
+              body: buildOrderBody(order, brand, true),
+              footerNote: `${brand.tenantName} — siparişin için teşekkürler!`,
+            }),
         }).catch(() => {}),
       );
     }
@@ -256,5 +267,123 @@ export async function notifyNewOrder(
     if (tasks.length) await Promise.all(tasks);
   } catch {
     // swallow — notifications must never break order flow
+  }
+}
+
+// ============================================================
+// Sipariş durum mailleri (müşteriye) — per-status toggle'lı
+// ============================================================
+
+type StatusToggleKey = 'preparing' | 'ready' | 'delivered' | 'cancelled';
+
+// Prisma OrderStatus → ayar anahtarı eşlemesi.
+// READY yalnız gel-al (TAKEAWAY) için anlamlı; kurye siparişi "yolda" mailini
+// OUT_FOR_DELIVERY geçişinde alır (READY'de sipariş henüz mutfakta bekler).
+const STATUS_TOGGLE_KEY: Record<string, StatusToggleKey> = {
+  PREPARING: 'preparing',
+  READY: 'ready',
+  OUT_FOR_DELIVERY: 'ready',
+  DELIVERED: 'delivered',
+  COMPLETED: 'delivered',
+  CANCELLED: 'cancelled',
+};
+
+/**
+ * Sipariş durumu değiştiğinde müşteriye tenant markalı bilgilendirme maili.
+ * customerEmail yoksa sessiz döner. Toggle'lar Settings `orderNotifications.
+ * statusEmails` altında; anahtar tanımlı değilse VARSAYILAN AÇIK.
+ * Fire-and-forget güvenli: her hata yutulur + loglanır.
+ */
+export async function notifyOrderStatus(
+  prisma: DbLike,
+  orderId: string,
+  newStatus: string,
+): Promise<void> {
+  try {
+    const toggleKey = STATUS_TOGGLE_KEY[newStatus];
+    if (!toggleKey) return; // PENDING/CONFIRMED/SERVED vb. maillenmez
+
+    const order: any = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order || !order.tenantId) return;
+
+    const customerEmail = String(order.customerEmail || '').trim();
+    if (!customerEmail.includes('@')) return;
+
+    // Tür-durum uyumu: READY sadece gel-al, OUT_FOR_DELIVERY sadece kurye.
+    if (newStatus === 'READY' && order.type !== 'TAKEAWAY') return;
+    if (newStatus === 'OUT_FOR_DELIVERY' && order.type !== 'DELIVERY') return;
+
+    const setting = await prisma.settings.findFirst({
+      where: { tenantId: order.tenantId, key: 'orderNotifications' },
+    });
+    const cfg = (setting?.value as NotifyConfig) || {};
+    const toggles = cfg.statusEmails || {};
+    if (toggles[toggleKey] === false) return; // yalnız açıkça kapatılınca sus
+
+    const orderNo = orderNumberOf(order);
+
+    let title = '';
+    let subject = '';
+    let text = '';
+    let ctaLabel: string | undefined;
+    let ctaFor: ((brand: TenantMailBrand) => string) | undefined;
+
+    if (toggleKey === 'preparing') {
+      // Tahmini süre — Settings `services.estimatedDeliveryTime` (varsa)
+      let estimated = '';
+      const services = await prisma.settings.findFirst({
+        where: { tenantId: order.tenantId, key: 'services' },
+      });
+      const est = (services?.value as Record<string, any>)?.estimatedDeliveryTime;
+      if (typeof est === 'string' && est.trim()) estimated = est.trim();
+
+      title = 'Siparişin hazırlanıyor 👨‍🍳';
+      subject = `Siparişin hazırlanıyor ${orderNo}`;
+      text =
+        `<b>${orderNo}</b> numaralı siparişin mutfağa iletildi, hazırlanmaya başlandı.` +
+        (estimated ? ` Tahmini süre: <b>${esc(estimated)}</b>.` : '');
+    } else if (toggleKey === 'ready') {
+      if (order.type === 'TAKEAWAY') {
+        title = 'Siparişin hazır 🛍️';
+        subject = `Siparişin hazır ${orderNo}`;
+        text = `<b>${orderNo}</b> numaralı gel-al siparişin hazır, seni bekliyoruz!`;
+      } else {
+        title = 'Siparişin yolda 🛵';
+        subject = `Siparişin yolda ${orderNo}`;
+        text = `<b>${orderNo}</b> numaralı siparişin yola çıktı, kapında olmasına az kaldı!`;
+      }
+    } else if (toggleKey === 'delivered') {
+      title = 'Afiyet olsun! 🎉';
+      subject = `Afiyet olsun! ${orderNo}`;
+      text = `<b>${orderNo}</b> numaralı siparişin teslim edildi. Afiyet olsun — tekrar bekleriz!`;
+      ctaLabel = 'Tekrar Sipariş Ver';
+      ctaFor = (brand) => `${brand.siteUrl}/menu`;
+    } else {
+      title = 'Siparişin iptal edildi';
+      subject = `Siparişin iptal edildi ${orderNo}`;
+      text =
+        `<b>${orderNo}</b> numaralı siparişin iptal edildi. ` +
+        'Bir sorun olduğunu düşünüyorsan bu e-postayı yanıtlayarak bize ulaşabilirsin.';
+    }
+
+    await sendTenantMail(prisma, order.tenantId, {
+      to: customerEmail,
+      subject: (brand) => `${subject} — ${brand.tenantName}`,
+      template: `order-status-${newStatus.toLowerCase()}`,
+      render: (brand) =>
+        renderTenantEmail(brand, {
+          preheader: `${title} — ${orderNo}`,
+          title,
+          body: `
+            <h1 style="font-size:22px;font-weight:700;margin:0 0 12px;color:#1a1a1a;">${title}</h1>
+            <p style="font-size:15px;line-height:1.7;color:#4a4a4a;margin:0 0 8px;">
+              ${order.customerName ? `Merhaba ${esc(order.customerName)}, ` : ''}${text}
+            </p>`,
+          ctaLabel,
+          ctaUrl: ctaFor ? ctaFor(brand) : undefined,
+        }),
+    });
+  } catch (err: any) {
+    console.error('📧 order status mail failed:', err?.message);
   }
 }

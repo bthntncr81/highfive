@@ -39,6 +39,11 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        // Restoran askıda (deneme bitti / ödeme yok) → tüm site kilit ekranına
+        // düşer (App.tsx 'tenant-suspended' event'ini dinler).
+        if (response.status === 402 && data?.code === "TENANT_SUSPENDED") {
+          window.dispatchEvent(new CustomEvent("tenant-suspended"));
+        }
         return {
           success: false,
           error: data.error || data.message || "Bir hata oluştu",

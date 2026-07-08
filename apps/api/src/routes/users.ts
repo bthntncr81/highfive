@@ -3,6 +3,8 @@ import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { verifyAdmin } from '../middleware/auth';
 import { assertWithinUserLimit } from '../lib/plan-limits';
+import { platformDb } from '../lib/tenant-db';
+import { sendPlatformMail, staffCredentialsTemplate } from '../lib/mailer';
 
 // Personel = User (platform kimliği: email/name/password) + Membership (bu tenant'ta
 // rol + PIN + aktiflik). Rol/PIN artık Membership'te olduğundan tüm CRUD üyelik
@@ -55,11 +57,12 @@ export default async function userRoutes(server: FastifyInstance) {
 
   // Create staff — isim + rol + 6 haneli PIN. Yeni User + bu tenant'a Membership.
   server.post('/', { preHandler: verifyAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const { name, role, pin, locationId } = request.body as {
+    const { name, role, pin, locationId, email } = request.body as {
       name: string;
       role?: UserRole;
       pin: string;
       locationId?: string;
+      email?: string; // opsiyonel: girilirse PIN bu adrese maille gönderilir (P3)
     };
 
     if (!name || !pin) {
@@ -94,6 +97,19 @@ export default async function userRoutes(server: FastifyInstance) {
         locationId: locationId ?? null,
       },
     });
+
+    // P3: personel giriş bilgisi maili (opsiyonel e-posta girildiyse; fire-and-forget)
+    const notifyEmail = (email || '').trim().toLowerCase();
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(notifyEmail)) {
+      const tenant = request.tenant!;
+      const posUrl = `https://${tenant.subdomain}.${process.env.PLATFORM_BASE_DOMAIN || 'otorder.com'}/pos/`;
+      sendPlatformMail(platformDb, {
+        to: notifyEmail,
+        subject: `${tenant.name} — POS giriş bilgin`,
+        html: staffCredentialsTemplate({ staffName: name, restaurantName: tenant.name, pin, posUrl }),
+        template: 'staff-credentials',
+      }).catch(() => {});
+    }
 
     return {
       user: {

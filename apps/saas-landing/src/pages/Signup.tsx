@@ -11,7 +11,6 @@ export default function Signup() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    password: '',
     restaurantName: '',
     subdomain: '',
     planKey: (params.get('plan') || 'STARTER').toUpperCase(),
@@ -19,7 +18,7 @@ export default function Signup() {
   const [subState, setSubState] = useState<SubState>('idle');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ url: string } | null>(null);
+  const [done, setDone] = useState<{ url: string; email: string } | null>(null);
 
   useEffect(() => {
     api.plans().then((r) => setPlans(r.plans)).catch(() => {});
@@ -48,8 +47,7 @@ export default function Signup() {
     setSubmitting(true);
     try {
       const r = await api.signup(form);
-      // Token'ı subdomain SPA'sına devretmek için query ile yönlendirilebilir.
-      setDone({ url: `${r.loginUrl}?welcome=1` });
+      setDone({ url: r.loginUrl, email: form.email });
     } catch (err: any) {
       setError(err.message || 'Kayıt başarısız');
     } finally {
@@ -64,8 +62,16 @@ export default function Signup() {
           <PartyPopper size={30} />
         </div>
         <h1 className="mt-6 text-3xl font-bold text-ink">Restoranınız hazır! 🎉</h1>
-        <p className="mt-3 text-ink-soft">Panelinize giderek menünüzü yükleyin ve siparişleri almaya başlayın.</p>
-        <a href={done.url} className="btn-primary mt-8 text-base">Panele Git</a>
+        <p className="mt-3 text-ink-soft">
+          <a href={done.url} className="font-semibold text-brand-600">{done.url.replace('https://', '')}</a> kuruldu.
+        </p>
+        <div className="mx-auto mt-6 max-w-md rounded-2xl border border-brand-200 bg-brand-50 px-6 py-5 text-left">
+          <p className="font-semibold text-ink">📬 Şimdi e-postanı kontrol et</p>
+          <p className="mt-2 text-sm text-ink-soft">
+            <span className="font-medium">{done.email}</span> adresine şifre belirleme bağlantısı gönderdik.
+            Şifreni kurduktan sonra panele giriş yapabilirsin. (Gelmezse spam klasörüne bak.)
+          </p>
+        </div>
       </div>
     );
   }
@@ -75,7 +81,7 @@ export default function Signup() {
       <div>
         <h1 className="text-3xl font-bold text-ink">Restoranınızı oluşturun</h1>
         <p className="mt-3 text-ink-soft">
-          14 gün ücretsiz. Kredi kartı gerekmez. Aşağıdaki bilgileri doldurun, saniyeler içinde
+          7 gün ücretsiz. Kredi kartı gerekmez. Aşağıdaki bilgileri doldurun, saniyeler içinde
           <span className="font-semibold text-brand-600"> {form.subdomain || 'restoraniniz'}.{BASE_DOMAIN}</span> yayında.
         </p>
         <ul className="mt-6 space-y-3 text-sm text-ink-soft">
@@ -95,8 +101,10 @@ export default function Signup() {
           </div>
           <SubHint state={subState} />
         </Field>
-        <Field label="E-posta"><input type="email" className="input" value={form.email} onChange={set('email')} required /></Field>
-        <Field label="Şifre"><input type="password" className="input" value={form.password} onChange={set('password')} required minLength={6} /></Field>
+        <Field label="E-posta">
+          <input type="email" className="input" value={form.email} onChange={set('email')} required />
+          <p className="mt-1 text-xs text-ink-muted">Şifre belirleme bağlantısı bu adrese gönderilir.</p>
+        </Field>
         <Field label="Paket">
           <select className="input" value={form.planKey} onChange={set('planKey')}>
             {plans.map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}

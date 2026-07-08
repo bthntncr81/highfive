@@ -27,8 +27,18 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     });
     
     const data = await response.json();
-    
+
     if (!response.ok) {
+      // Hesap askıda (deneme bitti / ödeme yok) → sahibi her zaman ödemeye
+      // ulaşabilmeli: abonelik sayfasına yönlendir (platform endpoint'leri
+      // kilitten muaf olduğu için orası çalışır).
+      if (response.status === 402 && data?.code === 'TENANT_SUSPENDED') {
+        const base = (import.meta as any).env?.BASE_URL || '/';
+        const target = `${base}billing`;
+        if (!window.location.pathname.endsWith('/billing')) {
+          window.location.href = target;
+        }
+      }
       // Preserve the full response body on the thrown Error so callers can
       // surface structured backend hints (ör. unpaidOrders + canForce on
       // table status conflicts).

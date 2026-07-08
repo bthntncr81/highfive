@@ -9,6 +9,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { buildServer } from '../src/server';
+import { signStaffToken } from '../src/middleware/auth';
 import { platformDb } from '../src/lib/tenant-db';
 
 let server: FastifyInstance;
@@ -28,11 +29,15 @@ async function signup(sub: string, planKey: string) {
     method: 'POST',
     url: '/api/platform/signup',
     payload: {
-      name: 'Owner', email: `o@${sub}.local`, password: 'gizli123',
+      name: 'Owner', email: `o@${sub}.local`,
       restaurantName: sub, subdomain: sub, planKey,
     },
   });
-  return res.json();
+  const body = res.json();
+  // Şifresiz kayıt: yanıt token dönmez — OWNER token'ı testte doğrudan üretilir.
+  const user = await platformDb.user.findUnique({ where: { email: `o@${sub}.local` } });
+  const token = signStaffToken({ userId: user!.id, tenantId: body.tenant.id, role: 'OWNER' as any });
+  return { ...body, token };
 }
 
 beforeAll(async () => {
