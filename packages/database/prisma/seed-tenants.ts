@@ -14,7 +14,7 @@ const PLANS = [
     features: { loyalty: false, campaigns: false, analytics: false, whatsappLink: false, brandedApp: false, customLanding: false, marketplace: false } },
   { key: 'PRO', name: 'Pro', monthlyPrice: 1990, annualPrice: 19900, maxLocations: -1, maxUsers: -1, sortOrder: 2,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: false, customLanding: false, marketplace: true } },
-  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 3990, annualPrice: 39900, maxLocations: -1, maxUsers: -1, sortOrder: 3,
+  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 4990, annualPrice: 49900, maxLocations: -1, maxUsers: -1, sortOrder: 3,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: true, customLanding: true, marketplace: true } },
 ];
 

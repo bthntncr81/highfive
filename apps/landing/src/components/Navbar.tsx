@@ -32,7 +32,6 @@ export const Navbar = () => {
     ? [
         { to: '/', label: 'Ana Sayfa' },
         { to: '/menu', label: 'Menü' },
-        { to: '/build', label: 'Tasarla' },
         { to: '/blog', label: 'Blog' },
         ...(content.game?.enabled ? [{ to: '/oyun', label: '🎮 Oyun' }] : []),
         { to: '/about', label: 'Hakkımızda' },

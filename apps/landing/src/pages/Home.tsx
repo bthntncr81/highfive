@@ -222,50 +222,6 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* ============ BUILDER (Tasarla) ============ */}
-      <SectionLite>
-        <div className="grid md:grid-cols-2 gap-5 lg:gap-6">
-          <RevealOnScroll delay={0.05}>
-            <Link to="/build/pizza" className="block group h-full">
-              <motion.div whileHover={{ y: -6 }} className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-xl h-full flex flex-col"
-                style={{ background: 'linear-gradient(135deg,#d4382a 0%,#bb1e10 55%,#8a1610 100%)' }}>
-                <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/15 rounded-full blur-3xl" />
-                <div className="relative z-10 flex flex-col flex-1">
-                  <div className="flex items-start justify-between mb-6">
-                    <HfPizza className="w-24 h-24 drop-shadow-lg" />
-                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">5 ADIM</span>
-                  </div>
-                  <h3 className="font-display font-extrabold text-3xl md:text-4xl mb-2">Kendi Pizzanı Tasarla</h3>
-                  <p className="text-white/90 text-base md:text-lg mb-6">Hamur → Sos → Peynir → İçerik → Üst Sos</p>
-                  <span className="inline-flex items-center gap-2 bg-white text-primary font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg self-start mt-auto">
-                    Tasarlamaya Başla <HfArrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </div>
-              </motion.div>
-            </Link>
-          </RevealOnScroll>
-          <RevealOnScroll delay={0.12}>
-            <Link to="/build/sandwich" className="block group h-full">
-              <motion.div whileHover={{ y: -6 }} className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-xl h-full flex flex-col"
-                style={{ background: 'linear-gradient(135deg,#b91c1c 0%,#991b1b 55%,#7f1d1d 100%)' }}>
-                <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-300/25 rounded-full blur-3xl" />
-                <div className="relative z-10 flex flex-col flex-1">
-                  <div className="flex items-start justify-between mb-6">
-                    <HfSandwich className="w-24 h-24 drop-shadow-lg" />
-                    <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-display font-bold tracking-wider">5 ADIM</span>
-                  </div>
-                  <h3 className="font-display font-extrabold text-3xl md:text-4xl mb-2">Kendi Sandviçini Tasarla</h3>
-                  <p className="text-white/90 text-base md:text-lg mb-6">Ekmek → Sos → Peynir → İçerik → Üst Sos</p>
-                  <span className="inline-flex items-center gap-2 bg-white text-primary font-display font-bold text-lg px-6 py-3 rounded-full shadow-lg self-start mt-auto">
-                    Tasarlamaya Başla <HfArrow className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </div>
-              </motion.div>
-            </Link>
-          </RevealOnScroll>
-        </div>
-      </SectionLite>
-
       {/* ============ STATS BAND ============ */}
       <section className="section-red">
         <div className="container-diner py-16 lg:py-20 grid sm:grid-cols-3 gap-8 text-center">
