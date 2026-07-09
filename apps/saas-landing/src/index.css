@@ -51,6 +51,18 @@ p {
   @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
 }
 
+/* OtOrder wordmark (nav + footer) — prototipteki görsel dil */
+.wordmark-ot {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+  color: #15171c;
+}
+.wordmark-ot b {
+  color: #d92b1c;
+}
+
 /* --- Butonlar (Signup/Login aynı sınıfları kullanır) --- */
 .btn {
   @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold transition-colors duration-200;

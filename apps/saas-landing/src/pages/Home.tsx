@@ -1,495 +1,743 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+// OtOrder ana sayfa — onaylanan canlı prototipin (otorder-canli.html) React portu.
+// Animasyon kuralları: framer-motion YOK; IO tabanlı reveal (2.5sn fallback),
+// saf CSS keyframe'ler, journey için scroll listener. Tüm interval/timeout'lar
+// useEffect cleanup'lı; prefers-reduced-motion'da döngüler başlatılmaz.
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Plan } from '../lib/api';
-import { PosMockup, KdsMockup, PhoneMockup, QrChip } from '../components/mockups';
+import {
+  IcPizza, IcPasta, IcDrink, IcDessert, IcCheese, IcMushroom, IcScooter, IcPin,
+  IcStar, IcCart, IcHome, IcList, IcSearch, IcBell, IcRepeat, IcBolt, IcChip,
+  IcMoon, IcVideo, IcPhone, IcMic, IcSmile, IcQr, IcGift,
+} from '../components/icons';
+import './home.css';
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' &&
+  !!window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* IO tabanlı reveal: .rv elemanlarına girişte .in ekler; 2.5sn fallback timer
+   ile her durumda görünür olur (prototipteki gibi). */
+function useReveal(rootRef: React.RefObject<HTMLElement | null>, dep: unknown) {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const els = Array.from(root.querySelectorAll<HTMLElement>('.rv'));
+    els.forEach((el, i) => {
+      el.style.transitionDelay = `${(i % 4) * 70}ms`;
+    });
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => e.isIntersecting && e.target.classList.add('in')),
+      { threshold: 0.18 },
+    );
+    els.forEach((el) => io.observe(el));
+    const t = window.setTimeout(() => els.forEach((el) => el.classList.add('in')), 2500);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(t);
+    };
+  }, [rootRef, dep]);
+}
 
 export default function Home() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [annual, setAnnual] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.plans().then((r) => setPlans(r.plans ?? [])).catch(() => setPlans([]));
   }, []);
 
+  useReveal(rootRef, plans.length);
+
   return (
-    <>
+    <div className="otr" ref={rootRef}>
       <Hero />
-      <Tour />
-      <Flow />
-      <Gallery />
-      <FeatureMenu />
-      <WhatsappBand />
+      <Journey />
+      <Bento />
+      <WaDetail />
+      <AppDetail />
       <Showcase />
       <Pricing plans={plans} annual={annual} onToggle={() => setAnnual((a) => !a)} />
-      <BrandedApp />
       <FinalCta />
-    </>
+    </div>
   );
 }
 
-/* ============================== GERÇEK EKRAN GALERİSİ ============================== */
+/* ============================== HERO (canlı sipariş simülasyonu) ============================== */
 
-const GALLERY: Array<{ img: string; url: string; title: string; desc: string; wide?: boolean }> = [
-  {
-    img: 'pos-reports', url: 'mehmet.otorder.com/reports', wide: true,
-    title: 'Raporlar',
-    desc: 'Günlük ciro, net kâr, ödeme dağılımı ve en çok satanlar; yapay zeka önerisiyle.',
-  },
-  {
-    img: 'pos-campaigns', url: 'mehmet.otorder.com/campaigns', wide: true,
-    title: 'Kampanyalar',
-    desc: 'İndirim, hediye ürün, min. sepet kampanyaları; kullanım limitli ve takipli.',
-  },
-  {
-    img: 'pos-loyalty', url: 'mehmet.otorder.com/loyalty',
-    title: 'Sadakat programları',
-    desc: 'Puan, damga kartı, doğum günü, davet: 12+ hazır program türü.',
-  },
-  {
-    img: 'pos-wheel', url: 'mehmet.otorder.com/spin-wheel',
-    title: 'Şans çarkı',
-    desc: 'Dilimleri ve olasılıkları siz belirlersiniz; müşteri sipariş sonrası çevirir.',
-  },
-  {
-    img: 'pos-stock', url: 'mehmet.otorder.com/stock',
-    title: 'Stok takibi',
-    desc: 'Ham madde bazlı düşüm; kritik seviyede uyarı, tedarikçi ve maliyet kaydı.',
-  },
+const MSGS = [
+  'Az önce: Masa 4 sipariş verdi',
+  'Az önce: WhatsApp AI paket sipariş aldı',
+  'Az önce: QR menüden Masa 7 sipariş verdi',
+  'Az önce: gel-al siparişi hazır',
+];
+const ITEMS: Array<[string, string, string]> = [
+  ['#1043', 'Masa 4', '2× Karışık Pizza L'],
+  ['#1044', 'Paket · WhatsApp AI', '1× Trüflü Mantar'],
+  ['#1045', 'Masa 7', '1× Smashé Burger'],
+  ['#1046', 'Gel-al', '2× Ayran · 1× Künefe'],
 ];
 
-function Gallery() {
-  return (
-    <section className="border-t border-line bg-wash py-20 lg:py-28">
-      <div className="container-x">
-        <h2 className="reveal max-w-[24ch] text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
-          Panelin tamamı: bunlar maket değil, üründen alınmış ekranlar.
-        </h2>
-        <div className="mt-12 grid gap-8 lg:grid-cols-6">
-          {GALLERY.map((g, i) => (
-            <figure key={g.img} className={`gal-in ${g.wide ? 'lg:col-span-3' : 'lg:col-span-2'}`} style={{ ['--i' as never]: i }}>
-              <div className="gal-card overflow-hidden rounded-xl border border-line bg-white shadow-[0_24px_60px_-24px_oklch(0.2_0.01_29/0.25)]">
-                <div className="flex items-center gap-2 border-b border-line bg-white px-3.5 py-2">
-                  <span className="flex gap-1.5" aria-hidden="true">
-                    <i className="h-2 w-2 rounded-full bg-line" />
-                    <i className="h-2 w-2 rounded-full bg-line" />
-                    <i className="h-2 w-2 rounded-full bg-line" />
-                  </span>
-                  <span className="ml-1 flex-1 truncate rounded bg-wash px-2.5 py-0.5 font-mono text-[9px] text-ink-muted ring-1 ring-line">
-                    {g.url}
-                  </span>
-                </div>
-                <img
-                  src={`/media/${g.img}.jpg`}
-                  width={1280}
-                  height={800}
-                  alt={`OtOrder ${g.title} ekranı`}
-                  loading="lazy"
-                  className="block w-full"
-                />
-              </div>
-              <figcaption className="mt-3.5">
-                <p className="font-bold text-ink">{g.title}</p>
-                <p className="mt-0.5 text-sm leading-snug text-ink-muted">{g.desc}</p>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+type PosTag = 'new' | 'prep' | 'ready';
+const TAG_CLS: Record<PosTag, string> = { new: 't-new', prep: 't-prep', ready: 't-ready' };
+const TAG_LABEL: Record<PosTag, string> = { new: 'YENİ', prep: 'HAZIRLANIYOR', ready: 'HAZIR' };
 
-/* ============================== MARKALI MOBİL UYGULAMA (KURUMSAL) ============================== */
-
-function BrandedApp() {
-  return (
-    <section className="border-t border-line py-20 lg:py-24">
-      <div className="container-x grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
-        <div className="reveal relative mx-auto w-full max-w-[250px]">
-          <div className="phone-bob">
-            <PhoneMockup />
-            {/* Döngüde inen push bildirimi — Kurumsal'ın kanıtı */}
-            <div
-              className="push-note absolute left-1/2 top-9 z-20 w-[86%] -translate-x-1/2 rounded-xl bg-white/95 p-2.5 shadow-[0_14px_34px_-12px_oklch(0.2_0.01_29/0.45)] ring-1 ring-line backdrop-blur"
-              aria-hidden="true"
-            >
-              <div className="flex items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-600 text-[11px] font-extrabold text-white">P</span>
-                <div className="min-w-0 text-[10px] leading-tight">
-                  <p className="font-bold text-ink">Pizzacı Mehmet</p>
-                  <p className="truncate text-ink-muted">🎁 Öğlene özel %15: kupon sepette hazır!</p>
-                </div>
-                <span className="ml-auto shrink-0 text-[9px] text-ink-muted">şimdi</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="reveal">
-          <p className="font-mono text-[12px] font-semibold text-brand-700">Ekstra modül · Markalı Mobil Uygulama</p>
-          <h2 className="mt-2 text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
-            Aynı sipariş deneyimi, kendi adınızla App Store ve Google Play'de.
-          </h2>
-          <p className="mt-4 max-w-measure leading-relaxed text-ink-soft">
-            Sipariş siteniz, sizin adınızı, ikonunuzu ve renklerinizi taşıyan markalı bir
-            mobil uygulamaya dönüşür. Yayınlamayı biz yürütürüz; puanlar, kampanyalar ve
-            push bildirimleri uygulamada da aynı hesapla çalışır. Tek seferlik ₺24.999 —
-            özel tasarım landing ile birlikte alana ₺44.999 ve 1 yıllık Pro paket hediye.
-          </p>
-          <ul className="mt-6 space-y-2.5">
-            {['Kendi uygulama adınız ve ikonunuz', 'Push bildirimiyle kampanya duyurusu', 'Sadakat puanları ve çark uygulamada da geçerli'].map((p) => (
-              <li key={p} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
-                <svg viewBox="0 0 16 16" className="mt-1 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true">
-                  <path fill="currentColor" d="M6.5 12.2 2.3 8l1.4-1.4 2.8 2.8 5.8-5.8L13.7 5z" />
-                </svg>
-                {p}
-              </li>
-            ))}
-          </ul>
-          <a href="#fiyatlar" className="btn-primary mt-8">
-            Fiyatları gör
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================== HERO ============================== */
+const MARQ = ['SİPARİŞ SİTESİ', 'POS', 'MUTFAK EKRANI', 'WHATSAPP AI', 'QR MENÜ', 'SADAKAT', 'MARKALI APP', 'KOMİSYON YOK'];
 
 function Hero() {
+  const [liveMsg, setLiveMsg] = useState(MSGS[0]);
+  const [posRows, setPosRows] = useState<Array<{ id: string; who: string; tag: PosTag; anim?: boolean }>>([
+    { id: '#1042', who: 'Paket · WhatsApp AI', tag: 'prep' },
+    { id: '#1041', who: 'Gel-al', tag: 'ready' },
+  ]);
+  const [kdsRows, setKdsRows] = useState<Array<{ id: string; meta: string; what: string; anim?: boolean }>>([
+    { id: '#1042', meta: '#1042 · 04:55', what: '1× Smashé Burger' },
+  ]);
+  const [fly, setFly] = useState<{ cls: '' | 'go1' | 'go2'; k: number }>({ cls: '', k: 0 });
+  const [saat, setSaat] = useState(22 * 60 + 41);
+
+  // canlı simülasyon döngüsü (prototipteki cycle() birebir zamanlamayla)
+  useEffect(() => {
+    if (reducedMotion()) return;
+    let no = 0;
+    const tos: number[] = [];
+    const cycle = () => {
+      const [id, who, what] = ITEMS[no % ITEMS.length];
+      const n = no;
+      setFly((s) => ({ cls: 'go1', k: s.k + 1 }));
+      tos.push(
+        window.setTimeout(() => {
+          setPosRows((rows) => [{ id, who, tag: 'new' as const, anim: true }, ...rows].slice(0, 3));
+        }, 2000),
+      );
+      tos.push(window.setTimeout(() => setFly((s) => ({ cls: 'go2', k: s.k + 1 })), 2300));
+      tos.push(
+        window.setTimeout(() => {
+          setKdsRows((rows) => [{ id, meta: `${id} · YENİ`, what, anim: true }, ...rows].slice(0, 2));
+          setLiveMsg(MSGS[n % MSGS.length]);
+        }, 6300),
+      );
+      no++;
+    };
+    cycle();
+    const iv = window.setInterval(cycle, 7500);
+    return () => {
+      window.clearInterval(iv);
+      tos.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
+
+  // mutfak ekranı saati
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const iv = window.setInterval(() => setSaat((s) => s + 1), 4000);
+    return () => window.clearInterval(iv);
+  }, []);
+
+  const clock = `${Math.floor(saat / 60) % 24}:${String(saat % 60).padStart(2, '0')}`;
+
   return (
-    <section className="overflow-hidden">
-      <div className="container-x grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:py-24">
-        <div>
-          <h1 className="text-[clamp(2.5rem,6vw,4.25rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-ink">
-            <span className="line-mask"><span className="line-rise" style={{ ['--i' as never]: 0 }}>Sipariş mutfağa</span></span>
-            <span className="line-mask"><span className="line-rise text-brand-600" style={{ ['--i' as never]: 1 }}><span className="sweep">saniyesinde</span></span></span>
-            <span className="line-mask"><span className="line-rise" style={{ ['--i' as never]: 2 }}>düşer.</span></span>
-          </h1>
-          <p className="float-in mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-soft [--d:320ms]">
-            OtOrder, restoranınızın tamamını tek abonelikte toplar: POS, mutfak ekranı,
-            size özel sipariş sitesi ve QR menü. Komisyon yok. Kurulum dakikalar sürer.
-          </p>
-          <div className="float-in mt-8 flex flex-wrap items-center gap-3 [--d:440ms]">
-            <Link to="/signup" className="btn-primary text-base">Ücretsiz dene</Link>
-            <a href="#fiyatlar" className="btn-ghost text-base">Planları gör</a>
-          </div>
-          <p className="float-in mt-4 text-sm text-ink-muted [--d:540ms]">7 gün ücretsiz · kart gerekmez · dilediğinde iptal</p>
-          <p className="float-in mt-8 flex items-center gap-2.5 text-sm text-ink-soft [--d:640ms]">
-            <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-brand-600" aria-hidden="true" />
-            High Five Pizza &amp; Makarna, Akçakoca: bu sistemle servis yapıyor.
-          </p>
-        </div>
-
-        {/* Katmanlı ürün kompozisyonu + QR'dan mutfağa süzülen sipariş */}
-        <div className="relative mx-auto w-full max-w-[560px] lg:max-w-none" aria-label="OtOrder ürün ekranları: POS, mutfak ekranı ve QR menü">
-          <svg
-            viewBox="0 0 680 380"
-            className="pointer-events-none absolute -inset-x-4 -bottom-16 top-auto hidden h-[420px] w-[calc(100%+2rem)] lg:block"
-            aria-hidden="true"
-          >
-            <path
-              d="M 30 300 C 140 340, 300 330, 420 220 S 560 60, 640 90"
-              fill="none"
-              stroke="#f9a8a2"
-              strokeWidth="2"
-              className="hero-path-draw"
-            />
-          </svg>
-          <span
-            className="hero-path-dot pointer-events-none absolute left-0 top-0 hidden h-3 w-3 rounded-full bg-brand-600 shadow-[0_0_0_4px_rgb(187_30_16/0.15)] lg:block"
-            aria-hidden="true"
-          />
-          <PosMockup className="bob relative z-10 w-[88%]" />
-          <KdsMockup className="bob-alt absolute -bottom-10 right-0 z-20 w-[64%] [--d:180ms]" />
-          <QrChip className="float-in absolute -left-2 -bottom-6 z-30 [--d:340ms] max-sm:hidden" />
-        </div>
-      </div>
-      <div className="h-10 lg:h-16" aria-hidden="true" />
-    </section>
-  );
-}
-
-/* ============================== ÜRÜN TURU ============================== */
-
-const TOUR = [
-  {
-    title: 'Kasada: POS',
-    body:
-      'Masa haritası, adisyon, hesap bölme ve gün sonu tek ekranda. Garson siparişi girer, mutfak aynı saniye görür; kağıt adisyon ve mutfağa koşturma biter.',
-    points: ['Masa & paket & gel-al akışları', 'Hesap bölme, ikram, indirim', 'Gün sonu raporu otomatik'],
-    art: (c: string) => <PosMockup className={c} />,
-  },
-  {
-    title: 'Mutfakta: KDS',
-    body:
-      'Her sipariş süresiyle birlikte mutfak ekranına düşer. Geciken sipariş kendini belli eder; şef "hazır" dediğinde garsonun ekranına bildirim gider.',
-    points: ['Sipariş başına canlı süre', 'İstasyon bazlı görünüm', 'Hazır bildirimi garsona'],
-    art: (c: string) => <KdsMockup className={c} />,
-    dark: true,
-  },
-  {
-    title: 'Müşteride: sipariş sitesi',
-    body:
-      'restoraniniz.otorder.com sizin markanızla açılır: menü, online ödeme, adres. Masadaki müşteri QR ile aynı menüden söyler. Komisyon yok, müşteri verisi sizde kalır.',
-    points: ['Kendi alan adınız ve renkleriniz', 'QR menü ve masadan sipariş', 'Online ödeme (kendi iyzico hesabınız)'],
-    art: (c: string) => <PhoneMockup className={`${c} max-w-[240px]`} />,
-  },
-];
-
-function Tour() {
-  return (
-    <section className="border-t border-line bg-wash py-20 lg:py-28">
-      <div className="container-x">
-        <h2 className="reveal max-w-[22ch] text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold leading-tight tracking-[-0.02em] text-ink">
-          Üç ekran, tek sistem: kasa, mutfak ve müşteri aynı anda aynı siparişi görür.
-        </h2>
-        <div className="mt-14 space-y-20 lg:space-y-24">
-          {TOUR.map((t, i) => (
-            <div
-              key={t.title}
-              className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}
-            >
-              <div className="reveal">
-                <h3 className="text-2xl font-bold tracking-[-0.01em] text-ink">{t.title}</h3>
-                <p className="mt-3 max-w-measure leading-relaxed text-ink-soft">{t.body}</p>
-                <ul className="mt-5 space-y-2.5">
-                  {t.points.map((p, j) => (
-                    <li key={p} className="flex items-start gap-2.5 text-[15px] text-ink-soft">
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="draw-check mt-1 h-4 w-4 shrink-0 text-brand-600"
-                        style={{ ['--i' as never]: j }}
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M2.5 8.5 6 12 13.5 4"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          pathLength={1}
-                        />
-                      </svg>
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="reveal-art tilt flex justify-center">
-                {t.art('w-full max-w-[520px]')}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================== SİPARİŞ AKIŞI ============================== */
-
-const FLOW = [
-  { t: 'Müşteri söyler', d: 'QR menüden, sipariş sitesinden veya garsona' },
-  { t: 'POS işler', d: 'Adisyon açılır, stok düşer' },
-  { t: 'Mutfak görür', d: 'KDS ekranında süre işlemeye başlar' },
-  { t: 'Servis çıkar', d: 'Garsona hazır bildirimi, kuryeye rota' },
-];
-
-function Flow() {
-  return (
-    <section className="border-t border-line py-20 lg:py-24">
-      <div className="container-x">
-        <h2 className="reveal text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold tracking-[-0.02em] text-ink">
-          Bir siparişin yolculuğu
-        </h2>
-        <p className="reveal mt-3 max-w-measure text-ink-soft">
-          Sipariş nereden gelirse gelsin aynı hatta girer. Telefonla not almak, mutfağa bağırmak, kağıt kaybetmek yok.
-        </p>
-        <ol className="reveal mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {FLOW.map((s, i) => (
-            <li key={s.t} className="relative">
-              {i < FLOW.length - 1 && (
-                <svg
-                  className="absolute left-[calc(100%_-_1.25rem)] top-4 hidden h-2 w-[calc(100%_-_2rem)] lg:block"
-                  aria-hidden="true"
-                >
-                  <line x1="0" y1="4" x2="100%" y2="4" stroke="#f9a8a2" strokeWidth="2" className="flow-dash" />
-                </svg>
-              )}
-              <span
-                className="flow-num grid h-9 w-9 place-items-center rounded-full bg-brand-600 font-mono text-sm font-semibold text-white"
-                style={{ ['--i' as never]: i }}
-              >
-                {i + 1}
-              </span>
-              <h3 className="mt-3 font-bold text-ink">{s.t}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-ink-muted">{s.d}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/* ============================== ÖZELLİK MENÜSÜ ============================== */
-
-const FEATURES: Array<[string, string]> = [
-  ['Sadakat programı', 'puan, kupon, çark ve başarımlarla müşteri geri gelir'],
-  ['Kampanyalar', 'happy hour, paket menü, hedefli push bildirimi'],
-  ['Stok takibi', 'ham madde bazlı düşüm, azalınca uyarı'],
-  ['Kurye takibi', 'canlı konum, müşteriye teslimat durumu'],
-  ['Raporlar', 'ciro, ürün, saat ve şube kırılımı'],
-  ['Çoklu şube', 'tek panelden tüm lokasyonlar'],
-  ['Yazıcı entegrasyonu', 'adisyon ve mutfak fişi otomatik yazar'],
-  ['Personel & PIN', 'rol bazlı yetki, 4 haneli hızlı giriş'],
-];
-
-function FeatureMenu() {
-  return (
-    <section className="border-t border-line bg-wash py-20 lg:py-24">
-      <div className="container-x grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
-        <div className="reveal">
-          <h2 className="text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold tracking-[-0.02em] text-ink">
-            Menünün devamı
-          </h2>
-          <p className="mt-3 leading-relaxed text-ink-soft">
-            Üç ana ekranın arkasında, işletmeyi büyüten araçlar hazır bekler. Hepsi
-            aynı panelde, ayrı kurulum yok.
-          </p>
-        </div>
-        <dl className="space-y-4">
-          {FEATURES.map(([name, desc], i) => (
-            <div key={name} className="leader-row flex items-baseline gap-2" style={{ ['--i' as never]: i }}>
-              <dt className="shrink-0 font-bold text-ink">{name}</dt>
-              <span className="leader mx-1 flex-1 -translate-y-1 border-b-2 border-dotted border-line" aria-hidden="true" />
-              <dd className="max-w-[52%] text-right text-sm leading-snug text-ink-muted">{desc}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </section>
-  );
-}
-
-/* ============================== WHATSAPP BANDI ============================== */
-
-function WhatsappBand() {
-  return (
-    <section className="relative overflow-hidden bg-brand-700 py-16 text-white lg:py-20">
-      {/* Yavaşça süzülen ışık lekeleri */}
-      <span className="wa-blob pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-500/25 blur-3xl" aria-hidden="true" />
-      <span className="wa-blob-2 pointer-events-none absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-brand-900/50 blur-3xl" aria-hidden="true" />
-      <div className="container-x relative grid items-center gap-10 lg:grid-cols-[1.3fr_1fr]">
-        <div className="reveal">
-          <h2 className="text-[clamp(1.6rem,3vw,2.3rem)] font-bold tracking-[-0.02em]">
-            WhatsApp'tan gelen sipariş de aynı mutfağa düşer.
-          </h2>
-          <p className="mt-4 max-w-measure leading-relaxed text-white/85">
-            WhatsApp Sipariş Modülü ayrı bir üründür: müşteriniz mesajla söyler, sipariş
-            otomatik POS'a ve mutfak ekranına işlenir. Pro pakete "Bağlan" düğmesiyle
-            eklenir; ayrı menü girmek gerekmez.
-          </p>
-          <a
-            href="https://order.highfivepps.com"
-            className="btn mt-7 bg-white text-brand-800 hover:bg-brand-50"
-          >
-            WhatsApp modülünü incele
-          </a>
-        </div>
-        <div className="reveal">
-          {/* Yaşayan sohbet vinyeti — 12 sn'de bir baştan oynar */}
-          <div className="ml-auto max-w-[320px] space-y-2.5 rounded-2xl bg-brand-800/60 p-4 text-[13px]">
-            <p className="wa-msg-1 w-fit max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-ink">
-              2 sucuklu pizza, 1 ayran. Adres kayıtlı 🙏
-            </p>
-            <p className="wa-typing ml-auto flex w-fit items-center gap-1 rounded-xl rounded-br-sm bg-brand-600/70 px-3 py-2.5" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="type-dot inline-block h-1.5 w-1.5 rounded-full bg-white" style={{ ['--i' as never]: i }} />
-              ))}
-            </p>
-            <p className="wa-msg-2 -mt-9 ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-brand-600 px-3 py-2">
-              Siparişiniz alındı! Tahmini teslimat 30 dk. Toplam ₺465
-            </p>
-            <p className="wa-chip ml-auto flex w-fit items-center gap-1.5 rounded-lg bg-brand-900/60 px-2.5 py-1.5 font-mono text-[10px] text-brand-200">
-              <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-lichen" aria-hidden="true" />
-              POS'a işlendi · #1043 mutfakta
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================== FİYATLAR (ADİSYON) ============================== */
-
-function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; onToggle: () => void }) {
-  return (
-    <section id="fiyatlar" className="border-t border-line py-20 lg:py-28">
-      <div className="container-x">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="reveal">
-            <h2 className="text-[clamp(1.75rem,3.5vw,2.6rem)] font-bold tracking-[-0.02em] text-ink">Hesap, net.</h2>
-            <p className="mt-2 text-ink-soft">Komisyon yok, gizli kalem yok. Her pakette 7 gün ücretsiz deneme.</p>
-          </div>
-          <div className="reveal flex items-center gap-3 text-sm font-semibold">
-            <span className={annual ? 'text-ink-muted' : 'text-ink'}>Aylık</span>
-            <button
-              onClick={onToggle}
-              role="switch"
-              aria-checked={annual}
-              aria-label="Yıllık fiyatlandırmaya geç"
-              className="relative h-7 w-12 rounded-full bg-brand-600 transition-colors"
-            >
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${annual ? 'left-6' : 'left-1'}`} />
-            </button>
-            <span className={annual ? 'text-ink' : 'text-ink-muted'}>
-              Yıllık <span className="text-brand-600">(2 ay hediye)</span>
+    <section id="hero">
+      <div className="wrap">
+        <div className="hero-grid">
+          <div>
+            <span className="chip">
+              <span className="dot" /> <span>{liveMsg}</span>
             </span>
+            <h1 style={{ marginTop: 24 }}>
+              Sipariş mutfağa
+              <br />
+              <em>saniyesinde</em> düşer.
+            </h1>
+            <p className="lead">
+              POS, mutfak ekranı, sipariş sitesi ve yapay zekâ WhatsApp asistanı tek abonelikte.
+              Komisyon yok, kurulum dakikalar sürer.
+            </p>
+            <div className="cta-row">
+              <Link to="/signup" className="obtn obtn-red">Restoranımı oluştur</Link>
+              <a href="#journey" className="obtn obtn-ghost">Yolculuğu izle ↓</a>
+            </div>
+            <div className="fine">7 gün ücretsiz · kart gerekmez · dilediğinde iptal</div>
+          </div>
+          <div className="stage">
+            <div className="panel p-site">
+              <div className="head">
+                <span className="ui-dots"><i /><i /><i /></span> highfivepps.com/menu
+              </div>
+              <div className="row">
+                <span><IcPizza /> Karışık Pizza (L) ×2</span>
+                <span>₺480</span>
+              </div>
+              <div className="row">
+                <span><IcDrink /> Ayran ×1</span>
+                <span>₺40</span>
+              </div>
+              <div className="row" style={{ background: 'rgba(217,43,28,.05)', borderColor: 'rgba(217,43,28,.35)' }}>
+                <b>Siparişi ver</b>
+                <span><b>₺520</b></span>
+              </div>
+            </div>
+            <div className="panel p-pos">
+              <div className="head">
+                <span className="ui-dots"><i /><i /><i /></span> POS · Siparişler{' '}
+                <span style={{ marginLeft: 'auto', color: 'var(--wa)' }}>● canlı</span>
+              </div>
+              <div>
+                {posRows.map((r) => (
+                  <div key={r.id} className="row" style={r.anim ? { animation: 'scenein .5s both' } : undefined}>
+                    <span><b>{r.id}</b> · {r.who}</span>
+                    <span className={`tag ${TAG_CLS[r.tag]}`}>{TAG_LABEL[r.tag]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="panel p-kds">
+              <div className="head">
+                <span className="ui-dots"><i /><i /><i /></span> MUTFAK EKRANI · <span>{clock}</span>
+              </div>
+              <div>
+                {kdsRows.map((r) => (
+                  <div key={r.meta} className="kds-row" style={r.anim ? { animation: 'scenein .5s both' } : undefined}>
+                    <span className="mono">{r.meta}</span>
+                    <div>{r.what}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div key={fly.k} className={`fly ${fly.cls}`}>
+              <IcPizza style={{ width: 14, height: 14, color: '#fff', verticalAlign: '-2.5px' }} /> Yeni sipariş · ₺520
+            </div>
           </div>
         </div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {plans.length === 0 && (
-            <p className="col-span-full text-center text-ink-muted">Planlar yükleniyor…</p>
-          )}
-          {plans.map((p, i) => (
-            <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} order={i} />
-          ))}
-          {plans.length > 0 && <BundleTicket order={plans.length} />}
+        <div className="marquee">
+          <div className="mtrack">
+            {[0, 1].map((k) => (
+              <span key={k}>
+                {MARQ.map((m) => (
+                  <Fragment key={m}>{m} <i>●</i></Fragment>
+                ))}
+              </span>
+            ))}
+          </div>
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Ekstralar: her pakete eklenebilen tek seferlik modüller */}
-        <div className="mt-16">
-          <h3 className="text-center text-2xl font-bold text-ink">Ekstralar</h3>
-          <p className="mt-2 text-center text-ink-soft">Her pakete eklenebilir — tek seferlik ödeme, abonelikten bağımsız.</p>
-          <div className="mx-auto mt-8 grid max-w-3xl gap-6 md:grid-cols-2">
-            {[
-              { icon: '🎨', title: 'Özel Tasarım Landing Page', desc: 'Markanıza özel, elle tasarlanmış tanıtım sitesi. Örnekler: smashe.otorder.com, highfivepps.com' },
-              { icon: '📱', title: 'Markalı Mobil Uygulama', desc: 'App Store + Google Play\'de kendi adınızla; sadakat, push bildirim ve online sipariş dahil.' },
-            ].map((x) => (
-              <div key={x.title} className="card">
-                <div className="text-3xl">{x.icon}</div>
-                <h4 className="mt-3 text-lg font-bold text-ink">{x.title}</h4>
-                <p className="mt-1.5 text-sm text-ink-soft">{x.desc}</p>
-                <div className="mt-4 border-t border-ink/10 pt-4 text-sm">
-                  <p><span className="font-bold text-ink">₺24.999</span> <span className="text-ink-muted">tek seferlik</span></p>
+/* ============================== JOURNEY (340vh pinned scroll) ============================== */
+
+const STATIONS = [
+  { left: '0%', no: '01', title: 'Sipariş gelir', desc: "QR menü, sipariş sitesi ya da WhatsApp'ta yapay zekâ alır." },
+  { left: '20%', no: '02', title: "POS'a düşer", desc: 'Masa, paket, gel-al. Kasada her şey tek ekranda.' },
+  { left: '40%', no: '03', title: 'Mutfak görür', desc: 'Saniyesinde mutfak ekranında. Süre takibi otomatik.' },
+  { left: '60%', no: '04', title: 'Yola çıkar', desc: 'Kurye paneli, müşteriye durum maili.' },
+  { left: '80%', no: '05', title: 'Kasa kapanır', desc: 'Gün sonu raporu, analitik, sadakat puanı.' },
+];
+
+const SPOT_HEADS = ['SİPARİŞ SİTESİ', 'POS · SİPARİŞLER', 'MUTFAK EKRANI', 'KURYE', 'GÜN SONU'];
+
+const SCENES: ReactNode[] = [
+  <>
+    <div className="row">
+      <span><IcPizza /> Karışık Pizza (L) ×2</span>
+      <span>₺480</span>
+    </div>
+    <div className="row" style={{ background: 'rgba(217,43,28,.05)' }}>
+      <b>Siparişi ver</b>
+      <b>₺520</b>
+    </div>
+  </>,
+  <>
+    <div className="row">
+      <span><b>#1043</b> · Masa 4</span>
+      <span className="tag t-new">YENİ</span>
+    </div>
+    <div className="row">
+      <span><b>#1042</b> · Paket</span>
+      <span className="tag t-prep">HAZIRLANIYOR</span>
+    </div>
+  </>,
+  <>
+    <div className="kdsb" style={{ margin: '10px 12px' }}>
+      <span className="mono">#1043 · MASA 4 · 00:12</span>
+      <div style={{ fontWeight: 600, marginTop: 3 }}>2× Karışık Pizza L · 1× Ayran</div>
+    </div>
+  </>,
+  <>
+    <div className="row">
+      <span><IcScooter /> Kurye: Emre</span>
+      <span className="tag t-prep">YOLDA</span>
+    </div>
+    <div className="row" style={{ fontSize: '11.5px', color: 'var(--ink-mute)' }}>
+      Müşteriye "siparişin yolda" maili gitti ✓
+    </div>
+  </>,
+  <>
+    <div className="row">
+      <span>Bugünkü ciro</span>
+      <b style={{ color: 'var(--red)' }}>₺18.460</b>
+    </div>
+    <div className="row">
+      <span>Sipariş sayısı</span>
+      <b>84</b>
+    </div>
+  </>,
+];
+
+function Journey() {
+  const secRef = useRef<HTMLElement | null>(null);
+  const fillRef = useRef<HTMLDivElement | null>(null);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const el = secRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const total = r.height - window.innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / (total || 1)));
+      if (fillRef.current) fillRef.current.style.width = `${p * 88}%`;
+      setIdx(Math.min(4, Math.floor(p * 5)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <section id="journey" ref={secRef}>
+      <div className="sticky">
+        <div className="wrap">
+          <span className="kicker">Bir siparişin yolculuğu — scroll et</span>
+          <h2>Müşteriden mutfağa, tek çizgide.</h2>
+          <div className="rail">
+            <div className="track" />
+            <div className="fill" ref={fillRef} />
+            {STATIONS.map((s, i) => (
+              <div
+                key={s.no}
+                className={`station ${i < idx ? 'done' : ''} ${i === idx ? 'active' : ''}`}
+                style={{ left: s.left }}
+              >
+                <span className="no">{s.no}</span>
+                <div className="pt" />
+                <h4>{s.title}</h4>
+                <p>{s.desc}</p>
+              </div>
+            ))}
+            <div className="spot">
+              <div className="head">
+                <span className="ui-dots"><i /><i /><i /></span> <span>{SPOT_HEADS[idx]}</span>
+              </div>
+              {SCENES.map((sc, i) => (
+                <div key={i} className={`scene ${i === idx ? 'on' : ''}`}>{sc}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================== BENTO (Tek abonelik, dört ekran) ============================== */
+
+const TABLES: Array<{ n: string; state?: 'full' | 'rdy'; sub: string }> = [
+  { n: 'M1', state: 'full', sub: '₺640' }, { n: 'M2', sub: 'boş' }, { n: 'M3', state: 'rdy', sub: 'hazır' }, { n: 'M4', sub: 'boş' },
+  { n: 'M5', sub: 'boş' }, { n: 'M6', state: 'full', sub: '₺210' }, { n: 'M7', sub: 'boş' }, { n: 'M8', state: 'rdy', sub: 'hazır' },
+  { n: 'M9', state: 'full', sub: '₺1.230' }, { n: 'M10', sub: 'boş' }, { n: 'M11', sub: 'boş' }, { n: 'M12', state: 'full', sub: '₺95' },
+];
+
+function Bento() {
+  const [ciro, setCiro] = useState(18460);
+
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const iv = window.setInterval(() => setCiro((c) => c + Math.floor(Math.random() * 180) + 40), 3000);
+    return () => window.clearInterval(iv);
+  }, []);
+
+  return (
+    <section id="bento">
+      <div className="wrap">
+        <span className="kicker rv">Modüller</span>
+        <h2 className="rv">Tek abonelik, dört ekran.</h2>
+        <div className="bgrid">
+          <div className="b b-pos rv">
+            <h5>POS · Salon yönetimi</h5>
+            <div className="sub">Masalar, adisyon, kasa, personel PIN girişi</div>
+            <div className="tblg">
+              {TABLES.map((t) => (
+                <div key={t.n} className={`tbl ${t.state ?? ''}`}>
+                  <b>{t.n}</b>
+                  {t.sub}
+                </div>
+              ))}
+            </div>
+            <div className="ciro">
+              <span className="sub">Bugünkü ciro</span>
+              <span className="mono">₺{ciro.toLocaleString('tr-TR')}</span>
+            </div>
+          </div>
+          <div className="b rv">
+            <h5>Mutfak ekranı</h5>
+            <div className="sub">Sipariş anında düşer</div>
+            <div className="kdsb">
+              <span className="mono">#1043 · 00:12</span>
+              <div style={{ fontWeight: 600 }}>2× Karışık Pizza L</div>
+            </div>
+            <div className="kdsb" style={{ borderLeftColor: 'var(--red)' }}>
+              <span className="mono">#1044 · YENİ</span>
+              <div style={{ fontWeight: 600 }}>1× Trüflü Mantar</div>
+            </div>
+          </div>
+          <div className="b rv">
+            <h5>
+              WhatsApp AI<span className="aibadge">Pro AI</span>
+            </h5>
+            <div className="sub">Asistan konuşur, sipariş POS'a düşer</div>
+            <div className="bub in">2 büyük karışık, 1 ayran. Adres kayıtlı olan.</div>
+            <div className="bub ai">
+              <span className="who">OTORDER AI</span>
+              <br />
+              Toplam 520 TL. Onaylıyor musun?
+            </div>
+            <span className="okl">● Sipariş #1042 POS ekranına düştü</span>
+          </div>
+          <div className="b rv">
+            <h5>Sipariş sitesi + QR menü</h5>
+            <div className="sub">Kendi domaininde, komisyonsuz</div>
+            <div style={{ marginTop: 16, display: 'flex', gap: 9 }}>
+              <div style={{ flex: 1, height: 105, borderRadius: 12, border: '1px solid var(--line)', display: 'grid', placeItems: 'center', color: 'var(--ink-mute)', fontSize: 12, background: 'var(--band)' }}>
+                20 menü şablonu
+              </div>
+              <div style={{ width: 90, height: 105, borderRadius: 12, border: '1.5px dashed rgba(21,23,28,.25)', display: 'grid', placeItems: 'center', color: 'rgba(21,23,28,.45)' }}>
+                <IcQr style={{ width: 30, height: 30 }} />
+              </div>
+            </div>
+          </div>
+          <div className="b rv">
+            <h5>Markalı mobil app</h5>
+            <div className="sub">App Store + Google Play'de kendi adınla</div>
+            <div className="phone">
+              <div className="ph">
+                <img src="/hf-logo-white.svg" alt="High Five" style={{ height: 15 }} />
+              </div>
+              <div className="pi" />
+              <div className="pi" />
+              <div className="pi" style={{ width: '70%' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================== WHATSAPP AI DETAY ============================== */
+
+const CONVO: Array<{ who: 'mine' | 'theirs' | 'sys'; typing?: number; node: ReactNode }> = [
+  { who: 'mine', node: <>2 büyük karışık, 1 ayran. Adres kayıtlı olan.</> },
+  {
+    who: 'theirs',
+    typing: 1400,
+    node: <>Hoş geldin Batuhan! 2× Karışık Pizza (L) + 1× Ayran = <b>520 TL</b>. Kayıtlı adres: Yalı Mah. Onaylıyor musun?</>,
+  },
+  { who: 'mine', node: <>Onaylıyorum</> },
+  {
+    who: 'theirs',
+    typing: 1100,
+    node: <>Siparişin alındı. <b>#1043</b> mutfağa iletildi. Tahmini teslimat: <b>35 dk</b>.</>,
+  },
+  { who: 'sys', node: <>● Sipariş #1043 POS ekranına düştü</> },
+];
+
+const WA_FEATS = [
+  { Icon: IcChip, t: 'Menünü ezbere bilir', d: '"2 büyük karışık, biri az pişmiş" der müşteri; asistan ürünü, boyutu ve notu doğru anlar.' },
+  { Icon: IcPin, t: 'Adresi ve alışkanlığı hatırlar', d: '"Her zamanki adrese" yeter. Kayıtlı müşteri tek mesajla sipariş verir.' },
+  { Icon: IcBolt, t: "POS'a anında düşer", d: 'Onaylanan sipariş mutfak ekranında belirir; kasada ayrı giriş yok, hata yok.' },
+  { Icon: IcMoon, t: '7/24 hattın açık', d: 'Kapalıyken bile sipariş toplar, açılış saatinde mutfağa iletir.' },
+];
+
+function WaDetail() {
+  const [msgs, setMsgs] = useState<Array<{ who: string; node: ReactNode; tm?: string; k: number }>>([]);
+  const [typing, setTyping] = useState(false);
+  const [status, setStatus] = useState('çevrimiçi');
+
+  useEffect(() => {
+    if (reducedMotion()) return;
+    let ci = 0;
+    let k = 0;
+    let alive = true;
+    const tos: number[] = [];
+    const later = (fn: () => void, ms: number) => tos.push(window.setTimeout(fn, ms));
+    const step = () => {
+      if (!alive) return;
+      if (ci >= CONVO.length) {
+        later(() => {
+          setMsgs([]);
+          ci = 0;
+          later(step, 900);
+        }, 3800);
+        return;
+      }
+      const m = CONVO[ci];
+      const show = () => {
+        if (!alive) return;
+        setTyping(false);
+        setStatus('çevrimiçi');
+        const tm = m.who !== 'sys' ? `22:4${1 + ci} ✓✓` : undefined;
+        const key = k++;
+        setMsgs((list) => [...list, { who: m.who, node: m.node, tm, k: key }]);
+        ci++;
+        later(step, 1600);
+      };
+      if (m.typing) {
+        setTyping(true);
+        setStatus('yazıyor...');
+        later(show, m.typing);
+      } else show();
+    };
+    later(step, 1200);
+    return () => {
+      alive = false;
+      tos.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
+
+  return (
+    <section id="wa">
+      <div className="wrap">
+        <div className="wa-grid">
+          <div>
+            <span className="kicker rv">WhatsApp AI · Pro AI paketi</span>
+            <h2 className="rv">
+              Müşterin yazar,
+              <br />
+              yapay zekâ satar.
+            </h2>
+            <p className="lead rv">
+              Asistan menünü bilir, adresi hatırlar, fiyatı hesaplar. Sipariş onaylanır onaylanmaz
+              POS ve mutfak ekranına düşer. Sen hiç dokunmazsın.
+            </p>
+            {WA_FEATS.map(({ Icon, t, d }) => (
+              <div key={t} className="feat-li rv">
+                <div className="ic"><Icon /></div>
+                <div>
+                  <h6>{t}</h6>
+                  <p>{d}</p>
                 </div>
               </div>
             ))}
+            <div className="statrow rv">
+              <div className="stat"><b>5 sn</b><span>ortalama yanıt</span></div>
+              <div className="stat"><b>7/24</b><span>hiç kapanmaz</span></div>
+              <div className="stat"><b>%0</b><span>yanlış adisyon</span></div>
+            </div>
           </div>
-          <p className="mx-auto mt-6 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-6 py-4 text-center text-sm text-ink-soft">
-            🎁 İkisi birden <span className="font-bold text-ink">₺44.999</span> — üstüne{' '}
-            <span className="font-bold text-brand-700">1 yıllık Pro paket hediye</span> (₺5.990 değerinde).
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'center' }} className="rv">
+            <div className="iphone" style={{ animation: 'bob 8s ease-in-out infinite' }}>
+              <div className="island" />
+              <div className="sbtn" />
+              <div className="sbtn2" />
+              <div className="sbtn3" />
+              <div className="screen">
+                <div className="wa-head">
+                  <span style={{ fontSize: 15, opacity: 0.8 }}>‹</span>
+                  <div className="av">
+                    <IcPizza style={{ width: 17, height: 17, color: '#fff' }} />
+                  </div>
+                  <div>
+                    <div className="nm">High Five</div>
+                    <div className="st">{status}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 14, fontSize: 13, opacity: 0.85 }}>
+                    <IcVideo style={{ width: 16, height: 16 }} />
+                    <IcPhone style={{ width: 16, height: 16 }} />
+                  </div>
+                </div>
+                <div className="wa-body">
+                  <div className="wmsg sys">Bugün · uçtan uca şifreli</div>
+                  {msgs.map((m) => (
+                    <div key={m.k} className={`wmsg ${m.who}`}>
+                      {m.node}
+                      {m.tm && <div className="tm">{m.tm}</div>}
+                    </div>
+                  ))}
+                  <div className={`typing ${typing ? 'on' : ''}`}><i /><i /><i /></div>
+                </div>
+                <div className="wa-inp">
+                  <IcSmile style={{ width: 18, height: 18, color: 'rgba(0,0,0,.4)' }} />
+                  <div className="f">Mesaj</div>
+                  <div className="mic">
+                    <IcMic style={{ width: 15, height: 15, color: '#fff' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
+/* ============================== MOBİL APP DETAY ============================== */
+
+const APP_FEATS = [
+  { Icon: IcBell, t: 'Push ile kampanya duyur', d: '"Öğlene özel %15" bildirimi tek tıkla tüm müşterilere gider; dönüşü aynı gün görürsün.' },
+  { Icon: IcStar, t: 'Sadakat cebinde', d: 'Puanlar, çark ve kuponlar uygulamada da aynı hesapla çalışır; müşteri geri gelir.' },
+  { Icon: IcRepeat, t: 'Tek dokunuşla tekrar sipariş', d: 'Son sipariş kayıtlı: "yine ondan" demek kadar kolay.' },
+];
+
+const PRODS = [
+  { Icon: IcPizza, t: 'Karışık Pizza', d: 'Sucuk, sosis, mantar, biber', p: '₺240' },
+  { Icon: IcCheese, t: 'Margherita', d: 'Mozzarella, fesleğen, domates', p: '₺180' },
+  { Icon: IcMushroom, t: 'Trüflü Mantar', d: 'Trüf yağı, mantar, parmesan', p: '₺290' },
+];
+
+const CATS = [
+  { Icon: IcPizza, t: 'Pizza', on: true },
+  { Icon: IcPasta, t: 'Makarna' },
+  { Icon: IcDrink, t: 'İçecek' },
+  { Icon: IcDessert, t: 'Tatlı' },
+];
+
+const TABS = [
+  { Icon: IcHome, t: 'Ana sayfa', on: true },
+  { Icon: IcList, t: 'Menü' },
+  { Icon: IcCart, t: 'Sepet', badge: true },
+  { Icon: IcStar, t: 'Puanlarım' },
+];
+
+function AppDetail() {
+  const [pushK, setPushK] = useState(0);
+
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const t = window.setTimeout(() => setPushK(1), 800);
+    const iv = window.setInterval(() => setPushK((k) => k + 1), 6000);
+    return () => {
+      window.clearTimeout(t);
+      window.clearInterval(iv);
+    };
+  }, []);
+
+  return (
+    <section id="app">
+      <div className="wrap">
+        <div className="app-grid">
+          <div className="phones rv">
+            <div className="iphone ph2">
+              <div className="island" />
+              <div className="sbtn" />
+              <div className="screen">
+                <div className="lock">
+                  <div className="tm display">21:47</div>
+                  <div className="dt">9 Temmuz Perşembe</div>
+                  <div key={pushK} className={`push ${pushK > 0 ? 'on' : ''}`}>
+                    <div className="top">
+                      <div className="ap">H</div>
+                      <span className="an">High Five</span>
+                      <span className="tt">şimdi</span>
+                    </div>
+                    <p>Öğlene özel %15: kuponun sepette hazır. Bugün geçerli.</p>
+                  </div>
+                  <div className="push push2">
+                    <div className="top">
+                      <div className="ap">H</div>
+                      <span className="an">High Five</span>
+                      <span className="tt">2 dk</span>
+                    </div>
+                    <p>Siparişin yola çıktı. Kurye Emre 18 dk içinde kapında.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="iphone ph1">
+              <div className="island" />
+              <div className="sbtn" />
+              <div className="sbtn2" />
+              <div className="sbtn3" />
+              <div className="screen">
+                <div className="app-hd">
+                  <div className="hg">Hoş geldin Batuhan</div>
+                  <img src="/hf-logo-white.svg" alt="High Five" style={{ height: 26, marginTop: 5, display: 'block' }} />
+                </div>
+                <div className="app-search">
+                  <IcSearch style={{ width: 14, height: 14, verticalAlign: -2 }} /> Pizza, makarna, içecek ara...
+                </div>
+                <div className="cats">
+                  {CATS.map(({ Icon, t, on }) => (
+                    <span key={t} className={`cat ${on ? 'on' : ''}`}>
+                      <Icon style={{ width: 13, height: 13, verticalAlign: -2 }} /> {t}
+                    </span>
+                  ))}
+                </div>
+                <div className="prods">
+                  {PRODS.map(({ Icon, t, d, p }) => (
+                    <div key={t} className="prod">
+                      <div className="im">
+                        <Icon style={{ width: 26, height: 26, color: 'var(--red)' }} />
+                      </div>
+                      <div>
+                        <h6>{t}</h6>
+                        <p>{d}</p>
+                      </div>
+                      <div className="pr">
+                        <b>{p}</b>
+                        <div className="add">+</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="tabbar">
+                  {TABS.map(({ Icon, t, on, badge }) => (
+                    <div key={t} className={`t ${on ? 'on' : ''} ${badge ? 'badge' : ''}`}>
+                      <i><Icon style={{ width: 17, height: 17 }} /></i>
+                      {t}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <span className="kicker rv">Markalı Mobil App · Ekstra modül</span>
+            <h2 className="rv">
+              App Store'da
+              <br />
+              kendi adınla.
+            </h2>
+            <p className="lead rv">
+              Sipariş siten, senin adını, ikonunu ve renklerini taşıyan gerçek bir iOS + Android
+              uygulamasına dönüşür. Yayınlamayı biz yürütürüz.
+            </p>
+            {APP_FEATS.map(({ Icon, t, d }) => (
+              <div key={t} className="feat-li rv">
+                <div className="ic"><Icon /></div>
+                <div>
+                  <h6>{t}</h6>
+                  <p>{d}</p>
+                </div>
+              </div>
+            ))}
+            <div className="statrow rv">
+              <div className="stat"><b>₺24.999</b><span>tek seferlik</span></div>
+              <div className="stat"><b>iOS + Android</b><span>ikisi de dahil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================== FİYATLAR (termal fiş / adisyon) ============================== */
 
 const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }> = [
   { label: 'POS + Mutfak ekranı', has: () => true },
@@ -499,119 +747,115 @@ const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }>
   { label: 'Analitik raporlar', has: (p) => !!p.features.analytics },
   { label: 'WhatsApp modülü bağlama', has: (p) => !!p.features.whatsappLink },
   { label: 'Yapay zekâ WhatsApp asistanı', has: (p) => !!p.features.whatsappAI },
-  // Landing ve mobil app plan özelliği değil, tek seferlik Ekstra modül
+  // Web sitesi ve mobil app plan özelliği değil, tek seferlik Ekstra modül
   { label: 'Markalı mobil uygulama', has: () => 'ekstra' },
-  { label: 'Özel tasarım landing', has: () => 'ekstra' },
+  { label: 'Özel tasarım web sitesi', has: () => 'ekstra' },
 ];
 
-function PlanTicket({ plan, annual, featured, order }: { plan: Plan; annual: boolean; featured: boolean; order: number }) {
+const ROT = ['r1', 'r2', 'r3'];
+
+function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; onToggle: () => void }) {
+  return (
+    <section id="fiyatlar">
+      <div className="wrap">
+        <span className="kicker rv">Fiyatlar</span>
+        <h2 className="rv">Hesap, net.</h2>
+        <p className="lead rv" style={{ marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' }}>
+          Komisyon yok, gizli kalem yok. Her pakette 7 gün ücretsiz deneme.
+        </p>
+        <div className="cycle-toggle rv">
+          <span className={`lbl ${!annual ? 'on' : ''}`}>Aylık</span>
+          <button
+            type="button"
+            className="sw"
+            role="switch"
+            aria-checked={annual}
+            aria-label="Yıllık fiyatlandırmaya geç"
+            onClick={onToggle}
+          >
+            <i />
+          </button>
+          <span className={`lbl ${annual ? 'on' : ''}`}>
+            Yıllık <b style={{ color: 'var(--red)' }}>(2 ay hediye)</b>
+          </span>
+        </div>
+        <div className="fisler">
+          {plans.length === 0 && <p style={{ color: 'var(--ink-mute)' }}>Planlar yükleniyor…</p>}
+          {plans.map((p, i) => (
+            <PlanFis key={p.key} plan={p} annual={annual} rot={ROT[i % ROT.length]} />
+          ))}
+          {plans.length > 0 && <BundleFis />}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PlanFis({ plan, annual, rot }: { plan: Plan; annual: boolean; rot: string }) {
+  const featured = !!plan.features.whatsappAI;
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   return (
-    <div className="ticket-print" style={{ ['--i' as never]: order }}>
-    <article
-      className={`ticket p-7 ${featured ? 'md:-translate-y-3 md:shadow-[0_28px_60px_-24px_rgb(187_30_16/0.30)]' : ''}`}
-    >
-      <header className="flex items-start justify-between">
-        <div>
-          <p className="font-mono text-[11px] text-ink-muted">otorder.com · adisyon</p>
-          <h3 className="mt-1 text-xl font-extrabold tracking-[-0.01em] text-ink">{plan.name}</h3>
-        </div>
-        {featured && (
-          <span className="stamp-in rotate-6 rounded border-2 border-brand-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700">
-            en çok tercih
-          </span>
-        )}
-      </header>
-
-      <p className="mt-5 flex items-baseline gap-1.5">
-        <span className="font-mono text-4xl font-semibold tracking-tight text-ink">
-          {price === 0 ? '₺0' : `₺${price.toLocaleString('tr-TR')}`}
-        </span>
-        <span className="text-sm text-ink-muted">/{annual ? 'yıl' : 'ay'}</span>
-      </p>
-
-      <ul className="ticket-rule mt-5 space-y-2.5 pt-5 font-mono text-[13px]">
+    <div className={`fis rv ${featured ? 'feat' : rot}`}>
+      {featured && <span className="stamp red">EN ÇOK TERCİH</span>}
+      <span className="mono">OTORDER.COM · ADİSYON</span>
+      <h3>{plan.name}</h3>
+      <div className="price">₺{price.toLocaleString('tr-TR')}</div>
+      <div className="per">{annual ? '/yıl · 2 ay hediye dahil' : '/ay · yıllıkta 2 ay hediye'}</div>
+      <ul>
         {TICKET_LINES.map(({ label, has }) => {
           const v = has(plan);
           if (v === false)
             return (
-              <li key={label} className="flex justify-between text-ink-muted/50">
-                <span className="line-through decoration-1">{label}</span>
+              <li key={label} className="off">
+                <span>{label}</span>
                 <span aria-hidden="true">·</span>
               </li>
             );
           return (
-            <li key={label} className="flex justify-between gap-3 text-ink-soft">
+            <li key={label}>
               <span>{label}</span>
-              <span className="font-semibold text-brand-700">{typeof v === 'string' ? v : '✓'}</span>
+              {v === true ? <b>✓</b> : <span className="mono">{v}</span>}
             </li>
           );
         })}
       </ul>
-
-      <div className="ticket-rule mt-5 pt-5">
-        <Link
-          to={`/signup?plan=${plan.key}`}
-          className={`${featured ? 'btn-primary' : 'btn-ghost'} w-full`}
-        >
-          {plan.name} ile başla
-        </Link>
-        <p className="mt-3 text-center font-mono text-[10px] text-ink-muted">
-          7 gün deneme · kart gerekmez · KDV dahil
-        </p>
-      </div>
-    </article>
+      <Link to={`/signup?plan=${plan.key}`} className="go">
+        {featured ? `${plan.name} ile başla` : 'Başla'}
+      </Link>
     </div>
   );
 }
 
-// Kuruluş paketi — landing + mobil app birlikte, tek seferlik; 1 yıllık Pro hediye.
-function BundleTicket({ order }: { order: number }) {
+// Kuruluş Paketi — özel tasarım web sitesi + markalı mobil app, tek seferlik; 1 yıl Pro hediye.
+function BundleFis() {
   return (
-    <div className="ticket-print" style={{ ['--i' as never]: order }}>
-      <article className="ticket p-7">
-        <header className="flex items-start justify-between">
-          <div>
-            <p className="font-mono text-[11px] text-ink-muted">otorder.com · adisyon</p>
-            <h3 className="mt-1 text-xl font-extrabold tracking-[-0.01em] text-ink">Kuruluş Paketi</h3>
-          </div>
-          <span className="stamp-in rotate-6 rounded border-2 border-brand-600 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700">
-            en iyi değer
-          </span>
-        </header>
-
-        <p className="mt-5 flex items-baseline gap-1.5">
-          <span className="font-mono text-4xl font-semibold tracking-tight text-ink">₺44.999</span>
-          <span className="text-sm text-ink-muted">tek seferlik</span>
-        </p>
-
-        <ul className="ticket-rule mt-5 space-y-2.5 pt-5 font-mono text-[13px]">
-          {[
-            'Özel tasarım landing page',
-            'Markalı mobil uygulama',
-            '1 yıllık Pro paket hediye (₺5.990)',
-            'Kurulum ve yayına alma bizde',
-          ].map((label) => (
-            <li key={label} className="flex justify-between gap-3 text-ink-soft">
-              <span>{label}</span>
-              <span className="font-semibold text-brand-700">✓</span>
-            </li>
-          ))}
-          <li className="flex justify-between text-ink-muted/70">
-            <span>Ayrı ayrı alana göre ₺10.988 avantaj</span>
-            <span aria-hidden="true">🎁</span>
-          </li>
-        </ul>
-
-        <div className="ticket-rule mt-5 pt-5">
-          <Link to="/signup?plan=PRO" className="btn-ghost w-full">
-            Paketle başla
-          </Link>
-          <p className="mt-3 text-center font-mono text-[10px] text-ink-muted">
-            kayıttan sonra tasarım için biz ulaşırız
-          </p>
-        </div>
-      </article>
+    <div className="fis rv r3">
+      <span className="stamp">EN İYİ DEĞER</span>
+      <span className="mono">OTORDER.COM · KURULUŞ</span>
+      <h3>Kuruluş Paketi</h3>
+      <div className="price">₺44.999</div>
+      <div className="per">tek seferlik</div>
+      <ul>
+        <li>
+          <span>Özel tasarım web sitesi</span>
+          <b>✓</b>
+        </li>
+        <li>
+          <span>Markalı mobil app</span>
+          <b>✓</b>
+        </li>
+        <li>
+          <span>1 yıl Pro hediye</span>
+          <b><IcGift style={{ width: 13, height: 13 }} /></b>
+        </li>
+        <li>
+          <span>Kurulum ve yayına alma bizde</span>
+          <b>✓</b>
+        </li>
+      </ul>
+      <Link to="/signup?plan=PRO" className="go">
+        Paketle başla
+      </Link>
     </div>
   );
 }
@@ -620,38 +864,33 @@ function BundleTicket({ order }: { order: number }) {
 
 function FinalCta() {
   return (
-    <section className="relative overflow-hidden border-t border-line bg-wash py-20 text-center lg:py-24">
-      {/* Süzülen çizim: pizza dilimi, çatal, fesleğen */}
-      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute left-[6%] top-12 h-16 w-16 text-brand-200" style={{ ['--i' as never]: 0 }} aria-hidden="true">
-        <path d="M8 14 L56 26 A34 34 0 0 1 20 56 Z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
-        <circle cx="28" cy="30" r="3.5" fill="currentColor" />
-        <circle cx="38" cy="42" r="3.5" fill="currentColor" />
-      </svg>
-      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute right-[8%] top-20 h-14 w-14 text-brand-200" style={{ ['--i' as never]: 1 }} aria-hidden="true">
-        <path d="M22 6 v16 M30 6 v16 M38 6 v16 M22 22 h16 a0 0 0 0 1 0 0 c0 8 -8 8 -8 14 v22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-      <svg viewBox="0 0 64 64" className="drift pointer-events-none absolute bottom-10 left-[14%] h-12 w-12 text-brand-200" style={{ ['--i' as never]: 2 }} aria-hidden="true">
-        <path d="M32 56 C 12 44, 14 18, 34 8 C 52 18, 52 44, 32 56 Z M32 56 V 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
-      </svg>
-      <div className="container-x relative">
-        <h2 className="reveal mx-auto max-w-[24ch] text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-tight tracking-[-0.025em] text-ink">
-          Bu akşamki servise yetişir.
+    <section id="son">
+      <div className="wrap">
+        <span className="chip rv">
+          <span className="dot" /> Kurulum ortalama 12 dakika
+        </span>
+        <h2 className="rv" style={{ marginTop: 26 }}>
+          Bu akşamki servise <em>yetişir.</em>
         </h2>
-        <p className="reveal mx-auto mt-4 max-w-[42ch] text-ink-soft">
-          Kaydolun, menünüzü şablondan yükleyin, QR kodları basın: sipariş almaya başlayın.
+        <p className="lead rv" style={{ margin: '18px auto 0', textAlign: 'center' }}>
+          Kaydol, menünü yükle, QR kodları bas. Sipariş almaya başla.
         </p>
-        <div className="reveal mt-8">
-          <Link to="/signup" className="btn-primary text-base">Restoranımı oluştur</Link>
+        <div className="rv" style={{ marginTop: 36 }}>
+          <Link to="/signup" className="obtn obtn-red" style={{ fontSize: 17, padding: '18px 40px' }}>
+            Restoranımı oluştur
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-// Örnek siteler — vitrin carouseli (Ekstralar modülünün kanıtı). Kartlar eşit
-// boyda; şerit sağa doğru otomatik akar; ortaya gelen kartta sitenin gerçek
-// ekran görüntüsü yavaşça kayarak önizlenir. Logolar/screenshot'lar
-// scripts/gen-showcase-assets.mjs ile üretilir (public/showcase/).
+/* ============================== GALERİ (Showcase carousel — AYNEN korunur) ============================== */
+
+// Örnek siteler — vitrin carouseli. Kartlar eşit boyda; şerit sağa doğru otomatik
+// akar; ortaya gelen kartta sitenin gerçek ekran görüntüsü yavaşça kayarak
+// önizlenir. Logolar/screenshot'lar scripts/gen-showcase-assets.mjs ile üretilir
+// (public/showcase/).
 const SHOWCASE_SITES: Array<{ key: string; name: string; cuisine: string; url: string; bg: string; accent: string; note: string; logoH: number }> = [
   { key: 'smashe', name: 'smashè club', cuisine: 'Smash burger & matcha', url: 'https://smashe.otorder.com', bg: '#1747D1', accent: '#ffffff', note: 'Royal mavi + pöti kare', logoH: 72 },
   { key: 'ustadoner', name: 'USTA DÖNER', cuisine: 'Dönerci', url: 'https://ustadoner.otorder.com', bg: '#141210', accent: '#ff5a1c', note: 'İs karası + ateş turuncusu', logoH: 40 },
@@ -719,16 +958,17 @@ function Showcase() {
   const activeDot = ((idx % N) + N) % N;
 
   return (
-    <section className="overflow-hidden border-t border-ink/10 bg-white py-20 md:py-28" id="ornekler">
+    <section className="gal-band overflow-hidden" id="ornekler">
       <style>{`
         @keyframes ot-shotpan { from { transform: translateY(0) } to { transform: translateY(calc(-100% + ${SHOT_H}px)) } }
         .ot-shot { animation: ot-shotpan 12s ease-in-out infinite alternate; will-change: transform; }
         @media (prefers-reduced-motion: reduce) { .ot-shot { animation: none } }
       `}</style>
-      <div className="container-x">
-        <h2 className="text-center text-3xl font-bold text-ink md:text-4xl">Örnek siteler</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-ink-soft">
-          Özel Tasarım Landing modülüyle her marka kendi dünyasına kavuşur. Hepsi canlı — ortadaki kart siteyi otomatik önizler, tıkla ve gez:
+      <div className="wrap">
+        <span className="kicker rv">Galeri</span>
+        <h2 className="rv">Her marka, kendi dünyası.</h2>
+        <p className="lead rv">
+          Özel tasarım web sitesi örnekleri. Hepsi canlı, ortadaki kart siteyi otomatik önizler.
         </p>
       </div>
       <div

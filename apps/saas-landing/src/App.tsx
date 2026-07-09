@@ -6,25 +6,20 @@ import SetPassword from './pages/SetPassword';
 import { BASE_DOMAIN } from './lib/api';
 
 function Logo({ className = '' }: { className?: string }) {
+  // Prototipteki wordmark: OtOrder + kırmızı nokta (Sora 800)
   return (
-    <span className={`inline-flex items-center gap-2.5 font-extrabold tracking-[-0.02em] text-ink ${className}`}>
-      {/* Tabak markası: dış tabak + servis çizgisi */}
-      <svg viewBox="0 0 28 28" className="h-8 w-8" aria-hidden="true">
-        <circle cx="14" cy="14" r="13" fill="#bb1e10" />
-        <circle cx="14" cy="14" r="8.5" fill="none" stroke="white" strokeWidth="2" />
-        <circle cx="14" cy="14" r="3" fill="white" />
-      </svg>
-      OtOrder
+    <span className={`wordmark-ot ${className}`}>
+      OtOrder<b>.</b>
     </span>
   );
 }
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-md">
-      <nav className="container-x flex h-16 items-center justify-between" aria-label="Ana gezinme">
-        <Link to="/" aria-label="OtOrder ana sayfa" className="group">
-          <Logo className="[&>svg]:transition-transform [&>svg]:duration-500 [&>svg]:ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:[&>svg]:rotate-180" />
+    <header className="sticky top-0 z-50 border-b border-[rgba(21,23,28,0.09)] bg-[rgba(251,250,248,0.8)] backdrop-blur-[14px]">
+      <nav className="mx-auto flex h-16 w-full max-w-[1220px] items-center justify-between px-5 sm:px-11" aria-label="Ana gezinme">
+        <Link to="/" aria-label="OtOrder ana sayfa">
+          <Logo />
         </Link>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <a href="/#fiyatlar" className="hidden px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink sm:block">
@@ -33,7 +28,10 @@ function Nav() {
           <Link to="/login" className="px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink">
             Giriş yap
           </Link>
-          <Link to="/signup" className="btn-primary px-5 py-2.5 text-sm">
+          <Link
+            to="/signup"
+            className="inline-flex items-center rounded-[14px] bg-[#D92B1C] px-[22px] py-[11px] text-sm font-bold text-white shadow-[0_14px_34px_-12px_rgba(217,43,28,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_-12px_rgba(217,43,28,0.6)]"
+          >
             Ücretsiz dene
           </Link>
         </div>

@@ -23,7 +23,7 @@ const FEATURE_LABELS: Record<string, string> = {
   loyalty: 'Sadakat programı', campaigns: 'Kampanyalar', analytics: 'Analitik',
   whatsappLink: 'WhatsApp modülü bağlama', whatsappAI: 'Yapay zekâ WhatsApp asistanı',
   brandedApp: 'Markalı mobil app',
-  customLanding: 'Özel tasarım landing', marketplace: 'Pazaryeri entegrasyonları',
+  customLanding: 'Özel tasarım web sitesi', marketplace: 'Pazaryeri entegrasyonları',
 };
 
 export default function Billing() {
@@ -247,7 +247,7 @@ export default function Billing() {
         <p className="text-sm text-gray-500 mb-4">Her pakete eklenebilir — tek seferlik ödeme, abonelikten bağımsız.</p>
         <div className="grid gap-3 md:grid-cols-2">
           {[
-            { key: 'landing', owned: !!addons.landing, icon: '🎨', t: 'Özel Tasarım Landing Page', d: 'Markana özel elle tasarlanmış tanıtım sitesi (örn. smashe.otorder.com).' },
+            { key: 'landing', owned: !!addons.landing, icon: '🎨', t: 'Özel Tasarım Web Sitesi', d: 'Markana özel elle tasarlanmış tanıtım sitesi (örn. smashe.otorder.com).' },
             { key: 'mobile', owned: !!addons.mobileApp, icon: '📱', t: 'Markalı Mobil Uygulama', d: 'App Store + Google Play\'de kendi adınla; push bildirim ve sadakat dahil.' },
           ].map((x) => (
             <div key={x.key} className="rounded-xl border border-gray-200 p-4 flex flex-col">
