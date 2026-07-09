@@ -16,7 +16,11 @@ const PLANS = [
     features: { loyalty: false, campaigns: false, analytics: false, whatsappLink: false, brandedApp: false, customLanding: false, marketplace: false } },
   { key: 'PRO', name: 'Pro', monthlyPrice: 599, annualPrice: 5990, maxLocations: -1, maxUsers: -1, sortOrder: 2,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: false, customLanding: false, marketplace: true } },
-  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 4990, annualPrice: 49900, maxLocations: -1, maxUsers: -1, sortOrder: 3, active: false,
+  // whatsappAI: yapay zekâ WhatsApp asistanı (whatsapp.otorder.com) — bu plana
+  // sahip tenant'ın sahibi oraya POS e-posta+şifresiyle girer, oto-bağlanır.
+  { key: 'AI', name: 'Pro AI', monthlyPrice: 999, annualPrice: 9990, maxLocations: -1, maxUsers: -1, sortOrder: 3,
+    features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, whatsappAI: true, brandedApp: false, customLanding: false, marketplace: true } },
+  { key: 'ENTERPRISE', name: 'Kurumsal', monthlyPrice: 4990, annualPrice: 49900, maxLocations: -1, maxUsers: -1, sortOrder: 4, active: false,
     features: { loyalty: true, campaigns: true, analytics: true, whatsappLink: true, brandedApp: true, customLanding: true, marketplace: true } },
 ];
 

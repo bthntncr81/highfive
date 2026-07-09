@@ -452,9 +452,9 @@ function Pricing({ plans, annual, onToggle }: { plans: Plan[]; annual: boolean; 
           </div>
         </div>
 
-        <div className="mt-14 grid gap-8 md:grid-cols-3">
+        <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {plans.length === 0 && (
-            <p className="col-span-3 text-center text-ink-muted">Planlar yükleniyor…</p>
+            <p className="col-span-full text-center text-ink-muted">Planlar yükleniyor…</p>
           )}
           {plans.map((p, i) => (
             <PlanTicket key={p.key} plan={p} annual={annual} featured={i === 1} order={i} />
@@ -498,6 +498,7 @@ const TICKET_LINES: Array<{ label: string; has: (p: Plan) => boolean | string }>
   { label: 'Sadakat + kampanyalar', has: (p) => !!p.features.loyalty },
   { label: 'Analitik raporlar', has: (p) => !!p.features.analytics },
   { label: 'WhatsApp modülü bağlama', has: (p) => !!p.features.whatsappLink },
+  { label: 'Yapay zekâ WhatsApp asistanı', has: (p) => !!p.features.whatsappAI },
   // Landing ve mobil app plan özelliği değil, tek seferlik Ekstra modül
   { label: 'Markalı mobil uygulama', has: () => 'ekstra' },
   { label: 'Özel tasarım landing', has: () => 'ekstra' },

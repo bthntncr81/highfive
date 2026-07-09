@@ -21,7 +21,8 @@ interface Tx { id: string; type: string; amount: number; success: boolean; creat
 
 const FEATURE_LABELS: Record<string, string> = {
   loyalty: 'Sadakat programı', campaigns: 'Kampanyalar', analytics: 'Analitik',
-  whatsappLink: 'WhatsApp modülü bağlama', brandedApp: 'Markalı mobil app',
+  whatsappLink: 'WhatsApp modülü bağlama', whatsappAI: 'Yapay zekâ WhatsApp asistanı',
+  brandedApp: 'Markalı mobil app',
   customLanding: 'Özel tasarım landing', marketplace: 'Pazaryeri entegrasyonları',
 };
 
