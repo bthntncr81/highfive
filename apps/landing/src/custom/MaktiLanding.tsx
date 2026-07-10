@@ -1,5 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { useCart } from '../lib/cartStore'
+import { useLoyalty } from '../lib/loyaltyStore'
+import { useSettings } from '../hooks/useSettings'
+import { orderApi, imageUrl, type Category, type MenuItem as APIMenuItem } from '../lib/api'
 
 // ─────────────────────────────────────────────────────────────────────
 // MAK-TI — premium hand-coded tenant landing (customLanding: "makti").
@@ -100,6 +105,34 @@ const IconArrow = ({ className = '', style }: IconProps) => (
   <svg {...ico} className={className} style={style} aria-hidden="true">
     <path d="M4 12h15" />
     <path d="M13 6l6 6-6 6" />
+  </svg>
+)
+
+const IconBasket = ({ className = '', style }: IconProps) => (
+  <svg {...ico} className={className} style={style} aria-hidden="true">
+    <path d="M4.5 9h15l-1.3 9.2a2 2 0 0 1-2 1.8H7.8a2 2 0 0 1-2-1.8L4.5 9Z" />
+    <path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2" />
+  </svg>
+)
+
+const IconPlus = ({ className = '', style }: IconProps) => (
+  <svg {...ico} className={className} style={style} aria-hidden="true">
+    <path d="M12 5.5v13" />
+    <path d="M5.5 12h13" />
+  </svg>
+)
+
+const IconUser = ({ className = '', style }: IconProps) => (
+  <svg {...ico} className={className} style={style} aria-hidden="true">
+    <circle cx="12" cy="8" r="3.6" />
+    <path d="M5 20a7 7 0 0 1 14 0" />
+  </svg>
+)
+
+const IconX = ({ className = '', style }: IconProps) => (
+  <svg {...ico} className={className} style={style} aria-hidden="true">
+    <path d="M6 6l12 12" />
+    <path d="M18 6L6 18" />
   </svg>
 )
 
@@ -230,8 +263,405 @@ const MENU_BOARD: { cat: string; items: { n: string; p: number }[] }[] = [
 
 const MARQUEE = ['MAKARNA', 'MANTI', 'AUTHENTİC ITALİAN PASTA', 'KDZ. EREĞLİ', '12:00 – 03:00']
 
+// ── Live-menu helpers ────────────────────────────────────────────────
+const norm = (s: string) => s.toLocaleLowerCase('tr').trim()
+
+// Effective price: discountPrice wins when it is lower than the base price.
+const priceOf = (item: APIMenuItem): number => {
+  const base = Number(item.price)
+  const disc = item.discountPrice != null ? Number(item.discountPrice) : NaN
+  return Number.isFinite(disc) && disc < base ? disc : base
+}
+
+// ₺ display matching the existing static pattern (integers stay bare).
+const tl = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace('.', ','))
+
+// Absolute image URL, ignoring generic placeholders (same rule as MenuGridFromAPI).
+const realImage = (path?: string): string => {
+  if (!path || path.startsWith('/placeholders/')) return ''
+  return imageUrl(path) || ''
+}
+
+type LiveMenu = { categories: Category[]; items: APIMenuItem[] }
+
+type SignatureCard = {
+  key: string
+  name: string
+  price: number
+  desc: string
+  photo: string
+  alt: string
+  tag?: string
+  apiItem: APIMenuItem | null // null → static fallback, no add-to-cart
+}
+
+type BoardRow = { n: string; p: number; apiItem: APIMenuItem | null }
+type BoardGroup = { cat: string; items: BoardRow[] }
+
+// Menu-board row: name … dotted leader … price, plus a small mint "+" when
+// the row is backed by a live API item and ordering is open.
+const BoardLine = ({
+  row,
+  canAdd,
+  onAdd,
+}: {
+  row: BoardRow
+  canAdd: boolean
+  onAdd: (item: APIMenuItem) => void
+}) => {
+  const item = row.apiItem
+  return (
+    <div className="flex items-baseline gap-3 text-[15px]">
+      <span className="font-semibold">{row.n}</span>
+      <span className="flex-1 border-b border-dotted" style={{ borderColor: 'rgba(242,244,236,0.25)' }} aria-hidden="true" />
+      <span className="mkt-display font-semibold" style={{ color: MINT }}>₺{tl(row.p)}</span>
+      {canAdd && item && item.available !== false && (
+        <button
+          type="button"
+          onClick={() => onAdd(item)}
+          aria-label={`Sepete ekle: ${row.n}`}
+          className="grid h-7 w-7 shrink-0 place-items-center self-center rounded-full border transition-colors hover:bg-white/5"
+          style={{ borderColor: 'rgba(127,227,168,0.45)', color: MINT }}
+        >
+          <IconPlus className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Membership modal (MAK-TI skin over the shared loyalty store) ─────
+// Phone-first flow: lookup via login(phone); unknown numbers open a name
+// field and go through register(phone, name). Logged-in members see their
+// name + points and can log out. Rendered through a portal, dark-green panel.
+const MemberModal = ({ onClose }: { onClose: () => void }) => {
+  const { member, login, register, logout } = useLoyalty()
+  const [step, setStep] = useState<'phone' | 'register' | 'success'>('phone')
+  const [phone, setPhone] = useState('')
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // Auto-close shortly after a successful login/register.
+  useEffect(() => {
+    if (step !== 'success') return
+    const t = setTimeout(onClose, 1400)
+    return () => clearTimeout(t)
+  }, [step, onClose])
+
+  const handlePhone = async () => {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 10) {
+      setError('Geçerli bir telefon numarası gir')
+      return
+    }
+    setBusy(true)
+    setError('')
+    const ok = await login(digits)
+    setBusy(false)
+    if (ok) {
+      setStep('success')
+    } else {
+      // Unknown number → collect the name and register.
+      setStep('register')
+    }
+  }
+
+  const handleRegister = async () => {
+    if (!name.trim()) {
+      setError('Adını yaz')
+      return
+    }
+    setBusy(true)
+    setError('')
+    const res = await register(phone.replace(/\D/g, ''), name.trim())
+    setBusy(false)
+    if (res.success) {
+      setStep('success')
+    } else {
+      setError(res.error || 'Kayıt başarısız')
+    }
+  }
+
+  const showSuccess = step === 'success'
+  const showAccount = !showSuccess && !!member
+
+  return createPortal(
+    <div
+      className="mkt fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="MAK-TI üyelik"
+      style={{ background: 'rgba(8,28,21,0.78)', backdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-3xl"
+        style={{
+          background: `linear-gradient(150deg, #0D2B1E 0%, ${PINE} 100%)`,
+          border: '1px solid rgba(127,227,168,0.3)',
+          color: CREAM,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="h-[3px] w-full" style={{ background: TRICOLOR }} aria-hidden="true" />
+        <div className="relative p-7">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Kapat"
+            className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border transition-colors hover:bg-white/5"
+            style={{ borderColor: 'rgba(242,244,236,0.25)', color: 'rgba(242,244,236,0.8)' }}
+          >
+            <IconX className="h-4 w-4" />
+          </button>
+
+          {showSuccess ? (
+            <div className="py-6 text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-full" style={{ background: 'rgba(127,227,168,0.15)', color: MINT }}>
+                <IconLeaf className="h-6 w-6" />
+              </div>
+              <h3 className="mkt-display mt-4 text-2xl font-semibold">
+                Hoş geldin{member?.name ? `, ${member.name}` : ''}!
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: 'rgba(242,244,236,0.7)' }}>
+                Üyeliğin hazır — her siparişte puan kazanırsın.
+              </p>
+              {member && (
+                <span className="mkt-display mt-4 inline-block rounded-full px-4 py-1.5 text-lg font-semibold" style={{ background: MINT, color: PINE }}>
+                  {member.totalPoints} Puan
+                </span>
+              )}
+            </div>
+          ) : showAccount && member ? (
+            <div>
+              <div className="flex items-center gap-4">
+                <div className="mkt-display grid h-14 w-14 shrink-0 place-items-center rounded-full text-2xl font-semibold" style={{ background: MINT, color: PINE }}>
+                  {(member.name || 'Ü')[0].toLocaleUpperCase('tr')}
+                </div>
+                <div>
+                  <h3 className="mkt-display text-2xl font-semibold">{member.name || 'Üye'}</h3>
+                  {member.phone && (
+                    <p className="text-sm" style={{ color: 'rgba(242,244,236,0.65)' }}>{member.phone}</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-6 flex items-center justify-between rounded-2xl border px-5 py-4" style={{ borderColor: 'rgba(127,227,168,0.3)' }}>
+                <span className="text-sm font-bold" style={{ color: 'rgba(242,244,236,0.75)' }}>Puanın</span>
+                <span className="mkt-display text-2xl font-semibold" style={{ color: MINT }}>{member.totalPoints}</span>
+              </div>
+              <p className="mt-3 text-xs" style={{ color: 'rgba(242,244,236,0.55)' }}>
+                {member.totalPoints >= 100
+                  ? `${Math.floor(member.totalPoints / 100) * 10}₺ indirim kullanabilirsin.`
+                  : `100 puana ${100 - member.totalPoints} puan kaldı.`}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  setStep('phone')
+                  setPhone('')
+                  setName('')
+                  setError('')
+                }}
+                className="mt-6 w-full rounded-full border px-6 py-3 text-sm font-bold transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(242,244,236,0.3)', color: CREAM }}
+              >
+                Çıkış Yap
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (busy) return
+                if (step === 'phone') handlePhone()
+                else handleRegister()
+              }}
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: MINT }}>MAK-TI Üyelik</p>
+              <h3 className="mkt-display mt-3 text-2xl font-semibold">
+                {step === 'phone' ? 'Üye ol, puan kazan' : 'Seni tanıyalım'}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: 'rgba(242,244,236,0.7)' }}>
+                {step === 'phone'
+                  ? 'Telefon numaranla giriş yap; her siparişte puan birikir.'
+                  : 'Bu numara kayıtlı değil — adını yaz, üyeliğini hemen oluşturalım.'}
+              </p>
+              <label className="mt-5 block text-sm font-bold" htmlFor="mkt-member-phone">Telefon</label>
+              <input
+                id="mkt-member-phone"
+                type="tel"
+                inputMode="tel"
+                autoFocus
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="05xx xxx xx xx"
+                disabled={step === 'register'}
+                className="mt-1.5 w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none disabled:opacity-60"
+                style={{ borderColor: 'rgba(127,227,168,0.35)', color: CREAM }}
+              />
+              {step === 'register' && (
+                <>
+                  <label className="mt-4 block text-sm font-bold" htmlFor="mkt-member-name">Adın</label>
+                  <input
+                    id="mkt-member-name"
+                    type="text"
+                    autoFocus
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Adın Soyadın"
+                    className="mt-1.5 w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none"
+                    style={{ borderColor: 'rgba(127,227,168,0.35)', color: CREAM }}
+                  />
+                </>
+              )}
+              {error && (
+                <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(201,59,46,0.18)', color: '#F5B7A6' }}>
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={busy}
+                className="mt-6 w-full rounded-full px-6 py-3.5 text-base font-extrabold transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+                style={{ background: BASIL, color: NIGHT }}
+              >
+                {busy ? 'Bekle...' : step === 'phone' ? 'Devam Et' : 'Üye Ol'}
+              </button>
+              {step === 'register' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('phone')
+                    setError('')
+                  }}
+                  className="mt-3 w-full text-xs font-bold transition-opacity hover:opacity-80"
+                  style={{ color: 'rgba(242,244,236,0.6)' }}
+                >
+                  Numarayı değiştir
+                </button>
+              )}
+            </form>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 export const MaktiLanding = () => {
   const rootRef = useRef<HTMLElement>(null)
+  const { addItemFromAPI, totalItems, openCart } = useCart()
+  const { member } = useLoyalty()
+  const { services, isWithinOrderHours } = useSettings()
+  const [memberOpen, setMemberOpen] = useState(false)
+  const [menu, setMenu] = useState<LiveMenu | null>(null)
+
+  // Ordering gate — same condition the global cart button/drawer uses.
+  const cartOk = services.cartEnabled && isWithinOrderHours
+
+  // Fetch the live menu once on mount; on failure the static content stays.
+  useEffect(() => {
+    let alive = true
+    orderApi
+      .getMenu()
+      .then((res) => {
+        if (!alive || !res.success || !res.data?.items?.length) return
+        setMenu({ categories: res.data.categories ?? [], items: res.data.items })
+      })
+      .catch(() => {
+        /* static fallback keeps rendering */
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const handleAdd = useCallback(
+    (item: APIMenuItem) => {
+      addItemFromAPI({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        price: priceOf(item),
+        image: realImage(item.image),
+        categoryId: item.category?.id || '',
+        badges: item.badges || [],
+      })
+      openCart()
+    },
+    [addItemFromAPI, openCart]
+  )
+
+  // Six signature cards: featured items first, filled from the rest. Layout
+  // slots (span/aspect/offset) always come from the static SIGNATURES grid so
+  // the approved composition never changes; static entries matched by name
+  // donate their curated photo/desc/tag when the API item lacks them.
+  const signatureCards: SignatureCard[] = useMemo(() => {
+    const fallback: SignatureCard[] = SIGNATURES.map((s) => ({
+      key: s.name,
+      name: s.name,
+      price: s.price,
+      desc: s.desc,
+      photo: s.photo,
+      alt: s.alt,
+      tag: s.tag,
+      apiItem: null,
+    }))
+    if (!menu || menu.items.length === 0) return fallback
+    const available = menu.items.filter((i) => i.available !== false)
+    const pool = available.length >= 6 ? available : [...available, ...menu.items.filter((i) => i.available === false)]
+    const picks = [...pool.filter((i) => i.featured), ...pool.filter((i) => !i.featured)].slice(0, 6)
+    return SIGNATURES.map((slot, i) => {
+      const item = picks[i]
+      if (!item) return fallback[i]
+      const match = SIGNATURES.find((s) => norm(s.name) === norm(item.name))
+      return {
+        key: item.id,
+        name: item.name,
+        price: priceOf(item),
+        desc: item.description || match?.desc || '',
+        photo: realImage(item.image) || match?.photo || slot.photo,
+        alt: match?.alt || item.name,
+        tag: match?.tag,
+        apiItem: item,
+      }
+    })
+  }, [menu])
+
+  // Menu board grouped by live categories (sortOrder), static list as fallback.
+  const board: BoardGroup[] = useMemo(() => {
+    const fallback: BoardGroup[] = MENU_BOARD.map((c) => ({
+      cat: c.cat,
+      items: c.items.map((it) => ({ n: it.n, p: it.p, apiItem: null })),
+    }))
+    if (!menu || menu.items.length === 0) return fallback
+    const sort = new Map(menu.categories.map((c, i) => [c.id, c.sortOrder ?? i]))
+    const groups = new Map<string, { cat: string; sort: number; items: BoardRow[] }>()
+    menu.items.forEach((item) => {
+      const id = item.category?.id || 'other'
+      if (!groups.has(id)) {
+        groups.set(id, {
+          cat: menu.categories.find((c) => c.id === id)?.name || item.category?.name || 'Menü',
+          sort: sort.get(id) ?? 999,
+          items: [],
+        })
+      }
+      groups.get(id)!.items.push({ n: item.name, p: priceOf(item), apiItem: item })
+    })
+    const live = [...groups.values()].sort((a, b) => a.sort - b.sort).map(({ cat, items }) => ({ cat, items }))
+    return live.length ? live : fallback
+  }, [menu])
 
   useEffect(() => {
     document.title = 'MAK-TI · Makarna & Mantı — Kdz. Ereğli'
@@ -315,7 +745,8 @@ export const MaktiLanding = () => {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <a href="#top" className="flex items-center gap-3">
             <img src="/makti/logo-circle.png" alt="MAK-TI logo" className="h-10 w-10" />
-            <span className="leading-none">
+            {/* Wordmark yields to the new cart/member buttons on very narrow screens */}
+            <span className="hidden leading-none min-[480px]:block">
               <span className="mkt-display block text-lg font-semibold tracking-wide">MAK-TI</span>
               <span className="block text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: MINT }}>
                 Makarna &amp; Mantı
@@ -325,16 +756,67 @@ export const MaktiLanding = () => {
           <nav className="hidden items-center gap-7 text-[15px] font-semibold md:flex" style={{ color: 'rgba(242,244,236,0.85)' }}>
             <a href="#lezzetler" className="hover:text-white">Lezzetler</a>
             <a href="#iki-dunya" className="hover:text-white">İki Dünya</a>
-            <a href="#menu-panosu" className="hover:text-white">Menü</a>
+            <Link to="/menu" className="hover:text-white">Menü</Link>
             <a href="#konum" className="hover:text-white">Konum</a>
           </nav>
-          <Link
-            to="/menu"
-            className="rounded-full px-5 py-2.5 text-[15px] font-bold transition-transform hover:-translate-y-0.5"
-            style={{ background: BASIL, color: NIGHT }}
-          >
-            Sipariş Ver
-          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {cartOk && (
+              <button
+                type="button"
+                onClick={openCart}
+                aria-label={`Sepeti aç${totalItems > 0 ? ` (${totalItems} ürün)` : ''}`}
+                className="relative grid h-10 w-10 place-items-center rounded-full border transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
+              >
+                <IconBasket className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span
+                    className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center rounded-full px-1 text-[11px] font-extrabold leading-none"
+                    style={{ background: MINT, color: PINE }}
+                  >
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </span>
+                )}
+              </button>
+            )}
+            {member ? (
+              <button
+                type="button"
+                onClick={() => setMemberOpen(true)}
+                aria-label="Hesabım"
+                className="flex items-center gap-2 rounded-full border p-1.5 transition-colors hover:bg-white/5 sm:pr-4"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: CREAM }}
+              >
+                <span className="mkt-display grid h-7 w-7 place-items-center rounded-full text-sm font-semibold" style={{ background: MINT, color: PINE }}>
+                  {(member.name || 'Ü')[0].toLocaleUpperCase('tr')}
+                </span>
+                <span className="hidden text-left leading-tight sm:block">
+                  <span className="block text-[13px] font-bold leading-none">{member.name || 'Üye'}</span>
+                  <span className="mt-0.5 block text-[11px] font-bold leading-none" style={{ color: MINT }}>
+                    {member.totalPoints} puan
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMemberOpen(true)}
+                aria-label="Üye ol"
+                className="flex h-10 items-center gap-2 rounded-full border px-3 text-sm font-bold transition-colors hover:bg-white/5 sm:px-4"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
+              >
+                <IconUser className="h-5 w-5" />
+                <span className="hidden sm:inline">Üye Ol</span>
+              </button>
+            )}
+            <Link
+              to="/menu"
+              className="rounded-full px-5 py-2.5 text-[15px] font-bold transition-transform hover:-translate-y-0.5"
+              style={{ background: BASIL, color: NIGHT }}
+            >
+              Sipariş Ver
+            </Link>
+          </div>
         </div>
         <div className="h-[2px] w-full opacity-80" style={{ background: TRICOLOR }} aria-hidden="true" />
       </header>
@@ -384,6 +866,16 @@ export const MaktiLanding = () => {
               >
                 Sipariş Ver <IconArrow className="h-5 w-5" />
               </Link>
+              {!member && (
+                <button
+                  type="button"
+                  onClick={() => setMemberOpen(true)}
+                  className="inline-flex items-center gap-2.5 rounded-full border px-8 py-4 text-base font-bold transition-colors hover:bg-white/5"
+                  style={{ borderColor: 'rgba(127,227,168,0.45)', color: MINT }}
+                >
+                  <IconUser className="h-5 w-5" /> Üye Ol &amp; Puan Kazan
+                </button>
+              )}
               <a
                 href="#lezzetler"
                 className="rounded-full border px-8 py-4 text-base font-bold transition-colors hover:bg-white/5"
@@ -470,38 +962,60 @@ export const MaktiLanding = () => {
           </div>
 
           <div className="mt-14 grid gap-x-8 gap-y-12 md:grid-cols-12">
-            {SIGNATURES.map((d) => (
-              <article key={d.name} data-reveal className={`mkt-dish ${d.span} ${d.offset ?? ''}`}>
-                <div className={`relative overflow-hidden rounded-2xl ${d.aspect}`}>
-                  <img src={d.photo} alt={d.alt} loading="lazy" className="h-full w-full object-cover" />
-                  <div
-                    className="pointer-events-none absolute inset-0"
-                    style={{ background: 'linear-gradient(180deg, rgba(8,28,21,0.05) 40%, rgba(8,28,21,0.82) 100%)' }}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className="mkt-display absolute right-4 top-4 rounded-full px-3.5 py-1 text-base font-semibold"
-                    style={{ background: MINT, color: PINE }}
-                  >
-                    ₺{d.price}
-                  </span>
-                  {d.tag && (
+            {signatureCards.map((d, i) => {
+              const slot = SIGNATURES[i]
+              const canAdd = !!d.apiItem && d.apiItem.available !== false
+              return (
+                <article key={d.key} data-reveal className={`mkt-dish ${slot.span} ${slot.offset ?? ''}`}>
+                  <div className={`relative overflow-hidden rounded-2xl ${slot.aspect}`}>
+                    <img src={d.photo} alt={d.alt} loading="lazy" className="h-full w-full object-cover" />
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{ background: 'linear-gradient(180deg, rgba(8,28,21,0.05) 40%, rgba(8,28,21,0.82) 100%)' }}
+                      aria-hidden="true"
+                    />
                     <span
-                      className="absolute left-4 top-4 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                      style={{ borderColor: 'rgba(242,244,236,0.4)', color: CREAM, background: 'rgba(8,28,21,0.45)' }}
+                      className="mkt-display absolute right-4 top-4 rounded-full px-3.5 py-1 text-base font-semibold"
+                      style={{ background: MINT, color: PINE }}
                     >
-                      {d.tag}
+                      ₺{tl(d.price)}
                     </span>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 p-5">
-                    <h3 className="mkt-display text-xl font-semibold md:text-2xl">{d.name}</h3>
-                    <p className="mt-1.5 max-w-md text-[15px] leading-relaxed" style={{ color: 'rgba(242,244,236,0.78)' }}>
-                      {d.desc}
-                    </p>
+                    {d.tag && (
+                      <span
+                        className="absolute left-4 top-4 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                        style={{ borderColor: 'rgba(242,244,236,0.4)', color: CREAM, background: 'rgba(8,28,21,0.45)' }}
+                      >
+                        {d.tag}
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 p-5">
+                      <h3 className="mkt-display text-xl font-semibold md:text-2xl">{d.name}</h3>
+                      <p className="mt-1.5 max-w-md text-[15px] leading-relaxed" style={{ color: 'rgba(242,244,236,0.78)' }}>
+                        {d.desc}
+                      </p>
+                      {canAdd && cartOk && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdd(d.apiItem!)}
+                          className="mt-3.5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold transition-transform hover:-translate-y-0.5"
+                          style={{ background: MINT, color: PINE }}
+                        >
+                          <IconBasket className="h-4 w-4" /> Sepete Ekle
+                        </button>
+                      )}
+                      {canAdd && !cartOk && (
+                        <span
+                          className="mt-3.5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold"
+                          style={{ borderColor: 'rgba(242,244,236,0.35)', color: 'rgba(242,244,236,0.8)' }}
+                        >
+                          <IconClock className="h-3.5 w-3.5" /> Şu an kapalıyız · 12:00–03:00
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            })}
           </div>
 
           <div data-reveal className="mt-16 text-center">
@@ -647,32 +1161,24 @@ export const MaktiLanding = () => {
           <div className="mt-12 grid gap-x-14 gap-y-12 md:grid-cols-2">
             <div data-reveal>
               <h3 className="mkt-display text-xl font-semibold" style={{ color: MINT }}>
-                {MENU_BOARD[0].cat}
+                {board[0].cat}
               </h3>
               <div className="mt-5 space-y-3.5">
-                {MENU_BOARD[0].items.map((it) => (
-                  <div key={it.n} className="flex items-baseline gap-3 text-[15px]">
-                    <span className="font-semibold">{it.n}</span>
-                    <span className="flex-1 border-b border-dotted" style={{ borderColor: 'rgba(242,244,236,0.25)' }} aria-hidden="true" />
-                    <span className="mkt-display font-semibold" style={{ color: MINT }}>₺{it.p}</span>
-                  </div>
+                {board[0].items.map((it) => (
+                  <BoardLine key={it.apiItem?.id ?? it.n} row={it} canAdd={cartOk} onAdd={handleAdd} />
                 ))}
               </div>
             </div>
 
             <div className="space-y-12">
-              {MENU_BOARD.slice(1).map((cat) => (
+              {board.slice(1).map((cat) => (
                 <div key={cat.cat} data-reveal>
                   <h3 className="mkt-display text-xl font-semibold" style={{ color: MINT }}>
                     {cat.cat}
                   </h3>
                   <div className="mt-5 space-y-3.5">
                     {cat.items.map((it) => (
-                      <div key={it.n} className="flex items-baseline gap-3 text-[15px]">
-                        <span className="font-semibold">{it.n}</span>
-                        <span className="flex-1 border-b border-dotted" style={{ borderColor: 'rgba(242,244,236,0.25)' }} aria-hidden="true" />
-                        <span className="mkt-display font-semibold" style={{ color: MINT }}>₺{it.p}</span>
-                      </div>
+                      <BoardLine key={it.apiItem?.id ?? it.n} row={it} canAdd={cartOk} onAdd={handleAdd} />
                     ))}
                   </div>
                 </div>
@@ -831,6 +1337,9 @@ export const MaktiLanding = () => {
           </p>
         </div>
       </footer>
+
+      {/* Membership modal (portal) — shared loyalty store, MAK-TI skin */}
+      {memberOpen && <MemberModal onClose={() => setMemberOpen(false)} />}
     </main>
   )
 }

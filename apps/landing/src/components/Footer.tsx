@@ -2,10 +2,15 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useContent } from '../lib/contentStore'
 import { useSettings } from '../hooks/useSettings'
+import { useTheme } from '../hooks/useTheme'
+import { imageUrl } from '../lib/api'
 
 export const Footer = () => {
   const { content } = useContent()
   const { whatsappEnabled } = useSettings()
+  // Beyaz-etiket: tenant logosu varsa o, yoksa metin wordmark — sabit marka dosyası asla
+  const theme = useTheme()
+  const brandLogo = imageUrl(theme?.logoUrl)
 
   const currentYear = new Date().getFullYear()
 
@@ -17,13 +22,19 @@ export const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="inline-block mb-6 group">
-              <motion.img
-                src="/logo-white.svg"
-                alt={content.site.logoText}
-                className="h-20 w-auto"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-              />
+              {brandLogo ? (
+                <motion.img
+                  src={brandLogo}
+                  alt={content.site.logoText}
+                  className="h-20 w-auto"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.3 }}
+                />
+              ) : (
+                <span className="font-display text-3xl font-bold text-white">
+                  {content.site.logoText}
+                </span>
+              )}
             </Link>
             <p className="font-body text-white/70 mb-6 max-w-xs">
               {content.site.tagline}
