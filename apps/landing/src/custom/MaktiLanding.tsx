@@ -899,13 +899,18 @@ export const MaktiLanding = () => {
         'content',
         "MAK-TI, Kdz. Ereğli'de İtalyan makarnası ve el açması Kayseri mantısı. Authentic Italian Pasta — her gün 12:00'den gece 03:00'e kadar açık. Online sipariş ver."
       )
+  }, [])
 
-    // Reveal-on-scroll: the hidden initial state only activates once JS adds
-    // .mkt-js — without JS everything stays visible (no opacity gate risk).
+  // Reveal-on-scroll: the hidden initial state only activates once JS adds
+  // .mkt-js — without JS everything stays visible (no opacity gate risk).
+  // Re-runs when the live menu arrives: the API data re-renders the signature
+  // grid / menu board with NEW elements that the mount-time observer never
+  // saw — without re-observing they would stay at opacity 0 forever.
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
     root.classList.add('mkt-js')
-    const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'))
+    const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]:not(.mkt-in)'))
     if (!('IntersectionObserver' in window)) {
       els.forEach((el) => el.classList.add('mkt-in'))
       return
@@ -923,7 +928,7 @@ export const MaktiLanding = () => {
     )
     els.forEach((el) => io.observe(el))
     return () => io.disconnect()
-  }, [])
+  }, [menu])
 
   // Arriving from another page via a /#section link (MaktiNav dual-mode
   // anchors): smooth-scroll to the target once the content has rendered.
