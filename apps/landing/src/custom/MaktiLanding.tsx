@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useCart } from '../lib/cartStore'
 import { useLoyalty } from '../lib/loyaltyStore'
 import { useSettings } from '../hooks/useSettings'
@@ -559,9 +559,237 @@ const MemberModal = ({ onClose }: { onClose: () => void }) => {
   )
 }
 
+// ── Shared chrome styles ─────────────────────────────────────────────
+// MaktiNav/MaktiFooter render on every page as App-level chrome (see
+// CUSTOM_CHROME in custom/index.ts), so the font stack and base classes they
+// need live here instead of MaktiLanding's page-only <style>. Rendering this
+// from several components at once is harmless — identical CSS text.
+const MAKTI_CHROME_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+  .mkt { font-family: 'Manrope', system-ui, sans-serif; }
+  .mkt-display { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.015em; }
+`
+
+const MaktiChromeStyles = () => <style>{MAKTI_CHROME_CSS}</style>
+
+// Dual-mode section link: plain hash anchor on the root route (native in-page
+// jump), router link to /#hash from any other page — MaktiLanding then
+// smooth-scrolls to the target after mount (see its hash effect).
+const NavAnchor = ({
+  hash,
+  className,
+  children,
+}: {
+  hash: string
+  className?: string
+  children: React.ReactNode
+}) => {
+  const { pathname } = useLocation()
+  return pathname === '/' ? (
+    <a href={`#${hash}`} className={className}>
+      {children}
+    </a>
+  ) : (
+    <Link to={`/#${hash}`} className={className}>
+      {children}
+    </Link>
+  )
+}
+
+// ── App-level chrome: nav ────────────────────────────────────────────
+// Sticky dark-green brand bar rendered by App on EVERY page of the makti
+// tenant (registered in CUSTOM_CHROME). MaktiLanding no longer carries its
+// own header, so this is the single source of the nav on the root as well.
+export const MaktiNav = () => {
+  const { totalItems, openCart } = useCart()
+  const { member } = useLoyalty()
+  const { services, isWithinOrderHours } = useSettings()
+  const [memberOpen, setMemberOpen] = useState(false)
+
+  // Ordering gate — same condition the global cart button/drawer uses.
+  const cartOk = services.cartEnabled && isWithinOrderHours
+
+  return (
+    <>
+      <MaktiChromeStyles />
+      <header
+        className="mkt sticky top-0 z-50"
+        style={{ background: 'rgba(8,28,21,0.92)', backdropFilter: 'blur(10px)', color: CREAM }}
+      >
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <NavAnchor hash="top" className="flex items-center gap-3">
+            <img src="/makti/logo-circle.png" alt="MAK-TI logo" className="h-10 w-10" />
+            {/* Wordmark yields to the cart/member buttons on very narrow screens */}
+            <span className="hidden leading-none min-[480px]:block">
+              <span className="mkt-display block text-lg font-semibold tracking-wide">MAK-TI</span>
+              <span className="block text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: MINT }}>
+                Makarna &amp; Mantı
+              </span>
+            </span>
+          </NavAnchor>
+          <nav className="hidden items-center gap-7 text-[15px] font-semibold md:flex" style={{ color: 'rgba(242,244,236,0.85)' }}>
+            <NavAnchor hash="lezzetler" className="hover:text-white">Lezzetler</NavAnchor>
+            <NavAnchor hash="iki-dunya" className="hover:text-white">İki Dünya</NavAnchor>
+            <Link to="/menu" className="hover:text-white">Menü</Link>
+            <NavAnchor hash="konum" className="hover:text-white">Konum</NavAnchor>
+          </nav>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {cartOk && (
+              <button
+                type="button"
+                onClick={openCart}
+                aria-label={`Sepeti aç${totalItems > 0 ? ` (${totalItems} ürün)` : ''}`}
+                className="relative grid h-10 w-10 place-items-center rounded-full border transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
+              >
+                <IconBasket className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span
+                    className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center rounded-full px-1 text-[11px] font-extrabold leading-none"
+                    style={{ background: MINT, color: PINE }}
+                  >
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </span>
+                )}
+              </button>
+            )}
+            {member ? (
+              <button
+                type="button"
+                onClick={() => setMemberOpen(true)}
+                aria-label="Hesabım"
+                className="flex items-center gap-2 rounded-full border p-1.5 transition-colors hover:bg-white/5 sm:pr-4"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: CREAM }}
+              >
+                <span className="mkt-display grid h-7 w-7 place-items-center rounded-full text-sm font-semibold" style={{ background: MINT, color: PINE }}>
+                  {(member.name || 'Ü')[0].toLocaleUpperCase('tr')}
+                </span>
+                <span className="hidden text-left leading-tight sm:block">
+                  <span className="block text-[13px] font-bold leading-none">{member.name || 'Üye'}</span>
+                  <span className="mt-0.5 block text-[11px] font-bold leading-none" style={{ color: MINT }}>
+                    {member.totalPoints} puan
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMemberOpen(true)}
+                aria-label="Üye ol"
+                className="flex h-10 items-center gap-2 rounded-full border px-3 text-sm font-bold transition-colors hover:bg-white/5 sm:px-4"
+                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
+              >
+                <IconUser className="h-5 w-5" />
+                <span className="hidden sm:inline">Üye Ol</span>
+              </button>
+            )}
+            <Link
+              to="/menu"
+              className="rounded-full px-5 py-2.5 text-[15px] font-bold transition-transform hover:-translate-y-0.5"
+              style={{ background: BASIL, color: NIGHT }}
+            >
+              Sipariş Ver
+            </Link>
+          </div>
+        </div>
+        <div className="h-[2px] w-full opacity-80" style={{ background: TRICOLOR }} aria-hidden="true" />
+      </header>
+      {/* Membership modal (portal) — shared loyalty store, MAK-TI skin */}
+      {memberOpen && <MemberModal onClose={() => setMemberOpen(false)} />}
+    </>
+  )
+}
+
+// ── App-level chrome: footer ─────────────────────────────────────────
+// Dark-green MAK-TI footer rendered by App on every page. Carries the giant
+// display wordmark + tricolor signature AND the mandatory items the shared
+// Footer provides elsewhere: legal links, iyzico badges, contact, staff login.
+export const MaktiFooter = () => (
+  <>
+    <MaktiChromeStyles />
+    <footer
+      className="mkt pb-10 pt-16"
+      style={{ background: NIGHT, color: CREAM, borderTop: '1px solid rgba(127,227,168,0.2)' }}
+    >
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <p className="mkt-display text-center font-semibold" style={{ fontSize: 'clamp(3rem, 13vw, 8.5rem)', lineHeight: 1 }}>
+          MAK<span style={{ color: MINT }}>-</span>TI
+        </p>
+        <div className="mx-auto mt-8 h-[2px] max-w-xs opacity-80" style={{ background: TRICOLOR }} aria-hidden="true" />
+
+        {/* Contact strip */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[15px] font-semibold">
+          <span className="flex items-center gap-2.5">
+            <IconPin className="h-5 w-5 shrink-0" style={{ color: MINT }} /> Kdz. Ereğli, Zonguldak
+          </span>
+          <span className="flex items-center gap-2.5">
+            <IconClock className="h-5 w-5 shrink-0" style={{ color: MINT }} /> Her gün 12:00 – 03:00
+          </span>
+          <a
+            href="https://instagram.com/maktihouse"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          >
+            <IconInstagram className="h-5 w-5 shrink-0" style={{ color: MINT }} /> @maktihouse
+          </a>
+        </div>
+
+        <div className="mt-12 flex flex-col items-center justify-between gap-6 md:flex-row">
+          <div className="flex items-center gap-3">
+            <img src="/makti/logo-circle.png" alt="MAK-TI logo" className="h-9 w-9 opacity-90" />
+            <p className="text-sm" style={{ color: 'rgba(242,244,236,0.55)' }}>
+              © {new Date().getFullYear()} MAK-TI · Kdz. Ereğli, Zonguldak
+            </p>
+          </div>
+          <div className="flex items-center gap-6 text-sm font-semibold">
+            <Link to="/menu" className="hover:opacity-70">Menü</Link>
+            <a
+              href="https://instagram.com/maktihouse"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:opacity-70"
+            >
+              Instagram
+            </a>
+            <Link to="/panel" className="hover:opacity-70" style={{ color: 'rgba(242,244,236,0.55)' }}>
+              İşletme Girişi
+            </Link>
+          </div>
+        </div>
+
+        {/* Legal links */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold">
+          {[
+            ['/terms-of-use', 'Üyelik Sözleşmesi'],
+            ['/privacy', 'Gizlilik & KVKK'],
+            ['/delivery-terms', 'Teslimat ve İade Şartları'],
+            ['/distance-sales', 'Mesafeli Satış Sözleşmesi'],
+          ].map(([to, label]) => (
+            <Link key={to} to={to} className="transition-opacity hover:opacity-80" style={{ color: 'rgba(242,244,236,0.55)' }}>
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Payment badges — official iyzico */}
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <img src="/iyzico-band.svg" alt="iyzico ile güvenli ödeme - Visa, MasterCard, Troy" className="h-9" />
+          <img src="/iyzico-ile-ode.svg" alt="iyzico ile öde" className="h-7" />
+        </div>
+
+        <p className="mt-8 text-center text-xs" style={{ color: 'rgba(242,244,236,0.4)' }}>
+          Sipariş altyapısı: OtOrder
+        </p>
+      </div>
+    </footer>
+  </>
+)
+
 export const MaktiLanding = () => {
   const rootRef = useRef<HTMLElement>(null)
-  const { addItemFromAPI, totalItems, openCart } = useCart()
+  const { addItemFromAPI, openCart } = useCart()
   const { member } = useLoyalty()
   const { services, isWithinOrderHours } = useSettings()
   const [memberOpen, setMemberOpen] = useState(false)
@@ -697,14 +925,26 @@ export const MaktiLanding = () => {
     return () => io.disconnect()
   }, [])
 
+  // Arriving from another page via a /#section link (MaktiNav dual-mode
+  // anchors): smooth-scroll to the target once the content has rendered.
+  // Short delay + rAF so layout is settled; in-page anchor clicks on '/'
+  // are handled natively by the browser and never reach this effect.
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash) return
+    const t = setTimeout(() => {
+      requestAnimationFrame(() => {
+        document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }, 300)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
     <main ref={rootRef} className="mkt" style={{ background: NIGHT, color: CREAM }}>
+      {/* Font import + .mkt base classes — shared with MaktiNav/MaktiFooter */}
+      <MaktiChromeStyles />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
-
-        .mkt { font-family: 'Manrope', system-ui, sans-serif; }
-        .mkt-display { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.015em; }
-
         /* Hero entrance (on load, no JS needed, 'both' fill) */
         @keyframes mkt-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
         .mkt-rise   { animation: mkt-rise 0.7s cubic-bezier(0.16,1,0.3,1) both; }
@@ -740,86 +980,7 @@ export const MaktiLanding = () => {
         }
       `}</style>
 
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50" style={{ background: 'rgba(8,28,21,0.92)', backdropFilter: 'blur(10px)' }}>
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <a href="#top" className="flex items-center gap-3">
-            <img src="/makti/logo-circle.png" alt="MAK-TI logo" className="h-10 w-10" />
-            {/* Wordmark yields to the new cart/member buttons on very narrow screens */}
-            <span className="hidden leading-none min-[480px]:block">
-              <span className="mkt-display block text-lg font-semibold tracking-wide">MAK-TI</span>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: MINT }}>
-                Makarna &amp; Mantı
-              </span>
-            </span>
-          </a>
-          <nav className="hidden items-center gap-7 text-[15px] font-semibold md:flex" style={{ color: 'rgba(242,244,236,0.85)' }}>
-            <a href="#lezzetler" className="hover:text-white">Lezzetler</a>
-            <a href="#iki-dunya" className="hover:text-white">İki Dünya</a>
-            <Link to="/menu" className="hover:text-white">Menü</Link>
-            <a href="#konum" className="hover:text-white">Konum</a>
-          </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {cartOk && (
-              <button
-                type="button"
-                onClick={openCart}
-                aria-label={`Sepeti aç${totalItems > 0 ? ` (${totalItems} ürün)` : ''}`}
-                className="relative grid h-10 w-10 place-items-center rounded-full border transition-colors hover:bg-white/5"
-                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
-              >
-                <IconBasket className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <span
-                    className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[20px] place-items-center rounded-full px-1 text-[11px] font-extrabold leading-none"
-                    style={{ background: MINT, color: PINE }}
-                  >
-                    {totalItems > 99 ? '99+' : totalItems}
-                  </span>
-                )}
-              </button>
-            )}
-            {member ? (
-              <button
-                type="button"
-                onClick={() => setMemberOpen(true)}
-                aria-label="Hesabım"
-                className="flex items-center gap-2 rounded-full border p-1.5 transition-colors hover:bg-white/5 sm:pr-4"
-                style={{ borderColor: 'rgba(127,227,168,0.4)', color: CREAM }}
-              >
-                <span className="mkt-display grid h-7 w-7 place-items-center rounded-full text-sm font-semibold" style={{ background: MINT, color: PINE }}>
-                  {(member.name || 'Ü')[0].toLocaleUpperCase('tr')}
-                </span>
-                <span className="hidden text-left leading-tight sm:block">
-                  <span className="block text-[13px] font-bold leading-none">{member.name || 'Üye'}</span>
-                  <span className="mt-0.5 block text-[11px] font-bold leading-none" style={{ color: MINT }}>
-                    {member.totalPoints} puan
-                  </span>
-                </span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMemberOpen(true)}
-                aria-label="Üye ol"
-                className="flex h-10 items-center gap-2 rounded-full border px-3 text-sm font-bold transition-colors hover:bg-white/5 sm:px-4"
-                style={{ borderColor: 'rgba(127,227,168,0.4)', color: MINT }}
-              >
-                <IconUser className="h-5 w-5" />
-                <span className="hidden sm:inline">Üye Ol</span>
-              </button>
-            )}
-            <Link
-              to="/menu"
-              className="rounded-full px-5 py-2.5 text-[15px] font-bold transition-transform hover:-translate-y-0.5"
-              style={{ background: BASIL, color: NIGHT }}
-            >
-              Sipariş Ver
-            </Link>
-          </div>
-        </div>
-        <div className="h-[2px] w-full opacity-80" style={{ background: TRICOLOR }} aria-hidden="true" />
-      </header>
+      {/* Nav/footer chrome is provided at App level (MaktiNav/MaktiFooter). */}
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <section
@@ -1302,41 +1463,6 @@ export const MaktiLanding = () => {
           </div>
         </div>
       </section>
-
-      {/* ── Footer ──────────────────────────────────────────────────── */}
-      <footer className="pb-10 pt-16" style={{ borderTop: '1px solid rgba(127,227,168,0.2)' }}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <p className="mkt-display text-center font-semibold" style={{ fontSize: 'clamp(3rem, 13vw, 8.5rem)', lineHeight: 1 }}>
-            MAK<span style={{ color: MINT }}>-</span>TI
-          </p>
-          <div className="mx-auto mt-8 h-[2px] max-w-xs opacity-80" style={{ background: TRICOLOR }} aria-hidden="true" />
-          <div className="mt-12 flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex items-center gap-3">
-              <img src="/makti/logo-circle.png" alt="MAK-TI logo" className="h-9 w-9 opacity-90" />
-              <p className="text-sm" style={{ color: 'rgba(242,244,236,0.55)' }}>
-                © {new Date().getFullYear()} MAK-TI · Kdz. Ereğli, Zonguldak
-              </p>
-            </div>
-            <div className="flex items-center gap-6 text-sm font-semibold">
-              <Link to="/menu" className="hover:opacity-70">Menü</Link>
-              <a
-                href="https://instagram.com/maktihouse"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:opacity-70"
-              >
-                Instagram
-              </a>
-              <Link to="/panel" className="hover:opacity-70" style={{ color: 'rgba(242,244,236,0.55)' }}>
-                İşletme girişi
-              </Link>
-            </div>
-          </div>
-          <p className="mt-8 text-center text-xs" style={{ color: 'rgba(242,244,236,0.4)' }}>
-            Sipariş altyapısı: OtOrder
-          </p>
-        </div>
-      </footer>
 
       {/* Membership modal (portal) — shared loyalty store, MAK-TI skin */}
       {memberOpen && <MemberModal onClose={() => setMemberOpen(false)} />}

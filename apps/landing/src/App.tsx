@@ -11,7 +11,7 @@ import { ContentProvider, useContent } from "./lib/contentStore";
 import { useTheme } from "./hooks/useTheme";
 import { ComingSoon } from "./pages/ComingSoon";
 import { StaffHub } from "./pages/StaffHub";
-import { CUSTOM_LANDINGS } from "./custom";
+import { CUSTOM_CHROME, CUSTOM_LANDINGS } from "./custom";
 import { SmasheAdmin } from "./custom/SmasheAdmin";
 import { LoyaltyProvider } from "./lib/loyaltyStore";
 import { useSettings } from "./hooks/useSettings";
@@ -182,13 +182,22 @@ const AnimatedRoutes = () => {
   const isCustomAdmin = location.pathname === "/smashe-admin";
   // Yayınlanmamış tenant'ın kök "site hazırlanıyor" sayfası tam ekran — navbar/footer gizli.
   const isComingSoon = location.pathname === "/" && theme !== null && !theme.published;
+  // Tenant'a özel App-seviyesi chrome (CUSTOM_CHROME): standart Navbar/Footer
+  // yerine markalı Nav/Footer HER sayfada render edilir.
+  const chrome =
+    theme !== null && theme.published === true && theme.customLanding
+      ? CUSTOM_CHROME[theme.customLanding]
+      : undefined;
   // Özel kodlanmış premium landing kendi nav/footer'ını taşır — paylaşılan chrome gizli.
+  // CUSTOM_CHROME'a kayıtlı tenant'larda landing kendi chrome'unu taşımaz;
+  // kökte de App-seviyesi Nav/Footer görünür (çift nav oluşmaz).
   const isCustomRoot =
     location.pathname === "/" &&
     theme !== null &&
     theme.published === true &&
     !!theme.customLanding &&
-    !!CUSTOM_LANDINGS[theme.customLanding];
+    !!CUSTOM_LANDINGS[theme.customLanding] &&
+    !CUSTOM_CHROME[theme.customLanding];
   const hideChrome = isAdmin || isComingSoon || isStaffHub || isCustomRoot || isCustomAdmin;
   const { services, isWithinOrderHours } = useSettings();
 
@@ -201,7 +210,7 @@ const AnimatedRoutes = () => {
       <MetaUpdater />
 
       {/* Show navbar and footer only on non-admin / non-placeholder pages */}
-      {!hideChrome && <Navbar />}
+      {!hideChrome && (chrome ? <chrome.Nav /> : <Navbar />)}
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
@@ -272,7 +281,7 @@ const AnimatedRoutes = () => {
         </Routes>
       </AnimatePresence>
 
-      {!hideChrome && <Footer />}
+      {!hideChrome && (chrome ? <chrome.Footer /> : <Footer />)}
       {!isAdmin && services.cartEnabled && isWithinOrderHours && <CartButton />}
       {!isAdmin && services.cartEnabled && isWithinOrderHours && <Cart />}
     </>
