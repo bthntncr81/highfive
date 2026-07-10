@@ -43,10 +43,11 @@ export const api = {
       { method: 'POST', body: JSON.stringify(body) },
     ),
 
-  login: (email: string, password: string) =>
+  // tenantId: çok üyelikli kullanıcı seçim yaptıktan sonra tenant-scoped token almak için
+  login: (email: string, password: string, tenantId?: string) =>
     req<any>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(tenantId ? { tenantId } : {}) }),
     }),
 
   // Şifre belirleme / sıfırlama (mail linkindeki token ile)

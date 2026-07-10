@@ -5,10 +5,21 @@ import Login from './pages/Login';
 import SetPassword from './pages/SetPassword';
 import { BASE_DOMAIN } from './lib/api';
 
-function Logo({ className = '' }: { className?: string }) {
-  // Prototipteki wordmark: OtOrder + kırmızı nokta (Sora 800)
+// OtOrder marka logosu: "Pulse Plate" mark'ı (tabak halkası + sipariş nabzı)
+// + Sora 800 wordmark. Mark public/brand/otorder-*.svg olarak da mevcut.
+export function OtOrderMark({ size = 26, color = '#D92B1C' }: { size?: number; color?: string }) {
   return (
-    <span className={`wordmark-ot ${className}`}>
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="24" cy="24" r="17.5" strokeWidth="5" />
+      <path d="M7 24h9l3.2-7.5 6 15 3.2-7.5H41" strokeWidth="4.6" />
+    </svg>
+  );
+}
+
+function Logo({ className = '' }: { className?: string }) {
+  return (
+    <span className={`wordmark-ot ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <OtOrderMark />
       OtOrder<b>.</b>
     </span>
   );

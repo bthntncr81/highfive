@@ -2,18 +2,19 @@ import { useState } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
 import { api, BASE_DOMAIN } from '../lib/api';
 
-// otorder.com/login: e-posta+şifre → auth (Membership). Tek üyelikte doğrudan
-// subdomain'e yönlendirir; çok üyelikte restoran seçtirir.
+// otorder.com/login: e-posta+şifre → auth (Membership). Girişten sonra kullanıcı
+// KENDİ restoranının POS'una oturum açık gider (token hash ile taşınır — sunucu
+// loglarına/referrer'a sızmaz, POS tarafı okuyup siler). Çok üyelikte restoran
+// seçtirir ve seçilen tenant için yeniden token alır.
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [choices, setChoices] = useState<Array<{ subdomain: string; name: string }>>([]);
+  const [choices, setChoices] = useState<Array<{ tenantId: string; subdomain: string; name: string }>>([]);
 
-  function gotoTenant(subdomain: string, token?: string) {
-    const url = `https://${subdomain}.${BASE_DOMAIN}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    window.location.href = url;
+  function gotoPos(subdomain: string, token: string) {
+    window.location.href = `https://${subdomain}.${BASE_DOMAIN}/pos/login-email#sso=${encodeURIComponent(token)}`;
   }
 
   async function submit(e: React.FormEvent) {
@@ -23,12 +24,31 @@ export default function Login() {
     try {
       const r = await api.login(email, password);
       if (r.requiresTenantSelection && Array.isArray(r.memberships)) {
-        setChoices(r.memberships.map((m: any) => ({ subdomain: m.tenant?.subdomain ?? m.subdomain, name: m.tenant?.name ?? m.name })));
-      } else if (r.tenant?.subdomain) {
-        gotoTenant(r.tenant.subdomain, r.token);
+        setChoices(r.memberships.map((m: any) => ({
+          tenantId: m.tenantId,
+          subdomain: m.subdomain ?? m.tenant?.subdomain,
+          name: m.tenantName ?? m.tenant?.name ?? m.subdomain,
+        })));
+      } else if (r.token && r.user?.tenant?.subdomain) {
+        gotoPos(r.user.tenant.subdomain, r.token);
       } else {
         setError('Bu hesaba bağlı restoran bulunamadı.');
       }
+    } catch (err: any) {
+      setError(err.message || 'Giriş başarısız');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Çok üyelik: seçilen restoran için tenant-scoped token al, POS'una git
+  async function pickTenant(c: { tenantId: string; subdomain: string }) {
+    setError('');
+    setLoading(true);
+    try {
+      const r = await api.login(email, password, c.tenantId);
+      if (r.token) gotoPos(c.subdomain, r.token);
+      else setError('Giriş tamamlanamadı, tekrar dene.');
     } catch (err: any) {
       setError(err.message || 'Giriş başarısız');
     } finally {
@@ -46,7 +66,7 @@ export default function Login() {
           <div className="card mt-8 space-y-2">
             <p className="mb-2 text-sm font-medium text-ink-soft">Hangi restoran?</p>
             {choices.map((c) => (
-              <button key={c.subdomain} onClick={() => gotoTenant(c.subdomain)} className="btn-ghost w-full justify-between">
+              <button key={c.tenantId} disabled={loading} onClick={() => pickTenant(c)} className="btn-ghost w-full justify-between">
                 <span>{c.name}</span>
                 <span className="text-xs text-ink-muted">{c.subdomain}.{BASE_DOMAIN}</span>
               </button>

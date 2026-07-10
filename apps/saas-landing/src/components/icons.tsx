@@ -214,6 +214,12 @@ export const IcCheck = (p: IconProps) => (
   </Svg>
 );
 
+export const IcX = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+  </Svg>
+);
+
 export const IcWa = (p: IconProps) => (
   <Svg {...p}>
     <path d="M4 20l1.3-4A8 8 0 1112 20a8 8 0 01-4-1L4 20z" />

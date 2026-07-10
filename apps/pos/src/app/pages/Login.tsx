@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, Pizza } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { api } from '../lib/api';
+import { storage } from '../lib/storage';
 
 export default function Login() {
   const [params] = useSearchParams();
@@ -22,6 +23,19 @@ export default function Login() {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // otorder.com/login'den SSO handoff: token URL hash'inde gelir (#sso=...),
+  // sunucuya/referrer'a sızmaz. Kaydet, hash'i sil, tam yeniden yükle →
+  // AuthContext token'ı storage'dan okuyup oturumu açar.
+  useEffect(() => {
+    const m = window.location.hash.match(/[#&]sso=([^&]+)/);
+    if (!m) return;
+    try {
+      storage.set('token', decodeURIComponent(m[1]));
+    } catch { /* ignore */ }
+    const base = (import.meta as any).env?.BASE_URL || '/';
+    window.location.replace(base);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
