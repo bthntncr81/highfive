@@ -898,6 +898,7 @@ const SHOWCASE_SITES: Array<{ key: string; name: string; cuisine: string; url: s
   { key: 'pidem', name: 'Pidem Karadeniz', cuisine: 'Taş fırın pide', url: 'https://pidem.otorder.com', bg: '#1E3B2E', accent: '#F3C64E', note: 'Yosun yeşili + tereyağı', logoH: 40 },
   { key: 'mokka', name: 'MOKKA', cuisine: 'Kahve & brunch', url: 'https://mokka.otorder.com', bg: '#2B1D16', accent: '#C57B45', note: 'Espresso + süt köpüğü', logoH: 36 },
   { key: 'serbet', name: 'Şerbet', cuisine: 'Baklava & künefe', url: 'https://serbet.otorder.com', bg: '#0C1F17', accent: '#93C572', note: 'Fıstık + bakır', logoH: 52 },
+  { key: 'makti', name: 'MAK-TI', cuisine: 'Makarna & mantı', url: 'https://makti.otorder.com', bg: '#081C15', accent: '#7FE3A8', note: 'Canlı müşteri: Kdz. Ereğli', logoH: 64 },
   { key: 'highfive', name: 'High Five', cuisine: 'Pizza & makarna', url: 'https://highfivepps.com', bg: '#ffffff', accent: '#CF1D00', note: 'Canlı müşteri: Akçakoca', logoH: 60 },
 ];
 

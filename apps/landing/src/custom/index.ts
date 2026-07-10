@@ -5,6 +5,7 @@ import { SushiselLanding } from './SushiselLanding'
 import { PidemLanding } from './PidemLanding'
 import { MokkaLanding } from './MokkaLanding'
 import { SerbetLanding } from './SerbetLanding'
+import { MaktiLanding } from './MaktiLanding'
 
 // Premium elle kodlanmış tenant landing'leri. theme.customLanding anahtarı
 // buradaki bir girişe denk gelirse (ve published=true ise) kök '/' onu render eder.
@@ -16,4 +17,5 @@ export const CUSTOM_LANDINGS: Record<string, ComponentType> = {
   pidem: PidemLanding,
   mokka: MokkaLanding,
   serbet: SerbetLanding,
+  makti: MaktiLanding,
 }
