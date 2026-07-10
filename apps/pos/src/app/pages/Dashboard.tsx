@@ -276,7 +276,7 @@ export default function Dashboard() {
             
             <Link
               to="/menu"
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-[#005387]/5 hover:to-[#005387]/10 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-primary-600/5 hover:to-primary-600/10 transition-all group"
             >
               <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 📦
@@ -285,7 +285,7 @@ export default function Dashboard() {
                 <p className="font-semibold text-gray-900">Paket Sipariş</p>
                 <p className="text-sm text-gray-500">Paket veya gel-al sipariş</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[#005387] group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
             </Link>
             
             <Link

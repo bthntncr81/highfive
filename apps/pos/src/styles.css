@@ -24,6 +24,19 @@
   --brand-800: 107 15 0;
   --brand-900: 82 12 0;
 
+  /* Vurgu rampası — VARSAYILAN = HighFive mavisi; theme.ts tenant accent'iyle
+     override eder (tailwind accent-* sınıfları bu değişkenleri okur). */
+  --brand-accent-50: 238 246 251;
+  --brand-accent-100: 212 232 245;
+  --brand-accent-200: 168 209 235;
+  --brand-accent-300: 109 179 220;
+  --brand-accent-400: 51 147 200;
+  --brand-accent-500: 0 83 135;
+  --brand-accent-600: 0 69 112;
+  --brand-accent-700: 0 61 99;
+  --brand-accent-800: 0 46 74;
+  --brand-accent-900: 0 31 50;
+
   /* Primary Colors */
   --color-primary: #bb1e10;
   --color-primary-dark: #8a1610;

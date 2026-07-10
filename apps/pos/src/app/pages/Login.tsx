@@ -71,7 +71,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#005387] via-[#003d63] to-[#1a1a1a]">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-700 via-primary-900 to-[#1a1a1a]">
         
         {/* Floating food icons */}
         <div className="absolute top-20 left-20 text-white/10 animate-float">

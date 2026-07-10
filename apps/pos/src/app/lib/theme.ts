@@ -72,6 +72,11 @@ export function applyTheme(theme: TenantTheme): void {
     root.style.setProperty('--color-accent', rgb(accent));
     root.style.setProperty('--color-accent-dark', rgb(mix(accent, [0, 0, 0], 0.25)));
     root.style.setProperty('--color-accent-light', rgb(mix(accent, [255, 255, 255], 0.2)));
+    // tailwind accent-50..900 sınıfları da tenant vurgu rengini izlesin
+    const accentRamp = buildRamp(accent);
+    for (const [k, [r, g, b]] of Object.entries(accentRamp)) {
+      root.style.setProperty(`--brand-accent-${k}`, `${r} ${g} ${b}`);
+    }
   }
   if (theme.name) document.title = `${theme.name} · POS`;
   applyFavicon(theme);

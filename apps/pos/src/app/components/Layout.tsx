@@ -114,7 +114,7 @@ export default function Layout() {
         shadow-2xl lg:shadow-xl
       `}>
         {/* Logo Section — tenant logo/adı */}
-        <div className="p-6 border-b border-[#e5e5e0] bg-[#005387]">
+        <div className="p-6 border-b border-[#e5e5e0] bg-primary-600">
           <div className="flex items-center gap-4">
             {brandLogo ? (
               <img src={brandLogo} alt={brandName || 'Logo'} className="h-12 w-auto max-w-[150px] object-contain" />
@@ -142,7 +142,7 @@ export default function Layout() {
               <span className="text-xl">{item.emoji}</span>
               <span className="flex-1">{item.label}</span>
               {item.to === '/orders' && itemCount > 0 && (
-                <span className="px-2.5 py-1 bg-[#005387] text-white text-xs font-bold rounded-full shadow-sm">
+                <span className="px-2.5 py-1 bg-primary-600 text-white text-xs font-bold rounded-full shadow-sm">
                   {itemCount}
                 </span>
               )}
@@ -179,7 +179,7 @@ export default function Layout() {
 
         {/* Cart summary (if items) */}
         {itemCount > 0 && (
-          <div className="mx-4 mb-4 p-4 bg-[#005387] rounded-2xl text-white">
+          <div className="mx-4 mb-4 p-4 bg-primary-600 rounded-2xl text-white">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Sepet</span>
               <span className="text-2xl">🛒</span>
@@ -195,7 +195,7 @@ export default function Layout() {
         <div className="p-4 border-t border-[#e5e5e0] bg-gray-50">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative">
-              <div className="w-12 h-12 bg-[#005387] rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
@@ -311,7 +311,7 @@ export default function Layout() {
               {itemCount > 0 && (
                 <button
                   onClick={() => navigate('/menu')}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#005387] text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
                 >
                   <span>🛒</span>
                   <span>{itemCount}</span>
