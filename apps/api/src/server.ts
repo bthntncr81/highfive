@@ -49,6 +49,7 @@ import expenseRoutes from './routes/expenses';
 import uploadRoutes from './routes/upload';
 import externalRoutes from './routes/external';
 import integrationPartnerRoutes from './routes/integration-partners';
+import supportRoutes from './routes/support';
 import mobileAuthRoutes from './routes/mobile-auth';
 import devicesRoutes from './routes/devices';
 import notificationRoutes from './routes/notifications';
@@ -163,6 +164,7 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   server.register(uploadRoutes, { prefix: '/api/upload' }); // File upload
   server.register(externalRoutes, { prefix: '/api/external' }); // External integration API
   server.register(integrationPartnerRoutes, { prefix: '/api/integration-partners' }); // Partner management UI
+  server.register(supportRoutes, { prefix: '/api/support' }); // POS destek talepleri (talep/şikayet)
   server.register(mobileAuthRoutes, { prefix: '/api/mobile' }); // Mobile (Customer) auth: phone+OTP
   server.register(devicesRoutes, { prefix: '/api/mobile/devices' }); // Push token register
   server.register(notificationRoutes, { prefix: '/api' }); // /api/notifications/* (admin push)

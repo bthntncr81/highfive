@@ -20,6 +20,7 @@ import {
   VolumeX,
   Bell,
   Wallet,
+  LifeBuoy,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../hooks/useTheme';
@@ -175,6 +176,19 @@ export default function Layout() {
               ))}
             </>
           )}
+
+          {/* Destek — tüm roller: platform operatörüne talep/şikayet/teknik sorun */}
+          <div className="my-4 pt-4 border-t-2 border-dashed border-gray-200" />
+          <NavLink
+            to="/support"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={({ isActive }) => `nav-link stagger-item ${isActive ? 'active' : ''}`}
+            style={{ animationDelay: `${(navItems.length + (isAdmin ? adminItems.length : 0)) * 0.05}s` }}
+          >
+            <LifeBuoy className="w-5 h-5" />
+            <span className="flex-1">Destek</span>
+            <ChevronRight className="w-4 h-4 opacity-50" />
+          </NavLink>
         </nav>
 
         {/* Cart summary (if items) */}

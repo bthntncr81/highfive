@@ -34,12 +34,14 @@ model Tenant {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  memberships  Membership[]
-  subscription Subscription?
-  storedCards  StoredCard[]
-  transactions BillingTransaction[]
-  sessions     Session[]
-  activityLogs ActivityLog[]
+  memberships          Membership[]
+  subscription         Subscription?
+  storedCards          StoredCard[]
+  transactions         BillingTransaction[]
+  sessions             Session[]
+  activityLogs         ActivityLog[]
+  supportTickets       SupportTicket[]
+  supportTicketReplies SupportTicketReply[]
 
   locations                    Location[]
   tables                       Table[]
@@ -488,14 +490,14 @@ model MenuItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  category         Category             @relation(fields: [categoryId], references: [id])
-  modifiers        Modifier[]
-  ingredients      MenuItemIngredient[]
-  orderItems       OrderItem[]
-  upsellItems      MenuItemUpsell[]     @relation("UpsellFrom")
-  upsoldBy         MenuItemUpsell[]     @relation("UpsellTo")
-  crossSellItems   MenuItemCrossSell[]  @relation("CrossSellFrom")
-  crossSoldBy      MenuItemCrossSell[]  @relation("CrossSellTo")
+  category            Category                    @relation(fields: [categoryId], references: [id])
+  modifiers           Modifier[]
+  ingredients         MenuItemIngredient[]
+  orderItems          OrderItem[]
+  upsellItems         MenuItemUpsell[]            @relation("UpsellFrom")
+  upsoldBy            MenuItemUpsell[]            @relation("UpsellTo")
+  crossSellItems      MenuItemCrossSell[]         @relation("CrossSellFrom")
+  crossSoldBy         MenuItemCrossSell[]         @relation("CrossSellTo")
   locations           MenuItemLocation[]
   happyHourItems      HappyHourItem[]
   bundleItems         BundleItem[]
@@ -2086,5 +2088,65 @@ model MarketplaceProductMapping {
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, platform, platformProductId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// Destek talepleri — tenant personeli POS'tan talep/şikayet açar; platform
+// operatörü admin.otorder.com'dan görür, yanıtlar ve durumunu yönetir.
+// ============================================================================
+
+enum TicketType {
+  REQUEST // talep
+  COMPLAINT // şikayet
+  ISSUE // teknik sorun
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model SupportTicket {
+  id           String         @id @default(cuid())
+  tenantId     String         @default("")
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  openedById   String? // User.id (POS'ta açan personel)
+  openedByName String?
+  type         TicketType     @default(REQUEST)
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(NORMAL)
+  source       String         @default("POS") // POS | KITCHEN | ADMIN
+  subject      String
+  message      String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  replies SupportTicketReply[]
+
+  @@index([tenantId, status])
+  @@index([status, createdAt])
+}
+
+model SupportTicketReply {
+  id         String        @id @default(cuid())
+  tenantId   String        @default("")
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromAdmin  Boolean       @default(false) // true → platform operatörü yanıtı
+  authorName String?
+  message    String
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId])
   @@index([tenantId])
 }

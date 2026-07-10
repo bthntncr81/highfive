@@ -29,6 +29,7 @@ import PushNotifications from './pages/PushNotifications';
 import RawMaterialsManagement from './pages/RawMaterialsManagement';
 import Expenses from './pages/Expenses';
 import CourierDashboard from './pages/CourierDashboard';
+import Support from './pages/Support';
 
 // Components
 import Layout from './components/Layout';
@@ -148,6 +149,8 @@ export default function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="orders/:id" element={<OrderDetail />} />
               <Route path="stock" element={<StockManagement />} />
+              {/* Destek — tüm roller erişebilir (rol kısıtı yok) */}
+              <Route path="support" element={<Support />} />
               
               {/* Admin routes */}
               <Route

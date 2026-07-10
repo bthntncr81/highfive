@@ -209,5 +209,169 @@ export default async function adminRoutes(server: FastifyInstance) {
         actingAs: { userId: owner.userId, email: owner.user.email },
       };
     });
+
+    // Tenant detayı — abonelik, üyeler, kullanım, son işlemler, tema/AI durumu
+    authed.get('/admin/tenants/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const monthAgo = new Date(Date.now() - 30 * 864e5);
+      const [tenant, transactions, orders30, openTickets, themeSetting] = await Promise.all([
+        platformDb.tenant.findUnique({
+          where: { id },
+          include: {
+            subscription: { include: { plan: true } },
+            memberships: { include: { user: { select: { email: true, name: true } } } },
+            _count: { select: { locations: true, orders: true, menuItems: true, categories: true } },
+          },
+        }),
+        platformDb.billingTransaction.findMany({
+          where: { tenantId: id },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        }),
+        platformDb.order.count({ where: { tenantId: id, createdAt: { gte: monthAgo } } }),
+        platformDb.supportTicket.count({ where: { tenantId: id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+        platformDb.settings.findFirst({ where: { tenantId: id, key: 'theme' } }),
+      ]);
+      if (!tenant) return reply.status(404).send({ error: 'Tenant bulunamadı' });
+      const theme = (themeSetting?.value as Record<string, unknown>) || {};
+      const features = (tenant.subscription?.plan?.features as Record<string, unknown>) || {};
+      return {
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          subdomain: tenant.subdomain,
+          status: tenant.status,
+          createdAt: tenant.createdAt,
+          trialEndsAt: tenant.trialEndsAt,
+          onboardingStep: tenant.onboardingStep,
+        },
+        subscription: tenant.subscription
+          ? {
+              status: tenant.subscription.status,
+              cycle: tenant.subscription.cycle,
+              plan: tenant.subscription.plan.key,
+              planName: tenant.subscription.plan.name,
+              monthlyPrice: Number(tenant.subscription.plan.monthlyPrice),
+              currentPeriodStart: tenant.subscription.currentPeriodStart,
+              currentPeriodEnd: tenant.subscription.currentPeriodEnd,
+              failedAttempts: tenant.subscription.failedAttempts,
+              whatsappAI: features.whatsappAI === true,
+            }
+          : null,
+        members: tenant.memberships.map((m) => ({
+          role: m.role,
+          active: m.active,
+          email: m.user.email,
+          name: m.user.name,
+        })),
+        usage: {
+          locations: tenant._count.locations,
+          ordersTotal: tenant._count.orders,
+          ordersLast30d: orders30,
+          menuItems: tenant._count.menuItems,
+          categories: tenant._count.categories,
+          openTickets,
+        },
+        theme: {
+          published: (theme as any).published === true,
+          customLanding: (theme as any).customLanding || null,
+          logoUrl: (theme as any).logoUrl || null,
+        },
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          type: t.type,
+          amount: Number(t.amount),
+          success: t.success,
+          errorMessage: t.errorMessage,
+          periodStart: t.periodStart,
+          periodEnd: t.periodEnd,
+          createdAt: t.createdAt,
+        })),
+      };
+    });
+
+    // Ödeme/fatura işlemleri — tüm tenant'lar (opsiyonel filtre)
+    authed.get('/admin/transactions', async (request: FastifyRequest) => {
+      const { tenantId, limit } = request.query as { tenantId?: string; limit?: string };
+      const take = Math.min(Math.max(Number(limit) || 100, 1), 500);
+      const txs = await platformDb.billingTransaction.findMany({
+        where: tenantId ? { tenantId } : {},
+        orderBy: { createdAt: 'desc' },
+        take,
+        include: { tenant: { select: { name: true, subdomain: true } } },
+      });
+      return {
+        transactions: txs.map((t) => ({
+          id: t.id,
+          tenantId: t.tenantId,
+          tenantName: t.tenant?.name ?? null,
+          subdomain: t.tenant?.subdomain ?? null,
+          type: t.type,
+          amount: Number(t.amount),
+          currency: t.currency,
+          success: t.success,
+          errorMessage: t.errorMessage,
+          periodStart: t.periodStart,
+          periodEnd: t.periodEnd,
+          createdAt: t.createdAt,
+        })),
+      };
+    });
+
+    // Destek talepleri — tüm tenant'lar (POS'tan açılan talep/şikayetler)
+    authed.get('/admin/tickets', async (request: FastifyRequest) => {
+      const { status, tenantId } = request.query as { status?: string; tenantId?: string };
+      const tickets = await platformDb.supportTicket.findMany({
+        where: {
+          ...(status ? { status: status as any } : {}),
+          ...(tenantId ? { tenantId } : {}),
+        },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+        take: 300,
+        include: {
+          tenant: { select: { name: true, subdomain: true } },
+          replies: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+      return { tickets };
+    });
+
+    // Talebe operatör yanıtı
+    authed.post('/admin/tickets/:id/reply', async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const { message } = request.body as { message?: string };
+      const m = (message || '').trim();
+      if (!m) return reply.status(400).send({ error: 'Mesaj zorunlu' });
+      const ticket = await platformDb.supportTicket.findUnique({ where: { id } });
+      if (!ticket) return reply.status(404).send({ error: 'Talep bulunamadı' });
+      const admin = (request as any).superAdmin as { email?: string } | undefined;
+      const r = await platformDb.supportTicketReply.create({
+        data: {
+          tenantId: ticket.tenantId,
+          ticketId: id,
+          fromAdmin: true,
+          authorName: admin?.email || 'OtOrder Destek',
+          message: m,
+        },
+      });
+      // Operatör yanıt verdi → işlemde
+      if (ticket.status === 'OPEN') {
+        await platformDb.supportTicket.update({ where: { id }, data: { status: 'IN_PROGRESS' } });
+      }
+      return reply.status(201).send({ reply: r });
+    });
+
+    // Talep durumu / önceliği güncelle
+    authed.put('/admin/tickets/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const { status, priority } = request.body as { status?: string; priority?: string };
+      const data: Record<string, unknown> = {};
+      if (status && ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(status)) data.status = status;
+      if (priority && ['LOW', 'NORMAL', 'HIGH'].includes(priority)) data.priority = priority;
+      if (!Object.keys(data).length) return reply.status(400).send({ error: 'Geçerli bir alan yok' });
+      const ticket = await platformDb.supportTicket.update({ where: { id }, data }).catch(() => null);
+      if (!ticket) return reply.status(404).send({ error: 'Talep bulunamadı' });
+      return { ticket };
+    });
   });
 }
