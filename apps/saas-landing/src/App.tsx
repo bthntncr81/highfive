@@ -66,7 +66,7 @@ function Footer() {
           <ul className="mt-3 space-y-2 text-sm text-ink-soft">
             <li><a className="hover:text-brand-700" href="/#fiyatlar">Planlar ve fiyatlar</a></li>
             <li><Link className="hover:text-brand-700" to="/signup">Ücretsiz deneme başlat</Link></li>
-            <li><a className="hover:text-brand-700" href="https://order.highfivepps.com">WhatsApp Sipariş Modülü</a></li>
+            <li><a className="hover:text-brand-700" href="https://whatsapp.otorder.com">WhatsApp Sipariş Modülü</a></li>
           </ul>
         </nav>
         <nav aria-label="Hesap">
